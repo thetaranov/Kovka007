@@ -366,33 +366,22 @@ export default function App() {
         const jsonString = JSON.stringify(payload);
         console.log("📝 JSON для кодирования:", jsonString);
         
-        // Упрощенное кодирование (Unicode safe)
-        const base64 = btoa(unescape(encodeURIComponent(jsonString)));
+        // Самый простой способ кодирования
+        const base64 = btoa(jsonString);
         const urlSafeBase64 = base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  
-        console.log("🔢 Base64 длина:", urlSafeBase64.length);
   
         const botUsername = 'Kovka007bot';
         const deepLink = `https://t.me/${botUsername}?start=order_${urlSafeBase64}`;
   
-        console.log("🔗 Полная ссылка:", deepLink);
-  
-        // Проверяем длину ссылки
-        if (deepLink.length > 2000) {
-            console.error("❌ Ссылка слишком длинная!");
-            alert("Ссылка слишком длинная. Пожалуйста, свяжитесь с менеджером напрямую: @thetaranov");
-            return;
-        }
-  
-        // Показываем подтверждение
-        // alert(`Переход в Telegram для оформления заказа...`);
+        console.log("🔗 Открываем ссылку в Telegram...");
         
-        // Открываем ссылку
+        // Пробуем оба способа открытия ссылки
         window.open(deepLink, '_blank');
         
     } catch (error) {
         console.error("❌ Ошибка создания Deep Link:", error);
-        alert("Ошибка создания заказа. Свяжитесь с менеджером: @thetaranov");
+        // Если все fails, просто открываем бота
+        window.open('https://t.me/Kovka007bot', '_blank');
     }
   };
 
