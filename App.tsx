@@ -348,6 +348,11 @@ export default function App() {
             window.Telegram.WebApp.sendData(jsonString);
             console.log("✅ Данные отправлены через WebApp");
             
+            // Закрываем WebApp после успешной отправки
+            setTimeout(() => {
+                window.Telegram.WebApp.close();
+            }, 2000);
+
             return; // Выходим, если отправили через WebApp
         } catch (error) {
             console.error("❌ Ошибка WebApp.sendData:", error);
