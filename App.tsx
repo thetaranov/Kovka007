@@ -367,7 +367,13 @@ export default function App() {
 
         // Open Telegram Deep Link with 'order_' prefix
         const botUsername = 'Kovka007bot';
-        window.open(`https://t.me/${botUsername}?start=order_${urlSafeBase64}`, '_blank');
+        const deepLink = `https://t.me/${botUsername}?start=order_${urlSafeBase64}`;
+
+        console.log("Открываю бота с данными:", payload);
+        console.log("Base64 данные:", urlSafeBase64);
+        console.log("Ссылка:", deepLink);
+
+        window.open(deepLink, '_blank');
     }
   };
 
