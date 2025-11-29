@@ -47,8 +47,11 @@ export default function App() {
   useEffect(() => {
     if (window.Telegram?.WebApp) {
       window.Telegram.WebApp.ready();
-      // Optional: Expand to full height if needed
-      window.Telegram.WebApp.expand();
+      try {
+        window.Telegram.WebApp.expand();
+      } catch (e) {
+        console.warn("WebApp expand failed", e);
+      }
     }
   }, []);
 
@@ -318,13 +321,7 @@ export default function App() {
     // 1. Generate ID and Prepare Data
     const configId = `CFG-${Date.now().toString(36).toUpperCase()}`;
     
-    const frameColorObj = FRAME_COLORS.find(c => c.hex === config.frameColor);
-    const roofColorObj = ROOF_COLORS.find(c => c.hex === config.roofColor);
-    
-    const frameColorName = frameColorObj ? frameColorObj.name : "Не указан";
-    const roofColorName = roofColorObj ? roofColorObj.name : "Не указан";
-  
-    // Упрощенный payload
+    // Упрощенный payload для короткой ссылки
     const simplePayload = {
         id: configId,
         t: config.roofType,
@@ -369,18 +366,16 @@ export default function App() {
         const jsonString = JSON.stringify(payload);
         console.log("📝 JSON для кодирования:", jsonString);
         
-        // Упрощенное кодирование
+        // Упрощенное кодирование (Unicode safe)
         const base64 = btoa(unescape(encodeURIComponent(jsonString)));
         const urlSafeBase64 = base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   
         console.log("🔢 Base64 длина:", urlSafeBase64.length);
-        console.log("🔢 Base64 данные:", urlSafeBase64);
   
         const botUsername = 'Kovka007bot';
         const deepLink = `https://t.me/${botUsername}?start=order_${urlSafeBase64}`;
   
         console.log("🔗 Полная ссылка:", deepLink);
-        console.log("📏 Длина ссылки:", deepLink.length);
   
         // Проверяем длину ссылки
         if (deepLink.length > 2000) {
@@ -389,8 +384,8 @@ export default function App() {
             return;
         }
   
-        // Показываем ссылку пользователю для тестирования
-        alert(`Ссылка для заказа (${deepLink.length} символов):\n\n${deepLink}\n\nНажмите OK чтобы открыть Telegram`);
+        // Показываем подтверждение
+        // alert(`Переход в Telegram для оформления заказа...`);
         
         // Открываем ссылку
         window.open(deepLink, '_blank');
