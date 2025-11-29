@@ -57,3 +57,31 @@ export const MIN_LENGTH = 3;
 export const MAX_LENGTH = 12;
 export const MIN_HEIGHT = 2;
 export const MAX_HEIGHT = 4;
+
+// Telegram WebApp Types
+declare global {
+  interface Window {
+    Telegram?: {
+      WebApp: {
+        initData: string;
+        initDataUnsafe: any;
+        ready: () => void;
+        expand: () => void;
+        close: () => void;
+        sendData: (data: string) => void;
+        isExpanded: boolean;
+        viewportHeight: number;
+        viewportStableHeight: number;
+        MainButton: {
+            text: string;
+            color: string;
+            textColor: string;
+            isVisible: boolean;
+            isActive: boolean;
+            show: () => void;
+            hide: () => void;
+        };
+      }
+    }
+  }
+}
