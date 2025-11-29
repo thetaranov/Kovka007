@@ -312,41 +312,9 @@ export default function App() {
       document.body.removeChild(link);
   };
 
-  const fallbackToDeepLink = (payload: any) => {
-    try {
-        const jsonString = JSON.stringify(payload);
-        console.log("🔄 Используем Deep Link");
-        
-        // Правильное кодирование
-        const encoder = new TextEncoder();
-        const data = encoder.encode(jsonString);
-        const binaryString = Array.from(data, (byte) => String.fromCharCode(byte)).join("");
-        const base64 = btoa(binaryString);
-        
-        const urlSafeBase64 = base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  
-        console.log("Длина base64:", urlSafeBase64.length);
-        
-        // Проверяем длину
-        if (urlSafeBase64.length > 50) {
-            console.warn("⚠️ Ссылка очень длинная, могут быть проблемы с Telegram");
-        }
-  
-        const botUsername = 'Kovka007bot';
-        const deepLink = `https://t.me/${botUsername}?start=order_${urlSafeBase64}`;
-  
-        console.log("🔗 Deep Link:", deepLink);
-  
-        // Открываем в новом окне
-        window.open(deepLink, '_blank');
-        
-    } catch (error) {
-        console.error("❌ Ошибка Deep Link:", error);
-        alert("Произошла ошибка. Свяжитесь с менеджером: @thetaranov");
-    }
-  };
-
   const handleOrder = () => {
+    console.log("🔄 Начинаем процесс заказа...");
+  
     // 1. Generate ID and Prepare Data
     const configId = `CFG-${Date.now().toString(36).toUpperCase()}`;
     
@@ -356,7 +324,7 @@ export default function App() {
     const frameColorName = frameColorObj ? frameColorObj.name : "Не указан";
     const roofColorName = roofColorObj ? roofColorObj.name : "Не указан";
   
-    // Упрощенный payload для короткой ссылки
+    // Упрощенный payload
     const simplePayload = {
         id: configId,
         t: config.roofType,
@@ -364,40 +332,67 @@ export default function App() {
         l: config.length,
         h: config.height,
         s: config.roofSlope,
-        a: (config.width * config.length).toFixed(1),
-        r: config.roofMaterial,
-        p: config.pillarSize,
-        f: frameColorName.substring(0, 10), // обрезаем для краткости
-        c: roofColorName.substring(0, 10),  // обрезаем для краткости
         pr: price
     };
   
-    console.log("📦 Данные для заказа:", simplePayload);
+    console.log("📦 Упрощенные данные:", simplePayload);
   
     // 2. CHECK IF INSIDE TELEGRAM WEBAPP
     if (window.Telegram?.WebApp) {
-        console.log("📱 Обнаружен Telegram WebApp");
+        console.log("📱 Обнаружен Telegram WebApp, пытаемся отправить данные...");
         
         try {
-            // Пытаемся отправить через WebApp
             const jsonString = JSON.stringify(simplePayload);
-            console.log("📤 Отправка данных через WebApp");
+            console.log("📤 Отправка через WebApp.sendData:", jsonString);
             
             window.Telegram.WebApp.sendData(jsonString);
             console.log("✅ Данные отправлены через WebApp");
             
-            // Показываем подтверждение
-            if (window.Telegram.WebApp.showAlert) {
-                window.Telegram.WebApp.showAlert("Заказ отправлен! Менеджер свяжется с вами.");
-            }
-            
+            return; // Выходим, если отправили через WebApp
         } catch (error) {
-            console.error("❌ Ошибка WebApp:", error);
-            fallbackToDeepLink(simplePayload);
+            console.error("❌ Ошибка WebApp.sendData:", error);
         }
-    } else {
-        console.log("🌐 WebApp не обнаружен, используем Deep Link");
-        fallbackToDeepLink(simplePayload);
+    }
+  
+    // 3. Fallback: Deep Link
+    console.log("🌐 Используем Deep Link как fallback...");
+    fallbackToDeepLink(simplePayload);
+  };
+  
+  const fallbackToDeepLink = (payload: any) => {
+    try {
+        const jsonString = JSON.stringify(payload);
+        console.log("📝 JSON для кодирования:", jsonString);
+        
+        // Упрощенное кодирование
+        const base64 = btoa(unescape(encodeURIComponent(jsonString)));
+        const urlSafeBase64 = base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  
+        console.log("🔢 Base64 длина:", urlSafeBase64.length);
+        console.log("🔢 Base64 данные:", urlSafeBase64);
+  
+        const botUsername = 'Kovka007bot';
+        const deepLink = `https://t.me/${botUsername}?start=order_${urlSafeBase64}`;
+  
+        console.log("🔗 Полная ссылка:", deepLink);
+        console.log("📏 Длина ссылки:", deepLink.length);
+  
+        // Проверяем длину ссылки
+        if (deepLink.length > 2000) {
+            console.error("❌ Ссылка слишком длинная!");
+            alert("Ссылка слишком длинная. Пожалуйста, свяжитесь с менеджером напрямую: @thetaranov");
+            return;
+        }
+  
+        // Показываем ссылку пользователю для тестирования
+        alert(`Ссылка для заказа (${deepLink.length} символов):\n\n${deepLink}\n\nНажмите OK чтобы открыть Telegram`);
+        
+        // Открываем ссылку
+        window.open(deepLink, '_blank');
+        
+    } catch (error) {
+        console.error("❌ Ошибка создания Deep Link:", error);
+        alert("Ошибка создания заказа. Свяжитесь с менеджером: @thetaranov");
     }
   };
 
