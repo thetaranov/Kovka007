@@ -315,32 +315,34 @@ export default function App() {
   const fallbackToDeepLink = (payload: any) => {
     try {
         const jsonString = JSON.stringify(payload);
-        console.log("🔄 Используем Deep Link с данными:", jsonString);
+        console.log("🔄 Используем Deep Link");
         
-        // Правильное кодирование для Unicode
+        // Правильное кодирование
         const encoder = new TextEncoder();
         const data = encoder.encode(jsonString);
         const binaryString = Array.from(data, (byte) => String.fromCharCode(byte)).join("");
         const base64 = btoa(binaryString);
         
-        // Make URL safe: + -> -, / -> _, remove = padding
         const urlSafeBase64 = base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   
-        // Open Telegram Deep Link with 'order_' prefix
-        const botUsername = 'Kovka007bot'; // Убедитесь что это правильный username без @
+        console.log("Длина base64:", urlSafeBase64.length);
+        
+        // Проверяем длину
+        if (urlSafeBase64.length > 50) {
+            console.warn("⚠️ Ссылка очень длинная, могут быть проблемы с Telegram");
+        }
+  
+        const botUsername = 'Kovka007bot';
         const deepLink = `https://t.me/${botUsername}?start=order_${urlSafeBase64}`;
   
         console.log("🔗 Deep Link:", deepLink);
   
-        // Пытаемся открыть в новом окне
+        // Открываем в новом окне
         window.open(deepLink, '_blank');
         
-        // Показываем сообщение пользователю
-        alert("Заказ отправлен! Переходим в Telegram...");
-        
     } catch (error) {
-        console.error("❌ Ошибка при создании Deep Link:", error);
-        alert("Произошла ошибка при отправке заказа. Пожалуйста, свяжитесь с менеджером напрямую: @thetaranov");
+        console.error("❌ Ошибка Deep Link:", error);
+        alert("Произошла ошибка. Свяжитесь с менеджером: @thetaranov");
     }
   };
 
@@ -348,74 +350,54 @@ export default function App() {
     // 1. Generate ID and Prepare Data
     const configId = `CFG-${Date.now().toString(36).toUpperCase()}`;
     
-    // ПРАВИЛЬНОЕ получение названий цветов
     const frameColorObj = FRAME_COLORS.find(c => c.hex === config.frameColor);
     const roofColorObj = ROOF_COLORS.find(c => c.hex === config.roofColor);
     
     const frameColorName = frameColorObj ? frameColorObj.name : "Не указан";
     const roofColorName = roofColorObj ? roofColorObj.name : "Не указан";
   
-    // Compressed payload
-    const payload = {
+    // Упрощенный payload для короткой ссылки
+    const simplePayload = {
         id: configId,
         t: config.roofType,
-        dims: {
-            w: config.width,
-            l: config.length,
-            h: config.height,
-            sl: config.roofSlope
-        },
-        area: (config.width * config.length).toFixed(1),
-        mat: {
-            r: config.roofMaterial,
-            p: config.pillarSize,
-            pt: config.paintType
-        },
-        col: {
-            f: frameColorName,
-            r: roofColorName
-        },
-        opt: {
-            tr: config.hasTrusses ? 1 : 0,
-            gu: config.hasGutters ? 1 : 0,
-            sw: config.hasSideWalls ? 1 : 0,
-            fd: config.hasFoundation ? 1 : 0,
-            in: config.hasInstallation ? 1 : 0
-        },
+        w: config.width,
+        l: config.length,
+        h: config.height,
+        s: config.roofSlope,
+        a: (config.width * config.length).toFixed(1),
+        r: config.roofMaterial,
+        p: config.pillarSize,
+        f: frameColorName.substring(0, 10), // обрезаем для краткости
+        c: roofColorName.substring(0, 10),  // обрезаем для краткости
         pr: price
     };
   
-    console.log("📦 Данные для заказа:", payload);
+    console.log("📦 Данные для заказа:", simplePayload);
   
     // 2. CHECK IF INSIDE TELEGRAM WEBAPP
     if (window.Telegram?.WebApp) {
         console.log("📱 Обнаружен Telegram WebApp");
         
-        // Проверяем, доступен ли sendData
-        if (typeof window.Telegram.WebApp.sendData === 'function') {
-            try {
-                const jsonString = JSON.stringify(payload);
-                console.log("📤 Отправка данных через WebApp:", jsonString);
-                
-                window.Telegram.WebApp.sendData(jsonString);
-                console.log("✅ Данные отправлены через WebApp");
-                
-                // Показываем пользователю сообщение
-                if (window.Telegram.WebApp.showAlert) {
-                    window.Telegram.WebApp.showAlert("Заказ отправлен! Менеджер свяжется с вами в ближайшее время.");
-                }
-                
-            } catch (error) {
-                console.error("❌ Ошибка при отправке через WebApp:", error);
-                fallbackToDeepLink(payload);
+        try {
+            // Пытаемся отправить через WebApp
+            const jsonString = JSON.stringify(simplePayload);
+            console.log("📤 Отправка данных через WebApp");
+            
+            window.Telegram.WebApp.sendData(jsonString);
+            console.log("✅ Данные отправлены через WebApp");
+            
+            // Показываем подтверждение
+            if (window.Telegram.WebApp.showAlert) {
+                window.Telegram.WebApp.showAlert("Заказ отправлен! Менеджер свяжется с вами.");
             }
-        } else {
-            console.log("❌ sendData не доступен, используем fallback");
-            fallbackToDeepLink(payload);
+            
+        } catch (error) {
+            console.error("❌ Ошибка WebApp:", error);
+            fallbackToDeepLink(simplePayload);
         }
     } else {
         console.log("🌐 WebApp не обнаружен, используем Deep Link");
-        fallbackToDeepLink(payload);
+        fallbackToDeepLink(simplePayload);
     }
   };
 
@@ -461,6 +443,7 @@ export default function App() {
             target="_blank" 
             rel="noopener noreferrer"
             className="bg-slate-800 text-white font-semibold py-3 px-4 rounded-xl shadow flex items-center justify-center gap-2 active:scale-95 no-underline whitespace-nowrap"
+            title="Перейти на сайт производителя"
          >
              <Globe size={16} />
              <span className="text-sm">Сайт</span>
