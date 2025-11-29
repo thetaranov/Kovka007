@@ -343,20 +343,22 @@ export default function App() {
 
     // 2. Encode to JSON -> Base64 -> URL Safe
     const jsonString = JSON.stringify(payload);
-    // Standard btoa encoding
-    const base64 = btoa(jsonString);
+    
+    // Fix for Unicode strings (Cyrillic names in frameColorName/roofColorName)
+    // btoa fails on Unicode, so we must encodeURIComponent first, then unescape to get Latin1 chars
+    const binaryString = unescape(encodeURIComponent(jsonString));
+    const base64 = btoa(binaryString);
+    
     // Make URL safe: + -> -, / -> _, remove = padding
     const urlSafeBase64 = base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
-    // 3. Open Telegram Deep Link
-    // Note: Telegram 'start' parameter has a length limit (often 64 chars, but can be more depending on client). 
-    // If the payload is too long, the link might open the bot without the parameter.
-    // Ideally, a backend database should store the config and pass only the ID.
-    window.open(`https://t.me/Kovka007bot?start=${urlSafeBase64}`, '_blank');
+    // 3. Open Telegram Deep Link with 'order_' prefix
+    const botUsername = 'Kovka007bot';
+    window.open(`https://t.me/${botUsername}?start=order_${urlSafeBase64}`, '_blank');
   };
 
   return (
-    <div className="flex flex-col lg:flex-row h-screen w-screen overflow-hidden bg-slate-100 font-sans">
+    <div className="flex flex-col lg:flex-row h-[100dvh] w-screen overflow-hidden bg-slate-100 font-sans">
       
       <div className="lg:hidden absolute top-0 left-0 right-0 z-50 p-4 pointer-events-none">
         <div className="flex justify-between items-center pointer-events-auto">
@@ -371,7 +373,7 @@ export default function App() {
         </div>
       </div>
 
-      <div className="relative w-full h-[50vh] lg:h-full lg:flex-grow order-1 transition-all duration-300">
+      <div className="relative w-full h-[50dvh] lg:h-full lg:flex-grow transition-all duration-300">
          <Scene config={config} />
          
          {/* Floating Area Display - High Z-Index */}
@@ -384,10 +386,10 @@ export default function App() {
       </div>
 
       {/* Mobile-only Action Buttons (under scene) */}
-      <div className="lg:hidden flex gap-2 p-4 bg-slate-100 border-t border-slate-200 overflow-x-auto relative z-20">
+      <div className="lg:hidden grid grid-cols-2 gap-3 p-4 bg-slate-100 border-t border-slate-200 relative z-30 flex-shrink-0">
          <button 
             onClick={handleDownloadReport}
-            className="flex-1 bg-white text-slate-700 font-semibold py-3 px-4 rounded-xl shadow border border-slate-200 flex items-center justify-center gap-2 active:scale-95 whitespace-nowrap"
+            className="bg-white text-slate-700 font-semibold py-3 px-4 rounded-xl shadow border border-slate-200 flex items-center justify-center gap-2 active:scale-95 whitespace-nowrap"
          >
              <FileText size={16} className="text-green-600" />
              <span className="text-sm">Скачать смету</span>
@@ -396,7 +398,7 @@ export default function App() {
             href="https://kovka007.ru/" 
             target="_blank" 
             rel="noopener noreferrer"
-            className="flex-1 bg-slate-800 text-white font-semibold py-3 px-4 rounded-xl shadow flex items-center justify-center gap-2 active:scale-95 no-underline whitespace-nowrap"
+            className="bg-slate-800 text-white font-semibold py-3 px-4 rounded-xl shadow flex items-center justify-center gap-2 active:scale-95 no-underline whitespace-nowrap"
          >
              <Globe size={16} />
              <span className="text-sm">Сайт</span>
@@ -406,12 +408,12 @@ export default function App() {
       <div className={`
         fixed inset-0 z-40 lg:static lg:z-auto
         transform transition-transform duration-500 cubic-bezier(0.32, 0.72, 0, 1)
-        ${isMobileMenuOpen ? 'translate-y-0' : 'translate-y-[100%] lg:translate-y-0'}
-        lg:w-[450px] lg:min-w-[400px] flex-shrink-0 order-2 h-full
+        ${isMobileMenuOpen ? 'translate-y-0 pointer-events-auto' : 'translate-y-[100%] lg:translate-y-0 pointer-events-none lg:pointer-events-auto'}
+        lg:w-[450px] lg:min-w-[400px] flex-shrink-0 h-full
         shadow-2xl lg:shadow-none flex flex-col bg-white
       `}>
         <div className="lg:hidden absolute top-4 right-4 z-50">
-           <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 bg-slate-100 rounded-full">
+           <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 bg-slate-100 rounded-full pointer-events-auto">
               <X size={24} className="text-slate-600"/>
            </button>
         </div>
@@ -450,11 +452,6 @@ export default function App() {
          </a>
       </div>
 
-      {/* 
-        Note: The order functionality currently redirects to Telegram immediately. 
-        Uncomment the line below and update handleOrder to use state if you prefer the internal modal.
-      */}
-      {/* <OrderModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} price={price} configSummary="..." /> */}
     </div>
   );
 }
