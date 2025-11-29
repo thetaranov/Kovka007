@@ -43,6 +43,15 @@ export default function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [price, setPrice] = useState(0);
 
+  // Initialize Telegram WebApp
+  useEffect(() => {
+    if (window.Telegram?.WebApp) {
+      window.Telegram.WebApp.ready();
+      // Optional: Expand to full height if needed
+      window.Telegram.WebApp.expand();
+    }
+  }, []);
+
   const handleConfigChange = (newConfig: CarportConfig) => {
     // Check if dimensions triggered a recommended pillar size update
     if (
@@ -309,9 +318,7 @@ export default function App() {
     const frameColorName = FRAME_COLORS.find(c => c.hex === config.frameColor)?.name || config.frameColor;
     const roofColorName = ROOF_COLORS.find(c => c.hex === config.roofColor)?.name || config.roofColor;
 
-    // Compressed payload to fit in URL
-    // Keys are shortened to reduce length: 
-    // id, t(type), w, l, h, s(slope), m(materials), c(colors), o(options), p(price)
+    // Compressed payload
     const payload = {
         id: configId,
         t: config.roofType,
@@ -341,20 +348,27 @@ export default function App() {
         pr: price
     };
 
-    // 2. Encode to JSON -> Base64 -> URL Safe
-    const jsonString = JSON.stringify(payload);
-    
-    // Fix for Unicode strings (Cyrillic names in frameColorName/roofColorName)
-    // btoa fails on Unicode, so we must encodeURIComponent first, then unescape to get Latin1 chars
-    const binaryString = unescape(encodeURIComponent(jsonString));
-    const base64 = btoa(binaryString);
-    
-    // Make URL safe: + -> -, / -> _, remove = padding
-    const urlSafeBase64 = base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    // 2. CHECK IF INSIDE TELEGRAM WEBAPP
+    if (window.Telegram?.WebApp?.initData) {
+        // We are in Telegram Mini App
+        const jsonString = JSON.stringify(payload);
+        window.Telegram.WebApp.sendData(jsonString);
+        // Optional: close webapp after sending
+        // window.Telegram.WebApp.close(); 
+    } else {
+        // 3. FALLBACK: Browser / Deep Link
+        const jsonString = JSON.stringify(payload);
+        // Fix for Unicode strings (Cyrillic names in frameColorName/roofColorName)
+        const binaryString = unescape(encodeURIComponent(jsonString));
+        const base64 = btoa(binaryString);
+        
+        // Make URL safe: + -> -, / -> _, remove = padding
+        const urlSafeBase64 = base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
-    // 3. Open Telegram Deep Link with 'order_' prefix
-    const botUsername = 'Kovka007bot';
-    window.open(`https://t.me/${botUsername}?start=order_${urlSafeBase64}`, '_blank');
+        // Open Telegram Deep Link with 'order_' prefix
+        const botUsername = 'Kovka007bot';
+        window.open(`https://t.me/${botUsername}?start=order_${urlSafeBase64}`, '_blank');
+    }
   };
 
   return (
