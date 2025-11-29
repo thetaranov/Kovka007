@@ -304,60 +304,55 @@ export default function App() {
   };
 
   const handleOrder = () => {
-     const typeMap = {
-         [RoofType.SingleSlope]: 'Односкатный (Параллельный)',
-         [RoofType.Triangular]: 'Односкатный (Треугольный)',
-         [RoofType.Gable]: 'Двускатный',
-         [RoofType.Arched]: 'Арочный',
-         [RoofType.SemiArched]: 'Полуарочный',
-     };
-     
-     const matMap = {
-         [RoofMaterial.Polycarbonate]: 'Сотовый поликарбонат',
-         [RoofMaterial.MetalTile]: 'Металлочерепица',
-         [RoofMaterial.Decking]: 'Профнастил',
-     };
+    // 1. Generate ID and Prepare Data
+    const configId = `CFG-${Date.now().toString(36).toUpperCase()}`;
+    const frameColorName = FRAME_COLORS.find(c => c.hex === config.frameColor)?.name || config.frameColor;
+    const roofColorName = ROOF_COLORS.find(c => c.hex === config.roofColor)?.name || config.roofColor;
 
-     const paintMap = {
-         [PaintType.None]: 'Грунт-эмаль',
-         [PaintType.Ral]: 'Эмаль RAL',
-         [PaintType.Polymer]: 'Полимерно-порошковая',
-     };
+    // Compressed payload to fit in URL
+    // Keys are shortened to reduce length: 
+    // id, t(type), w, l, h, s(slope), m(materials), c(colors), o(options), p(price)
+    const payload = {
+        id: configId,
+        t: config.roofType,
+        dims: {
+            w: config.width,
+            l: config.length,
+            h: config.height,
+            sl: config.roofSlope
+        },
+        area: (config.width * config.length).toFixed(1),
+        mat: {
+            r: config.roofMaterial,
+            p: config.pillarSize,
+            pt: config.paintType
+        },
+        col: {
+            f: frameColorName,
+            r: roofColorName
+        },
+        opt: {
+            tr: config.hasTrusses ? 1 : 0,
+            gu: config.hasGutters ? 1 : 0,
+            sw: config.hasSideWalls ? 1 : 0,
+            fd: config.hasFoundation ? 1 : 0,
+            in: config.hasInstallation ? 1 : 0
+        },
+        pr: price
+    };
 
-     const frameColorName = FRAME_COLORS.find(c => c.hex === config.frameColor)?.name || config.frameColor;
-     const roofColorName = ROOF_COLORS.find(c => c.hex === config.roofColor)?.name || config.roofColor;
+    // 2. Encode to JSON -> Base64 -> URL Safe
+    const jsonString = JSON.stringify(payload);
+    // Standard btoa encoding
+    const base64 = btoa(jsonString);
+    // Make URL safe: + -> -, / -> _, remove = padding
+    const urlSafeBase64 = base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
-     const message = `Здравствуйте, хочу заказать навес!
-     
-Параметры заказа:
-🏗 Тип: ${typeMap[config.roofType]}
-📏 Размеры: ${config.width}x${config.length} м
-⬆️ Высота: ${config.height} м
-📐 Уклон/Подъем: ${config.roofType !== RoofType.Arched ? config.roofSlope + '°' : '-'}
-
-Материалы:
-🧱 Столбы: ${config.pillarSize}
-🏠 Кровля: ${matMap[config.roofMaterial]}
-🎨 Покраска: ${paintMap[config.paintType]}
-🖌 Цвет каркаса: ${frameColorName}
-🖌 Цвет кровли: ${roofColorName}
-
-Опции:
-${config.hasTrusses ? '✅ Усиленные фермы' : '❌ Без усиленных ферм'}
-${config.hasGutters ? '✅ Водостоки' : '❌ Без водостоков'}
-${config.hasSideWalls ? '✅ Боковая зашивка' : '❌ Без боковой зашивки'}
-${config.hasFoundation ? '✅ Бетонный фундамент' : '❌ Без фундамента'}
-${config.hasInstallation ? '✅ С монтажом' : '❌ Без монтажа'}
-
-💰 Ориентировочная стоимость: ${price.toLocaleString()} ₽`;
-
-    navigator.clipboard.writeText(message).then(() => {
-        alert('Заказ скопирован! Открываю Telegram бота...');
-        // Link to the bot. Using t.me is generally more reliable for cross-device support.
-        window.location.href = `https://t.me/Kovka007bot`;
-    }).catch(() => {
-        window.location.href = `https://t.me/Kovka007bot`;
-    });
+    // 3. Open Telegram Deep Link
+    // Note: Telegram 'start' parameter has a length limit (often 64 chars, but can be more depending on client). 
+    // If the payload is too long, the link might open the bot without the parameter.
+    // Ideally, a backend database should store the config and pass only the ID.
+    window.open(`https://t.me/Kovka007bot?start=${urlSafeBase64}`, '_blank');
   };
 
   return (
@@ -389,7 +384,7 @@ ${config.hasInstallation ? '✅ С монтажом' : '❌ Без монтаж�
       </div>
 
       {/* Mobile-only Action Buttons (under scene) */}
-      <div className="lg:hidden flex gap-2 p-4 bg-slate-100 border-t border-slate-200 overflow-x-auto">
+      <div className="lg:hidden flex gap-2 p-4 bg-slate-100 border-t border-slate-200 overflow-x-auto relative z-20">
          <button 
             onClick={handleDownloadReport}
             className="flex-1 bg-white text-slate-700 font-semibold py-3 px-4 rounded-xl shadow border border-slate-200 flex items-center justify-center gap-2 active:scale-95 whitespace-nowrap"
