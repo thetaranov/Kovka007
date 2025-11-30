@@ -12,6 +12,7 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
   return (
     <div 
       className="w-full h-full bg-slate-200 relative shadow-inner overflow-hidden"
+      // 1. Запрещаем действия браузера на контейнере
       style={{ touchAction: 'none' }}
     >
       {/* Static CSS Watermark Background - Darker Kovka007 */}
@@ -24,7 +25,14 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
         }}
       />
 
-      <Canvas shadows camera={{ position: [8, 6, 10], fov: 40 }} className="z-10 relative">
+      <Canvas 
+        shadows 
+        camera={{ position: [8, 6, 10], fov: 40 }} 
+        className="z-10 relative"
+        // 2. ВАЖНО: Запрещаем действия браузера на самом Canvas. 
+        // Это заставит телефон передавать свайпы в OrbitControls, а не скроллить страницу.
+        style={{ touchAction: 'none', width: '100%', height: '100%' }}
+      >
         <Suspense fallback={null}>
           <Environment preset="city" />
           
@@ -50,6 +58,9 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
             minDistance={5}
             maxDistance={30}
             target={[0, config.height/2, 0]}
+            // Опционально: можно отключить смещение (панорамирование) двумя пальцами, 
+            // чтобы модель не "улетала" с экрана, оставив только вращение и зум.
+            enablePan={false} 
           />
         </Suspense>
       </Canvas>
