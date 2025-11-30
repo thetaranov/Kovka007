@@ -1,3 +1,4 @@
+
 export interface ColorOption {
   name: string;
   hex: string;
@@ -65,6 +66,8 @@ declare global {
       WebApp: {
         initData: string;
         initDataUnsafe: any;
+        version: string;
+        isVersionAtLeast: (version: string) => boolean;
         ready: () => void;
         expand: () => void;
         close: () => void;
@@ -72,6 +75,9 @@ declare global {
         isExpanded: boolean;
         viewportHeight: number;
         viewportStableHeight: number;
+        isVerticalSwipesEnabled?: boolean;
+        disableVerticalSwipes?: () => void;
+        enableVerticalSwipes?: () => void;
         MainButton: {
             text: string;
             color: string;

@@ -208,17 +208,14 @@ const SemiArchedTruss: React.FC<{ width: number; angle: number; color: string }>
 };
 
 const ArchedTruss: React.FC<{ width: number; color: string; overhang?: number }> = ({ width, color, overhang = 0 }) => {
-  // Use 'width' (pillar span) for the basic geometry definition to ensure it matches the pillars
   const rise = width * SPECS.trussHeightArch;
   const t = SPECS.trussThickness;
   const trussDepth = 0.35; 
   
-  // Calculate Radius and Center for the pillar-to-pillar span
   const R_top = (Math.pow(width/2, 2) + Math.pow(rise, 2)) / (2 * rise);
   const Cy = rise - R_top; 
   const R_bot = R_top - trussDepth; 
   
-  // Calculate angles for the FULL width including overhang
   const totalW = width + 2 * overhang;
   const halfAngle = Math.asin((totalW/2) / R_top);
   
@@ -238,13 +235,8 @@ const ArchedTruss: React.FC<{ width: number; color: string; overhang?: number }>
 
   return (
     <group>
-      {/* Top Chord */}
       {topPoints.map((p, i) => { if (i === 0) return null; return <BoxBeam key={`top-${i}`} start={topPoints[i-1]} end={p} thickness={t} color={color} />; })}
-      
-      {/* Bottom Chord */}
       {botPoints.map((p, i) => { if (i === 0) return null; return <BoxBeam key={`bot-${i}`} start={botPoints[i-1]} end={p} thickness={t} color={color} />; })}
-      
-      {/* Webbing */}
       {topPoints.map((pTop, i) => {
          if (i >= segments) return null;
          const pBot = botPoints[i];
@@ -256,8 +248,6 @@ const ArchedTruss: React.FC<{ width: number; color: string; overhang?: number }>
             </React.Fragment>
          );
       })}
-      
-      {/* End Caps - Vertical struts at the tips */}
       <BoxBeam start={topPoints[segments]} end={botPoints[segments]} thickness={t*0.6} color={color} />
       <BoxBeam start={topPoints[0]} end={botPoints[0]} thickness={t*0.6} color={color} />
     </group>
@@ -293,7 +283,6 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config }) => {
     let sa_R = 0, sa_Cy = 0, sa_Cx = 0;
     if (roofType === RoofType.SemiArched) {
         const rise = asymmetricRise;
-        // Radius of Bottom Chord
         sa_R = (Math.pow(width, 2) + Math.pow(rise, 2)) / (2 * rise);
         sa_Cx = width / 2;
         sa_Cy = rise - sa_R;
@@ -302,15 +291,7 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config }) => {
     let arch_R = 0, arch_Cy = 0;
     if (roofType === RoofType.Arched) {
         const rise = width * SPECS.trussHeightArch;
-        // Radius of Bottom Chord
         const R_top = (Math.pow(width/2, 2) + Math.pow(rise, 2)) / (2 * rise);
-        // Assuming Arch truss has constant depth 0.35, and top chord rises to 'rise'.
-        // R_bot is approx R_top - 0.35.
-        // Or simplified: We calculated Arch Truss R_bot based on Top R. 
-        // In ArchedTruss function: R_top = ..., R_bot = R_top - 0.35.
-        // Cy = rise - R_top.
-        // Equation for Top Chord: y = Cy + sqrt(R_top^2 - x^2).
-        // Equation for Bottom Chord: y = Cy + sqrt(R_bot^2 - x^2).
         const R_top_calc = R_top;
         arch_R = R_top_calc - 0.35;
         arch_Cy = rise - R_top_calc;
@@ -326,17 +307,11 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config }) => {
             const ratio = xOffset / width;
             hAtX = height + ratio * asymmetricRise;
         } else if (roofType === RoofType.SemiArched) {
-            // Circle eq: (x - Cx)^2 + (y - Cy)^2 = R^2 => y = Cy + sqrt(R^2 - (x-Cx)^2)
             const term = sa_R * sa_R - (x - sa_Cx) * (x - sa_Cx);
             if (term > 0) {
-                // y_local is relative to the start point of the curve.
-                // The truss Bottom Chord connects (0,0) to (w, rise) in local coords.
-                // Our equation yields y relative to Cy.
-                // We need to add 'height'.
                 hAtX = height + (sa_Cy + Math.sqrt(term));
             }
         } else if (roofType === RoofType.Arched) {
-            // Circle eq centered at x=0.
             const term = arch_R * arch_R - x * x;
             if (term > 0) {
                 hAtX = height + (arch_Cy + Math.sqrt(term));
@@ -383,8 +358,7 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config }) => {
        const rad = (roofSlope * Math.PI) / 180;
        const rise = (width / 2) * Math.tan(rad);
        const slopeLen = (width/2 + overhang) / Math.cos(rad);
-
-       // Fix for roof skin height to sit exactly on purlins
+       
        const purlinH = 0.04;
        const trussHalf = SPECS.trussThickness / 2;
        const skinHalf = 0.005; 
@@ -396,14 +370,21 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config }) => {
        
        return (
          <group position={[0, baseY + rise, 0]}>
-           <mesh position={[-width/4 - overhang/2, localY, 0]} rotation={[0, 0, rad]} castShadow receiveShadow>
-              <boxGeometry args={[slopeLen, 0.01, totalL]} />
-              <meshStandardMaterial color={roofColor} transparent={isTrans} opacity={opacity} metalness={metalness} roughness={roughness} side={THREE.DoubleSide} />
-           </mesh>
-           <mesh position={[width/4 + overhang/2, localY, 0]} rotation={[0, 0, -rad]} castShadow receiveShadow>
-              <boxGeometry args={[slopeLen, 0.01, totalL]} />
-              <meshStandardMaterial color={roofColor} transparent={isTrans} opacity={opacity} metalness={metalness} roughness={roughness} side={THREE.DoubleSide} />
-           </mesh>
+           {/* Left Slope */}
+           <group position={[-width/4 - overhang/2, localY, 0]} rotation={[0, 0, rad]}>
+                <mesh castShadow receiveShadow>
+                    <boxGeometry args={[slopeLen, 0.01, totalL]} />
+                    <meshStandardMaterial color={roofColor} transparent={isTrans} opacity={opacity} metalness={metalness} roughness={roughness} side={THREE.DoubleSide} />
+                </mesh>
+           </group>
+
+           {/* Right Slope */}
+           <group position={[width/4 + overhang/2, localY, 0]} rotation={[0, 0, -rad]}>
+                <mesh castShadow receiveShadow>
+                    <boxGeometry args={[slopeLen, 0.01, totalL]} />
+                    <meshStandardMaterial color={roofColor} transparent={isTrans} opacity={opacity} metalness={metalness} roughness={roughness} side={THREE.DoubleSide} />
+                </mesh>
+           </group>
          </group>
        );
     } else if (roofType === RoofType.SingleSlope || roofType === RoofType.Triangular) {
@@ -411,11 +392,10 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config }) => {
         const rise = width * Math.tan(rad);
         const slopeLen = (width + overhang * 2) / Math.cos(rad);
         
-        // Calculate vertical offset from the truss top chord center line
-        const purlinH = 0.04; // Purlin depth
-        const trussHalf = SPECS.trussThickness / 2; // 0.02
+        const purlinH = 0.04; 
+        const trussHalf = SPECS.trussThickness / 2; 
         const skinHalf = 0.005; 
-        const perpOffset = trussHalf + purlinH + skinHalf; // ~0.065
+        const perpOffset = trussHalf + purlinH + skinHalf;
         const vertOffset = perpOffset / Math.cos(rad);
         
         const trussBaseY = roofType === RoofType.SingleSlope ? 0.35 : 0;
@@ -424,10 +404,12 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config }) => {
 
         return (
           <group position={[0, baseY, 0]}>
-             <mesh position={[0, totalY, 0]} rotation={[0, 0, rad]} castShadow receiveShadow>
-                 <boxGeometry args={[slopeLen, 0.01, totalL]} />
-                 <meshStandardMaterial color={roofColor} transparent={isTrans} opacity={opacity} metalness={metalness} roughness={roughness} side={THREE.DoubleSide} />
-             </mesh>
+             <group position={[0, totalY, 0]} rotation={[0, 0, rad]}>
+                <mesh castShadow receiveShadow>
+                    <boxGeometry args={[slopeLen, 0.01, totalL]} />
+                    <meshStandardMaterial color={roofColor} transparent={isTrans} opacity={opacity} metalness={metalness} roughness={roughness} side={THREE.DoubleSide} />
+                </mesh>
+             </group>
           </group>
         );
     } else if (roofType === RoofType.SemiArched) {
@@ -438,7 +420,6 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config }) => {
         const Cx = width / 2;
         const Cy = rise - R_bot;
         
-        // Calculation to place skin on top of purlins
         const purlinH = 0.04;
         const trussHalf = SPECS.trussThickness / 2;
         const skinHalf = 0.005;
@@ -449,9 +430,10 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config }) => {
         const anglePerMeter = 1 / R_skin;
         const tLeft = startTheta + overhang * anglePerMeter;
         const tRight = endTheta - overhang * anglePerMeter;
+        
+        // Render Strips
         const segments = 24;
         const strips = [];
-
         for (let i=0; i<segments; i++) {
            const t1 = tLeft - (tLeft - tRight) * (i / segments);
            const t2 = tLeft - (tLeft - tRight) * ((i+1) / segments);
@@ -472,19 +454,23 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config }) => {
                />
            );
         }
-        return <group position={[0, baseY, 0]}>{strips.map((s, i) => <mesh key={i} castShadow receiveShadow><primitive object={s.type === BoxBeam ? new THREE.Object3D() : new THREE.Object3D()} /></mesh>)}{strips}</group>;
+
+        return <group position={[0, baseY, 0]}>
+            {strips.map((s, i) => <mesh key={i} castShadow receiveShadow><primitive object={s.type === BoxBeam ? new THREE.Object3D() : new THREE.Object3D()} /></mesh>)}{strips}
+        </group>;
     } else {
+        // Arched
         const rise = width * SPECS.trussHeightArch;
         const radius = (Math.pow(width/2, 2) + Math.pow(rise, 2)) / (2 * rise);
         const centerY = -(radius - rise);
         
-        // Calculation to place skin on top of purlins
         const purlinH = 0.04;
         const trussHalf = SPECS.trussThickness / 2;
         const skinHalf = 0.005;
         const skinRadius = radius + trussHalf + purlinH + skinHalf;
         
         const totalAngle = 2 * Math.asin((totalW/2) / skinRadius);
+
         return (
            <group position={[0, baseY, 0]}>
               <mesh position={[0, centerY, 0]} rotation={[-Math.PI/2, 0, 0]} castShadow receiveShadow>

@@ -10,7 +10,10 @@ interface SceneProps {
 
 export const Scene: React.FC<SceneProps> = ({ config }) => {
   return (
-    <div className="w-full h-full bg-slate-200 relative shadow-inner overflow-hidden">
+    <div 
+      className="w-full h-full bg-slate-200 relative shadow-inner overflow-hidden"
+      style={{ touchAction: 'none' }}
+    >
       {/* Static CSS Watermark Background - Darker Kovka007 */}
       <div 
         className="absolute inset-0 pointer-events-none z-0 opacity-[0.10]"
