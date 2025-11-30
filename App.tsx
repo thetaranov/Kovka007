@@ -316,40 +316,110 @@ export default function App() {
   };
 
   const handleOrder = () => {
+    // 1. Generate ID and Prepare Data
     const configId = `CFG-${Date.now().toString(36).toUpperCase()}`;
     
-    // Формируем данные заказа
-    const orderData = {
-      id: configId,
-      t: config.roofType,
-      w: config.width,
-      l: config.length,
-      h: config.height,
-      s: config.roofSlope,
-      pr: price,
-      ts: Date.now()
+    const frameColorObj = FRAME_COLORS.find(c => c.hex === config.frameColor);
+    const roofColorObj = ROOF_COLORS.find(c => c.hex === config.roofColor);
+    
+    const frameColorName = frameColorObj ? frameColorObj.name : "Не указан";
+    const roofColorName = roofColorObj ? roofColorObj.name : "Не указан";
+
+    // Compressed payload
+    const payload = {
+        id: configId,
+        t: config.roofType,
+        dims: {
+            w: config.width,
+            l: config.length,
+            h: config.height,
+            sl: config.roofSlope
+        },
+        area: (config.width * config.length).toFixed(1),
+        mat: {
+            r: config.roofMaterial,
+            p: config.pillarSize,
+            pt: config.paintType
+        },
+        col: {
+            f: frameColorName,
+            r: roofColorName
+        },
+        opt: {
+            tr: config.hasTrusses ? 1 : 0,
+            gu: config.hasGutters ? 1 : 0,
+            sw: config.hasSideWalls ? 1 : 0,
+            fd: config.hasFoundation ? 1 : 0,
+            in: config.hasInstallation ? 1 : 0
+        },
+        pr: price
     };
-  
-    const orderText = JSON.stringify(orderData, null, 2); // Красивое форматирование
-  
-    // Копируем в буфер обмена
-    navigator.clipboard.writeText(orderText).then(() => {
-      alert(`✅ Данные заказа скопированы!\n\nТеперь перейдите в бота @Kovka007bot и вставьте эти данные в чат.\n\nID заказа: ${configId}`);
-      
-      // Открываем бота
-      window.open('https://t.me/Kovka007bot', '_blank');
-    }).catch(() => {
-      // Fallback для старых браузеров
-      const textArea = document.createElement('textarea');
-      textArea.value = orderText;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-      
-      alert(`✅ Данные заказа скопированы!\n\nТеперь перейдите в бота @Kovka007bot и вставьте эти данные в чат.\n\nID заказа: ${configId}`);
-      window.open('https://t.me/Kovka007bot', '_blank');
-    });
+
+    console.log("📦 Данные для заказа:", payload);
+
+    // 2. CHECK IF INSIDE TELEGRAM WEBAPP
+    if (window.Telegram?.WebApp) {
+        console.log("📱 Обнаружен Telegram WebApp");
+        
+        // Проверяем, доступен ли sendData
+        if (typeof window.Telegram.WebApp.sendData === 'function') {
+            try {
+                const jsonString = JSON.stringify(payload);
+                console.log("📤 Отправка данных через WebApp:", jsonString);
+                
+                window.Telegram.WebApp.sendData(jsonString);
+                console.log("✅ Данные отправлены через WebApp");
+                
+                // Показываем пользователю сообщение
+                if (window.Telegram.WebApp.showAlert) {
+                    window.Telegram.WebApp.showAlert("Заказ отправлен! Менеджер свяжется с вами в ближайшее время.");
+                }
+                
+            } catch (error) {
+                console.error("❌ Ошибка при отправке через WebApp:", error);
+                fallbackToDeepLink(payload);
+            }
+        } else {
+            console.log("❌ sendData не доступен, используем fallback");
+            fallbackToDeepLink(payload);
+        }
+    } else {
+        console.log("🌐 WebApp не обнаружен, используем Deep Link");
+        fallbackToDeepLink(payload);
+    }
+  };
+
+  // Добавьте эту функцию для fallback
+  const fallbackToDeepLink = (payload: any) => {
+    try {
+        const jsonString = JSON.stringify(payload);
+        console.log("🔄 Используем Deep Link с данными:", jsonString);
+        
+        // Правильное кодирование для Unicode
+        const encoder = new TextEncoder();
+        const data = encoder.encode(jsonString);
+        const binaryString = Array.from(data, (byte) => String.fromCharCode(byte)).join("");
+        const base64 = btoa(binaryString);
+        
+        // Make URL safe: + -> -, / -> _, remove = padding
+        const urlSafeBase64 = base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+        // Open Telegram Deep Link with 'order_' prefix
+        const botUsername = 'Kovka007bot';
+        const deepLink = `https://t.me/${botUsername}?start=order_${urlSafeBase64}`;
+
+        console.log("🔗 Deep Link:", deepLink);
+
+        // Пытаемся открыть в новом окне
+        window.open(deepLink, '_blank');
+        
+        // Показываем сообщение пользователю
+        alert("Заказ отправлен! Переходим в Telegram...");
+        
+    } catch (error) {
+        console.error("❌ Ошибка при создании Deep Link:", error);
+        alert("Произошла ошибка при отправке заказа. Пожалуйста, свяжитесь с менеджером напрямую: @thetaranov");
+    }
   };
 
   return (
