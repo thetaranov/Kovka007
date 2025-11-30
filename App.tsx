@@ -316,73 +316,40 @@ export default function App() {
   };
 
   const handleOrder = () => {
-    console.log("🔄 Начинаем процесс заказа...");
-  
-    // 1. Generate ID and Prepare Data
     const configId = `CFG-${Date.now().toString(36).toUpperCase()}`;
     
-    // Упрощенный payload для короткой ссылки
-    const simplePayload = {
-        id: configId,
-        t: config.roofType,
-        w: config.width,
-        l: config.length,
-        h: config.height,
-        s: config.roofSlope,
-        pr: price
+    // Формируем данные заказа
+    const orderData = {
+      id: configId,
+      t: config.roofType,
+      w: config.width,
+      l: config.length,
+      h: config.height,
+      s: config.roofSlope,
+      pr: price,
+      ts: Date.now()
     };
   
-    console.log("📦 Упрощенные данные:", simplePayload);
+    const orderText = JSON.stringify(orderData, null, 2); // Красивое форматирование
   
-    // 2. CHECK IF INSIDE TELEGRAM WEBAPP
-    if (window.Telegram?.WebApp) {
-        console.log("📱 Обнаружен Telegram WebApp, пытаемся отправить данные...");
-        
-        try {
-            const jsonString = JSON.stringify(simplePayload);
-            console.log("📤 Отправка через WebApp.sendData:", jsonString);
-            
-            window.Telegram.WebApp.sendData(jsonString);
-            console.log("✅ Данные отправлены через WebApp");
-            
-            // Закрываем WebApp после успешной отправки
-            setTimeout(() => {
-                window.Telegram.WebApp.close();
-            }, 2000);
-
-            return; // Выходим, если отправили через WebApp
-        } catch (error) {
-            console.error("❌ Ошибка WebApp.sendData:", error);
-        }
-    }
-  
-    // 3. Fallback: Deep Link
-    console.log("🌐 Используем Deep Link как fallback...");
-    fallbackToDeepLink(simplePayload);
-  };
-  
-  const fallbackToDeepLink = (payload: any) => {
-    try {
-        const jsonString = JSON.stringify(payload);
-        console.log("📝 JSON для кодирования:", jsonString);
-        
-        // Самый простой способ кодирования
-        const base64 = btoa(jsonString);
-        const urlSafeBase64 = base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  
-        const botUsername = 'Kovka007bot';
-        const deepLink = `https://t.me/${botUsername}?start=order_${urlSafeBase64}`;
-  
-        console.log("🔗 Открываем ссылку в Telegram...");
-        
-        // Пробуем оба способа открытия ссылки
-        window.open(deepLink, '_blank');
-        
-    } catch (error) {
-        console.error("❌ Ошибка создания Deep Link:", error);
-        // Если все fails, просто открываем бота
-        window.open('https://t.me/Kovka007bot', '_blank');
-    }
+    // Копируем в буфер обмена
+    navigator.clipboard.writeText(orderText).then(() => {
+      alert(`✅ Данные заказа скопированы!\n\nТеперь перейдите в бота @Kovka007bot и вставьте эти данные в чат.\n\nID заказа: ${configId}`);
+      
+      // Открываем бота
+      window.open('https://t.me/Kovka007bot', '_blank');
+    }).catch(() => {
+      // Fallback для старых браузеров
+      const textArea = document.createElement('textarea');
+      textArea.value = orderText;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      
+      alert(`✅ Данные заказа скопированы!\n\nТеперь перейдите в бота @Kovka007bot и вставьте эти данные в чат.\n\nID заказа: ${configId}`);
+      window.open('https://t.me/Kovka007bot', '_blank');
+    });
   };
 
   return (
