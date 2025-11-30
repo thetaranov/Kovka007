@@ -35,15 +35,11 @@ export default function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [price, setPrice] = useState(0);
 
-  // --- Инициализация Telegram WebApp ---
   useEffect(() => {
     if (window.Telegram?.WebApp) {
       window.Telegram.WebApp.ready();
       try {
         window.Telegram.WebApp.expand();
-        if (window.Telegram.WebApp.isVerticalSwipesEnabled) {
-          // window.Telegram.WebApp.disableVerticalSwipes(); 
-        }
       } catch (e) {
         console.warn("WebApp expand failed", e);
       }
@@ -62,15 +58,11 @@ export default function App() {
     setConfig(newConfig);
   };
 
-  // --- Расчет стоимости ---
   useEffect(() => {
     let total = 0;
     const floorArea = config.width * config.length; 
-    
-    // 1. Каркас
     let baseRate = PRICING.baseStructure.priceLarge;
     const { smallArea, largeArea, priceSmall, priceLarge } = PRICING.baseStructure;
-
     if (floorArea <= smallArea) {
         baseRate = priceSmall;
     } else if (floorArea < largeArea) {
@@ -78,40 +70,30 @@ export default function App() {
         baseRate = priceSmall - t * (priceSmall - priceLarge);
     }
     total += floorArea * baseRate * PRICING.roofTypeMultiplier[config.roofType];
-
-    // 2. Столбы
+    
     const maxSpan = 6.0;
     const numCols = Math.ceil(config.width / maxSpan) + 1;
     const numRows = Math.ceil(config.length / SPECS.postSpacing) + 1;
     const pillarCount = numCols * numRows;
     total += pillarCount * config.height * PRICING.pillarMultiplier[config.pillarSize];
 
-    // 3. Материал кровли
     let roofAreaMultiplier = 1.0;
     if (config.roofType === RoofType.Gable) roofAreaMultiplier = 1.25;
     if (config.roofType === RoofType.Arched) roofAreaMultiplier = 1.35;
     if (config.roofType === RoofType.SemiArched) roofAreaMultiplier = 1.45;
     if (config.roofType === RoofType.SingleSlope || config.roofType === RoofType.Triangular) roofAreaMultiplier = 1.1;
-    
     const roofArea = floorArea * roofAreaMultiplier;
     total += roofArea * PRICING.roofMaterialPricePerSqm[config.roofMaterial];
-
-    // 4. Покраска и допы
     total += floorArea * PRICING.paintMultiplier[config.paintType];
+    
     if (config.hasTrusses) total += floorArea * PRICING.extras.trusses; 
     if (config.hasGutters) total += config.length * 2 * PRICING.extras.gutters;
     if (config.hasSideWalls) {
         const wallArea = (config.length * config.height) + (config.width * config.height * 0.5);
         total += wallArea * PRICING.extras.sideWalls;
     }
-    if (config.hasFoundation) {
-        total += floorArea * PRICING.extras.foundation;
-    }
-
-    // 5. Монтаж
-    if (config.hasInstallation) {
-      total = total * (1 + PRICING.extras.installation); 
-    }
+    if (config.hasFoundation) total += floorArea * PRICING.extras.foundation;
+    if (config.hasInstallation) total = total * (1 + PRICING.extras.installation); 
 
     setPrice(Math.round(total / 100) * 100); 
   }, [config]);
@@ -119,7 +101,6 @@ export default function App() {
   const oldPrice = Math.round(price * 1.2);
   const savings = oldPrice - price;
 
-  // --- CSV (BOM) ---
   const calculateBOM = useCallback(() => {
     const maxSpan = 6.0;
     const numCols = Math.ceil(config.width / maxSpan) + 1;
@@ -132,13 +113,10 @@ export default function App() {
       alert("Функция скачивания сметы работает.");
   };
 
-  // --- ГЛАВНАЯ ФУНКЦИЯ ЗАКАЗА (ПОЛНАЯ ИНФОРМАЦИЯ) ---
   const handleOrder = () => {
-    // 1. Поиск красивых названий цветов из constants.tsx
     const frameColorObj = FRAME_COLORS.find(c => c.hex === config.frameColor);
     const roofColorObj = ROOF_COLORS.find(c => c.hex === config.roofColor);
 
-    // 2. Расчет площадей для отчета
     const areaFloor = (config.width * config.length).toFixed(2);
     
     let roofAreaMultiplier = 1.0;
@@ -149,25 +127,33 @@ export default function App() {
     
     const areaRoof = (config.width * config.length * roofAreaMultiplier).toFixed(2);
 
-    // 3. Формируем ПОЛНЫЙ JSON
+    // Расчет высоты в коньке (Total Height)
+    let peakHeight = config.height;
+    if (config.roofType === RoofType.Gable) {
+        peakHeight += (config.width / 2) * Math.tan(config.roofSlope * Math.PI / 180);
+    } else if (config.roofType === RoofType.SingleSlope || config.roofType === RoofType.Triangular) {
+        peakHeight += config.width * Math.tan(config.roofSlope * Math.PI / 180);
+    } else if (config.roofType === RoofType.Arched) {
+        peakHeight += config.width * SPECS.trussHeightArch;
+    } else if (config.roofType === RoofType.SemiArched) {
+        peakHeight += (config.width * Math.tan(config.roofSlope * Math.PI / 180)) * 0.7; // Approx
+    }
+
     const payload = {
         id: `CFG-${Date.now().toString(36).toUpperCase().slice(-5)}`,
-        // Геометрия
         type: config.roofType,
         width: config.width,
         length: config.length,
         height: config.height,
+        height_peak: parseFloat(peakHeight.toFixed(2)), // Новое поле
         slope: config.roofSlope,
         pillar: config.pillarSize,
-        // Площади
         area_floor: areaFloor,
         area_roof: areaRoof,
-        // Материалы и Цвета
         material: config.roofMaterial,
         paint: config.paintType,
-        color_frame: frameColorObj ? frameColorObj.name : config.frameColor, // Передаем название, а не HEX
-        color_roof: roofColorObj ? roofColorObj.name : config.roofColor,     // Передаем название, а не HEX
-        // Опции
+        color_frame: frameColorObj ? frameColorObj.name : config.frameColor,
+        color_roof: roofColorObj ? roofColorObj.name : config.roofColor,
         opts: {
             trusses: config.hasTrusses,
             gutters: config.hasGutters,
@@ -183,30 +169,19 @@ export default function App() {
     if (window.Telegram?.WebApp) {
         try {
             window.Telegram.WebApp.sendData(dataToSend);
-            
-            // Если версия поддерживает алерты (6.2+)
-            if (window.Telegram.WebApp.version && parseFloat(window.Telegram.WebApp.version) >= 6.2) {
-                 if (window.Telegram.WebApp.showAlert) {
-                     window.Telegram.WebApp.showAlert("Заказ сформирован! Переходим в чат...");
-                 }
-            }
-            
             setTimeout(() => {
                 window.Telegram.WebApp.close();
-            }, 1000); 
-            
+            }, 500); 
         } catch (error) {
             alert("Ошибка отправки: " + error);
         }
     } else {
-        alert("⚠️ Вы не в Telegram!\n\nJSON:\n" + JSON.stringify(payload, null, 2));
+        alert("⚠️ Вы не в Telegram!\n\n" + JSON.stringify(payload, null, 2));
     }
   };
 
   return (
     <div className="flex flex-col lg:flex-row h-[100dvh] w-screen overflow-hidden bg-slate-100 font-sans">
-      
-      {/* Мобильная шапка */}
       <div className="lg:hidden absolute top-0 left-0 right-0 z-50 p-4 pointer-events-none">
         <div className="flex justify-between items-center pointer-events-auto">
           <div /> 
@@ -219,10 +194,8 @@ export default function App() {
         </div>
       </div>
 
-      {/* 3D Сцена */}
       <div className="relative w-full flex-grow min-h-0 lg:h-full transition-all duration-300">
          <Scene config={config} />
-         
          <div className="absolute bottom-6 left-0 right-0 flex justify-center pointer-events-none z-30">
             <div className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-xl shadow-lg border border-slate-200 text-slate-700 flex flex-col items-center">
                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Площадь</span>
@@ -231,7 +204,6 @@ export default function App() {
          </div>
       </div>
 
-      {/* Мобильная панель */}
       <div className="lg:hidden flex flex-col z-30 flex-shrink-0 bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
          <div className="grid grid-cols-2 gap-3 p-4 border-b border-slate-100">
              <button onClick={handleDownloadReport} className="bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl border border-slate-200 flex items-center justify-center gap-2 active:scale-95 whitespace-nowrap">
@@ -264,7 +236,6 @@ export default function App() {
          </div>
       </div>
 
-      {/* Панель управления (Десктоп) */}
       <div className={`fixed inset-0 z-40 lg:static lg:z-auto transform transition-transform duration-500 cubic-bezier(0.32, 0.72, 0, 1) ${isMobileMenuOpen ? 'translate-y-0 pointer-events-auto' : 'translate-y-[100%] lg:translate-y-0 pointer-events-none lg:pointer-events-auto'} lg:w-[450px] lg:min-w-[400px] flex-shrink-0 h-full shadow-2xl lg:shadow-none flex flex-col bg-white`}>
         <div className="lg:hidden absolute top-4 right-4 z-50">
            <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 bg-slate-100 rounded-full pointer-events-auto">
