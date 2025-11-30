@@ -312,6 +312,7 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
             </div>
         </div>
         <button
+          type="button"
           onClick={onOrder}
           className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
         >
