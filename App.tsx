@@ -127,7 +127,6 @@ export default function App() {
     
     const areaRoof = (config.width * config.length * roofAreaMultiplier).toFixed(2);
 
-    // Расчет высоты в коньке (Total Height)
     let peakHeight = config.height;
     if (config.roofType === RoofType.Gable) {
         peakHeight += (config.width / 2) * Math.tan(config.roofSlope * Math.PI / 180);
@@ -136,7 +135,7 @@ export default function App() {
     } else if (config.roofType === RoofType.Arched) {
         peakHeight += config.width * SPECS.trussHeightArch;
     } else if (config.roofType === RoofType.SemiArched) {
-        peakHeight += (config.width * Math.tan(config.roofSlope * Math.PI / 180)) * 0.7; // Approx
+        peakHeight += (config.width * Math.tan(config.roofSlope * Math.PI / 180)) * 0.7; 
     }
 
     const payload = {
@@ -145,7 +144,7 @@ export default function App() {
         width: config.width,
         length: config.length,
         height: config.height,
-        height_peak: parseFloat(peakHeight.toFixed(2)), // Новое поле
+        height_peak: parseFloat(peakHeight.toFixed(2)),
         slope: config.roofSlope,
         pillar: config.pillarSize,
         area_floor: areaFloor,
@@ -166,29 +165,41 @@ export default function App() {
   
     const dataToSend = JSON.stringify(payload);
 
-    if (window.Telegram?.WebApp) {
+    // --- ЛОГИКА ДЛЯ ДЕСКТОПА И МОБИЛЬНОГО ---
+    // Проверяем, доступны ли нативные методы Телеграм
+    if (window.Telegram?.WebApp?.initData) {
         try {
             window.Telegram.WebApp.sendData(dataToSend);
             setTimeout(() => {
                 window.Telegram.WebApp.close();
             }, 500); 
         } catch (error) {
-            alert("Ошибка отправки: " + error);
+            console.error(error);
+            // Если не вышло отправить, переходим к fallback
+            fallbackCopy(dataToSend);
         }
     } else {
-        alert("⚠️ Вы не в Telegram!\n\n" + JSON.stringify(payload, null, 2));
+        // Если открыто в обычном браузере
+        fallbackCopy(dataToSend);
     }
   };
+
+  const fallbackCopy = (text: string) => {
+      navigator.clipboard.writeText(text).then(() => {
+          alert("📋 Данные заказа скопированы!\n\n1. Перейдите в бот @Kovka007bot\n2. Вставьте текст и отправьте.");
+          // Пытаемся открыть телеграм
+          window.open('https://t.me/Kovka007bot', '_blank');
+      }).catch(() => {
+          alert("⚠️ Не удалось скопировать данные. Пожалуйста, откройте сайт через Telegram.");
+      });
+  }
 
   return (
     <div className="flex flex-col lg:flex-row h-[100dvh] w-screen overflow-hidden bg-slate-100 font-sans">
       <div className="lg:hidden absolute top-0 left-0 right-0 z-50 p-4 pointer-events-none">
         <div className="flex justify-between items-center pointer-events-auto">
           <div /> 
-          <button 
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="bg-white p-2.5 rounded-xl shadow-md border border-slate-100 text-slate-700 active:scale-95 transition-transform"
-          >
+          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="bg-white p-2.5 rounded-xl shadow-md border border-slate-100 text-slate-700 active:scale-95 transition-transform">
              {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
