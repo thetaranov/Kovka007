@@ -113,24 +113,136 @@ export default function App() {
     setPrice(Math.round(total / 100) * 100); 
   }, [config]);
 
-  // --- CSV (BOM) ---
+  // --- Логика формирования сметы (BOM) ---
   const calculateBOM = useCallback(() => {
+    const { width, length, height, roofType, roofSlope, pillarSize } = config;
+
+    // 1. Столбы
     const maxSpan = 6.0;
-    const numCols = Math.ceil(config.width / maxSpan) + 1;
-    const numRows = Math.ceil(config.length / SPECS.postSpacing) + 1;
+    const numCols = Math.ceil(width / maxSpan) + 1;
+    const numRows = Math.ceil(length / SPECS.postSpacing) + 1;
     const pillarCount = numCols * numRows;
-    return { pillarCount }; // Упрощено для краткости, полная логика в вашем оригинале
+    
+    // 2. Балки (Mauerlat/Beams) - идут вдоль длины по каждому ряду столбов
+    const beamLength = length;
+    const beamCount = numCols;
+    const totalBeamLength = beamCount * beamLength;
+
+    // 3. Фермы
+    const trussCount = Math.ceil(length / 1.5) + 1;
+    let approxSteelPerTruss = 0;
+    
+    // Приблизительный расчет длины трубы на одну ферму
+    if (roofType === RoofType.Gable) {
+        const rad = (roofSlope * Math.PI) / 180;
+        const slopeLen = (width / 2) / Math.cos(rad);
+        approxSteelPerTruss = width + (slopeLen * 2) + (width * 0.8); // Нижний пояс + верхний пояс + раскосы
+    } else if (roofType === RoofType.Arched) {
+        const arcLen = width * 1.2; // Примерно
+        approxSteelPerTruss = (arcLen * 2) + (width * 1.0); // 2 дуги + раскосы
+    } else {
+        approxSteelPerTruss = width * 2.5; // Усредненно для других типов
+    }
+
+    // 4. Обрешетка (Purlins)
+    // Шаг 0.6м, покрытие ширины + свесы
+    const overhang = 0.4;
+    const totalRoofWidth = width + overhang * 2;
+    const purlinCount = Math.ceil(totalRoofWidth / 0.6) + 1;
+    const purlinLength = length + overhang * 2;
+    const totalPurlinLength = purlinCount * purlinLength;
+
+    // 5. Площадь кровли (для поликарбоната/черепицы)
+    let roofAreaMultiplier = 1.0;
+    if (roofType === RoofType.Gable) roofAreaMultiplier = 1.25;
+    else if (roofType === RoofType.Arched) roofAreaMultiplier = 1.25;
+    else if (roofType === RoofType.SemiArched) roofAreaMultiplier = 1.35;
+    else roofAreaMultiplier = 1.1;
+
+    const roofArea = (width * length * roofAreaMultiplier).toFixed(2);
+
+    return {
+        pillarCount,
+        pillarTotalHeight: pillarCount * height,
+        beamCount,
+        totalBeamLength,
+        trussCount,
+        totalTrussSteel: trussCount * approxSteelPerTruss,
+        purlinCount,
+        totalPurlinLength,
+        roofArea
+    };
   }, [config]);
 
   const handleDownloadReport = () => {
-      alert("Функция скачивания сметы работает (код сокращен для краткости)");
+      const bom = calculateBOM();
+      const date = new Date().toLocaleDateString('ru-RU');
+      
+      const pillarProfile = config.pillarSize === PillarSize.Size60 ? '60x60x3' : config.pillarSize === PillarSize.Size80 ? '80x80x3' : '100x100x4';
+      const beamProfile = config.pillarSize === PillarSize.Size100 ? '100x100x4' : '80x80x3'; // Балки обычно чуть меньше или такие же
+      
+      // Расчет геометрии для шапки
+      let roofInfo = '';
+      if (config.roofType === RoofType.Arched || config.roofType === RoofType.SemiArched) {
+          roofInfo = `Хорда (ширина): ${config.width}м`;
+      } else {
+          roofInfo = `Ширина: ${config.width}м, Длина ската: ~${(config.width * 1.1 / (config.roofType === RoofType.Gable ? 2 : 1)).toFixed(2)}м`;
+      }
+
+      // Расчет высоты в коньке
+      let peakHeight = config.height;
+      if (config.roofType === RoofType.Gable) {
+          peakHeight += (config.width / 2) * Math.tan(config.roofSlope * Math.PI / 180);
+      } else if (config.roofType === RoofType.Arched) {
+          peakHeight += config.width * SPECS.trussHeightArch;
+      }
+
+      const rows = [
+          ['Смета на материалы для навеса', date],
+          ['Тип', config.roofType],
+          ['Размеры (по столбам)', `${config.width}x${config.length}м, Высота проезда: ${config.height}м`],
+          ['Габариты кровли', `~${(config.width + 0.8).toFixed(1)}x${(config.length + 0.8).toFixed(1)}м (с учетом свесов)`],
+          ['Высота в пике (примерно)', `~${peakHeight.toFixed(2)}м`],
+          ['Опции', [
+              config.hasTrusses ? 'Усиленные фермы' : '', 
+              config.hasGutters ? 'Водостоки' : '',
+              config.hasSideWalls ? 'Зашивка' : '',
+              config.hasFoundation ? 'Фундамент' : '',
+              config.hasInstallation ? 'Монтаж' : ''
+          ].filter(Boolean).join(', ')],
+          ['ИТОГОВАЯ СТОИМОСТЬ', `${price.toLocaleString()} RUB`],
+          [],
+          ['Наименование', 'Профиль/Материал', 'Кол-во (шт)', 'Длина 1 шт (м)', 'Всего (м/м2)', 'Примечание'],
+          
+          ['ФУНДАМЕНТ', '', '', '', '', ''],
+          ['Бетонирование столбов', 'Бетон М300 + Арматура', bom.pillarCount, '-', '-', config.hasFoundation ? 'Включено в смету' : 'Не включено'],
+          
+          ['МЕТАЛЛОКАРКАС', '', '', '', '', ''],
+          ['Столбы опорные', `Труба ${pillarProfile}`, bom.pillarCount, config.height, bom.pillarTotalHeight.toFixed(1), 'Опоры'],
+          ['Балки несущие (мауэрлат)', `Труба ${beamProfile}`, bom.beamCount, bom.totalBeamLength / bom.beamCount, bom.totalBeamLength.toFixed(1), 'Продольные балки'],
+          ['Фермы (пояса + раскосы)', 'Труба 40x40x2 / 40x20x2', bom.trussCount, '~' + (bom.totalTrussSteel / bom.trussCount).toFixed(1), bom.totalTrussSteel.toFixed(1), `Шаг ~1.5м`],
+          ['Обрешетка (прогоны)', 'Труба 40x20x2', bom.purlinCount, (bom.totalPurlinLength / bom.purlinCount).toFixed(2), bom.totalPurlinLength.toFixed(1), 'Шаг ~0.6м'],
+          
+          ['КРОВЛЯ', '', '', '', '', ''],
+          ['Покрытие', config.roofMaterial, '-', '-', bom.roofArea, 'Площадь с учетом запаса']
+      ];
+
+      const csvContent = "\uFEFF" + rows.map(e => e.join(";")).join("\n");
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `smete_kovka007_${date}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
   };
 
-  // --- ГЛАВНАЯ ФУНКЦИЯ ЗАКАЗА (ИСПРАВЛЕНА) ---
+  // --- ГЛАВНАЯ ФУНКЦИЯ ЗАКАЗА ---
   const handleOrder = () => {
-    // 1. Формируем JSON
+    // 1. Формируем компактный JSON для бота
     const payload = {
-        id: `CFG-${Date.now().toString(36).toUpperCase().slice(-5)}`,
+        id: `CFG-${Date.now().toString(36).toUpperCase().slice(-5)}`, // Короткий уникальный ID
         t: config.roofType,
         w: config.width,
         l: config.length,
@@ -138,22 +250,31 @@ export default function App() {
         s: config.roofSlope,
         pr: price
     };
-  
+    
     const dataToSend = JSON.stringify(payload);
 
-    // 2. Проверка объекта Telegram
-    // ВАЖНО: Мы убрали проверку .initData, проверяем только сам объект WebApp
-    if (window.Telegram && window.Telegram.WebApp) {
+    // 2. Проверка WebApp
+    if (window.Telegram?.WebApp) {
         try {
-            // Отправляем данные
             window.Telegram.WebApp.sendData(dataToSend);
+            
+            // Если версия поддерживает алерты (6.2+)
+            if (window.Telegram.WebApp.version && parseFloat(window.Telegram.WebApp.version) >= 6.2) {
+                 if (window.Telegram.WebApp.showAlert) {
+                     window.Telegram.WebApp.showAlert("Заказ отправлен! Менеджер свяжется с вами.");
+                 }
+            }
+            
+            // Закрываем приложение
+            setTimeout(() => {
+                window.Telegram.WebApp.close();
+            }, 1000);
+            
         } catch (error) {
-            // Если произошла ошибка JS, показываем её на экране
-            alert("Ошибка sendData: " + error);
+            alert("Ошибка отправки заказа: " + error);
         }
     } else {
-        // Если открыто в браузере
-        alert("⚠️ Вы не в Telegram!\n\nДанные:\n" + dataToSend);
+        alert("⚠️ Вы не в Telegram!\n\nЭто демо-режим. В реальном боте этот заказ был бы отправлен.\n\nJSON:\n" + dataToSend);
     }
   };
 
@@ -224,7 +345,7 @@ export default function App() {
           config={config} 
           onChange={handleConfigChange} 
           price={price} 
-          onOrder={handleOrder} // <-- Функция передается корректно
+          onOrder={handleOrder} 
         />
       </div>
       
