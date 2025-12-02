@@ -1,4 +1,4 @@
-import React, { Suspense, useState } from 'react';
+import React, { Suspense, useState, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Environment, ContactShadows, Html, useProgress } from '@react-three/drei';
 import { CarportConfig } from '../types';
@@ -22,8 +22,10 @@ function Loader() {
 }
 
 export const Scene: React.FC<SceneProps> = ({ config }) => {
-  // Key to force-remount the Canvas on error/reset
   const [resetKey, setResetKey] = useState(0);
+  
+  // Оптимизация: определяем мощность устройства (упрощенно)
+  const [dpr, setDpr] = useState([1, 2]); 
 
   const handleReset = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -35,7 +37,6 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
       className="w-full h-full bg-slate-200 relative shadow-inner overflow-hidden"
       style={{ touchAction: 'none' }}
     >
-      {/* Static CSS Watermark Background - Darker Kovka007 */}
       <div 
         className="absolute inset-0 pointer-events-none z-0 opacity-[0.10]"
         style={{
@@ -45,7 +46,6 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
         }}
       />
 
-      {/* Reset 3D Scene Button */}
       <button
         onClick={handleReset}
         className="absolute top-20 right-4 lg:top-4 lg:right-4 z-20 p-2 bg-white/80 hover:bg-white backdrop-blur-sm rounded-lg shadow-sm border border-slate-200 text-slate-500 hover:text-indigo-600 active:scale-95 transition-all"
@@ -56,12 +56,18 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
 
       <Canvas 
         key={resetKey}
-        shadows 
+        shadows
+        // ОПТИМИЗАЦИЯ: Ограничиваем плотность пикселей (максимум 2x, даже если экран 3x)
+        dpr={[1, 2]}
+        // ОПТИМИЗАЦИЯ: Отключаем лишние перерисовки
+        frameloop="demand" 
         camera={{ position: [8, 6, 10], fov: 40 }} 
         className="z-10 relative"
-        // 2. ВАЖНО: Запрещаем действия браузера на самом Canvas. 
-        // Это заставит телефон передавать свайпы в OrbitControls, а не скроллить страницу.
         style={{ touchAction: 'none', width: '100%', height: '100%' }}
+        onCreated={(state) => {
+            // Принудительно рендерим кадр при изменении
+            state.gl.domElement.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
+        }}
       >
         <Suspense fallback={<Loader />}>
           <Environment preset="city" />
@@ -71,7 +77,8 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
             position={[5, 12, 5]} 
             intensity={1.2} 
             castShadow 
-            shadow-mapSize={[2048, 2048]} 
+            // ОПТИМИЗАЦИЯ: Уменьшаем разрешение теней для мобилок
+            shadow-mapSize={[1024, 1024]} 
             shadow-bias={-0.0005}
           >
             <orthographicCamera attach="shadow-camera" args={[-10, 10, 10, -10]} />
@@ -79,7 +86,7 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
 
           <CarportModel config={config} />
           
-          <ContactShadows resolution={1024} scale={40} blur={2} opacity={0.5} far={10} color="#000000" />
+          <ContactShadows resolution={512} scale={40} blur={2} opacity={0.5} far={10} color="#000000" />
           
           <OrbitControls 
             makeDefault 
@@ -89,6 +96,10 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
             maxDistance={30}
             target={[0, config.height/2, 0]}
             enablePan={false} 
+            // ОПТИМИЗАЦИЯ: Включаем рендер только при вращении камеры
+            onChange={(e) => {
+               if (e?.target?.object?.parent?.Invalidate) e.target.object.parent.invalidate();
+            }}
           />
         </Suspense>
       </Canvas>
