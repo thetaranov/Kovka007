@@ -10,6 +10,7 @@ body {
   padding: 0;
 }
 
+/* Кастомный скроллбар */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
 }
@@ -27,6 +28,7 @@ body {
   background-color: #94a3b8;
 }
 
+/* Анимации */
 @keyframes fade-in-up {
   from {
     opacity: 0;
