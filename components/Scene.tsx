@@ -6,7 +6,8 @@ import {
   ContactShadows,
   Html,
   useProgress,
-  Grid, // <--- ИМПОРТИРУЕМ GRID
+  Grid,
+  Text, // <--- Для цифр
 } from "@react-three/drei";
 import { CarportConfig } from "../types";
 import { CarportModel } from "./CarportModel";
@@ -30,6 +31,48 @@ function Loader() {
   );
 }
 
+// --- Компонент Линейки (Цифры на полу) ---
+const Ruler = () => {
+  const range = 12; // От -12 до +12
+  const ticks = [];
+
+  for (let i = -range; i <= range; i += 1) {
+    if (i === 0) continue; // Пропускаем ноль в центре
+
+    // Ось X (Ширина)
+    ticks.push(
+      <Text
+        key={`x-${i}`}
+        position={[i, 0.02, -0.3]} // Чуть смещаем цифры, чтобы не на линии
+        rotation={[-Math.PI / 2, 0, 0]} // Лежат на полу
+        fontSize={0.4}
+        color="#94a3b8" // slate-400
+        anchorX="center"
+        anchorY="middle"
+      >
+        {i}
+      </Text>,
+    );
+
+    // Ось Z (Длина)
+    ticks.push(
+      <Text
+        key={`z-${i}`}
+        position={[-0.3, 0.02, i]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        fontSize={0.4}
+        color="#94a3b8"
+        anchorX="center"
+        anchorY="middle"
+      >
+        {i}
+      </Text>,
+    );
+  }
+
+  return <group>{ticks}</group>;
+};
+
 export const Scene: React.FC<SceneProps> = ({ config }) => {
   const [resetKey, setResetKey] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -39,15 +82,13 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
     setResetKey((prev) => prev + 1);
   };
 
-  // --- ВАЖНО: Блокировка скролла при касании 3D-сцены ---
+  // --- Блокировка скролла ---
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
     const preventTouch = (e: TouchEvent) => {
-      if (e.cancelable) {
-        e.preventDefault();
-      }
+      if (e.cancelable) e.preventDefault();
     };
 
     container.addEventListener("touchmove", preventTouch, { passive: false });
@@ -63,7 +104,7 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
     <div
       ref={containerRef}
       className="w-full h-full bg-slate-200 relative shadow-inner overflow-hidden"
-      style={{ touchAction: "none" }} 
+      style={{ touchAction: "none" }}
     >
       {/* Background Pattern */}
       <div
@@ -87,7 +128,8 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
         shadows
         dpr={[1, 1.5]}
         gl={{ powerPreference: "high-performance", antialias: false }}
-        camera={{ position: [8, 6, 10], fov: 40 }}
+        // Увеличили FOV до 50 и отодвинули камеру (было [8, 6, 10])
+        camera={{ position: [12, 10, 15], fov: 50 }}
         className="z-10 relative"
         style={{
           touchAction: "none",
@@ -109,31 +151,33 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
           >
             <orthographicCamera
               attach="shadow-camera"
-              args={[-10, 10, 10, -10]}
+              args={[-15, 15, 15, -15]} // Расширили область теней
             />
           </directionalLight>
 
-          {/* --- СЕТКА НА ПОЛУ --- */}
-          <Grid 
-            position={[0, 0.01, 0]} // Чуть приподнимаем, чтобы не мерцала с полом
-            args={[20, 20]} // Размер сетки 20x20 метров
-            cellSize={1} // Основная ячейка 1 метр
-            cellThickness={0.6} // Толщина линий ячейки
-            cellColor="#64748b" // Цвет основных линий (slate-500)
-            sectionSize={5} // Секции по 5 метров (жирные линии)
-            sectionThickness={1.2} // Толщина секций
-            sectionColor="#475569" // Цвет секций (slate-600)
-            fadeDistance={20} // Сетка исчезает вдали
-            fadeStrength={1}
-            followCamera={false} 
-            infiniteGrid={true} // Бесконечная сетка
+          {/* --- Сетка --- */}
+          <Grid
+            position={[0, 0.01, 0]}
+            args={[30, 30]} // Увеличили размер сетки (30х30м)
+            cellSize={1}
+            cellThickness={0.6}
+            cellColor="#94a3b8"
+            sectionSize={5} // Каждые 5 метров жирная линия
+            sectionThickness={1.2}
+            sectionColor="#64748b"
+            fadeDistance={40} // Сетка видна дальше
+            fadeStrength={1.5}
+            infiniteGrid={true}
           />
+
+          {/* --- Линейка с цифрами --- */}
+          <Ruler />
 
           <CarportModel config={config} />
 
           <ContactShadows
             resolution={512}
-            scale={40}
+            scale={50} // Увеличили область теней под навесом
             blur={2}
             opacity={0.5}
             far={10}
@@ -145,7 +189,7 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
             minPolarAngle={0}
             maxPolarAngle={Math.PI / 2 - 0.05}
             minDistance={5}
-            maxDistance={30}
+            maxDistance={50} // Позволяем отлетать дальше
             target={[0, config.height / 2, 0]}
             enablePan={false}
             enableZoom={true}
