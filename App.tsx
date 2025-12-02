@@ -243,72 +243,53 @@ export default function App() {
       <div className="relative w-full flex-grow min-h-0 lg:h-full transition-all duration-300">
          <Scene config={config} />
 
-         <div className="absolute bottom-6 left-0 right-0 flex justify-center pointer-events-none z-30">
-            <div className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-xl shadow-lg border border-slate-200 text-slate-800 flex items-center gap-3 text-xs sm:text-sm font-medium whitespace-nowrap">
-               <span className="font-mono text-slate-600">
-                   {config.length}×{config.width}×{config.height}м
-                   <span className="hidden sm:inline text-[10px] ml-1 text-slate-400">(Д×Ш×В)</span>
-               </span>
-               <span className="w-[1px] h-4 bg-slate-300"></span>
-               <span className="font-bold">{(config.width * config.length).toFixed(1)} м²</span>
-               <span className="w-[1px] h-4 bg-slate-300"></span>
+         {/* ИНФО-ПЛАШКА */}
+         <div className="absolute bottom-6 left-0 right-0 flex justify-center pointer-events-none z-30 px-4">
+            <div className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-xl shadow-lg border border-slate-200 text-slate-800 flex items-center gap-3 text-xs sm:text-sm font-medium whitespace-nowrap overflow-x-auto hide-scrollbar max-w-full">
+               <div className="flex items-baseline gap-1">
+                   <span className="font-bold text-slate-700">{config.length}×{config.width}×{config.height}м</span>
+                   <span className="text-[10px] text-slate-400 font-normal">(Д×Ш×В)</span>
+               </div>
+               <span className="w-px h-3 bg-slate-300 flex-shrink-0"></span>
+               <span className="font-bold text-slate-700">{(config.width * config.length).toFixed(1)} м²</span>
+               <span className="w-px h-3 bg-slate-300 flex-shrink-0"></span>
                <span className="text-slate-500">~{Math.round(price / (config.width * config.length)).toLocaleString()} ₽/м²</span>
             </div>
          </div>
       </div>
 
-      {/* MOBILE PANEL - ИСПРАВЛЕННАЯ ЦЕНА */}
+      {/* MOBILE PANEL */}
       <div className="lg:hidden flex flex-col z-30 flex-shrink-0 bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.05)] pb-safe">
          <div className="grid grid-cols-2 gap-3 p-3 border-b border-slate-100">
              <button onClick={handleDownloadReport} className="bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl border flex justify-center items-center gap-2 active:scale-95"><FileText size={16} className="text-green-600"/><span className="text-xs">Смета</span></button>
-             <a href="https://kovka007.ru/" target="_blank" className="bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl border flex justify-center items-center gap-2 active:scale-95"><Globe size={16} className="text-indigo-600"/><span className="text-xs">Сайт</span></a>
+             <a href="https://kovka007.ru/" target="_blank" rel="noopener noreferrer" className="bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl border flex justify-center items-center gap-2 active:scale-95"><Globe size={16} className="text-indigo-600"/><span className="text-xs">Сайт</span></a>
          </div>
 
          <div className="px-4 pt-3">
-            <button 
-                onClick={() => setIsMobileMenuOpen(true)}
-                className="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors active:scale-95"
-            >
+            <button onClick={() => setIsMobileMenuOpen(true)} className="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors active:scale-95">
                 <Settings2 size={18} />
                 <span>Настроить параметры</span>
             </button>
          </div>
 
          <div className="p-4">
-            {/* БЛОК ЦЕНЫ КАК В МЕНЮ */}
             <div className="mb-4">
                 <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
-                        <span className="text-lg font-medium text-slate-400 line-through decoration-slate-400/50">
-                            {oldPrice.toLocaleString()} ₽
-                        </span>
-                        <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
-                            -20%
-                        </span>
+                        <span className="text-lg font-medium text-slate-400 line-through decoration-slate-400/50">{oldPrice.toLocaleString()} ₽</span>
+                        <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">-20%</span>
                     </div>
-                    {config.hasInstallation && (
-                        <div className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">
-                            с монтажом
-                        </div>
-                    )}
+                    {config.hasInstallation && (<div className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">с монтажом</div>)}
                 </div>
                 <div className="flex items-end justify-between">
-                    <p className="text-3xl font-black text-slate-900 leading-none tracking-tight">
-                        {price.toLocaleString()} ₽
-                    </p>
-                    <div className="flex items-center gap-1 text-green-600 text-xs font-bold bg-green-50 px-2 py-1 rounded">
-                        <TrendingDown size={14} />
-                        <span>Выгода {savings.toLocaleString()} ₽</span>
-                    </div>
+                    <p className="text-3xl font-black text-slate-900 leading-none tracking-tight">{price.toLocaleString()} ₽</p>
+                    <div className="flex items-center gap-1 text-green-600 text-xs font-bold bg-green-50 px-2 py-1 rounded"><TrendingDown size={14}/><span>Выгода {savings.toLocaleString()} ₽</span></div>
                 </div>
             </div>
-
             <button onClick={handleOrder} className="w-full bg-slate-900 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg flex justify-center gap-3 active:scale-[0.98]">
               <span>Оформить заявку</span>
               <div className="opacity-80 ml-2">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M21.9287 2.52309C22.2575 2.15556 21.9904 1.58309 21.5173 1.76459L2.09459 9.30809C1.72484 9.45034 1.72259 9.97734 2.09109 10.1236L6.59109 11.9026C6.88359 12.0181 7.21584 11.9446 7.43934 11.7143L17.7983 1.05609C17.9251 0.925587 18.0661 1.09434 17.9543 1.23534L8.71059 12.9098C8.52684 13.1416 8.52834 13.4678 8.71359 13.6981L14.7353 21.1688C15.0346 21.5398 15.6368 21.4111 15.7681 20.9491L21.9287 2.52309Z" fill="currentColor"/>
-                  </svg>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21.9287 2.52309C22.2575 2.15556 21.9904 1.58309 21.5173 1.76459L2.09459 9.30809C1.72484 9.45034 1.72259 9.97734 2.09109 10.1236L6.59109 11.9026C6.88359 12.0181 7.21584 11.9446 7.43934 11.7143L17.7983 1.05609C17.9251 0.925587 18.0661 1.09434 17.9543 1.23534L8.71059 12.9098C8.52684 13.1416 8.52834 13.4678 8.71359 13.6981L14.7353 21.1688C15.0346 21.5398 15.6368 21.4111 15.7681 20.9491L21.9287 2.52309Z" fill="currentColor"/></svg>
               </div>
             </button>
          </div>
@@ -320,11 +301,16 @@ export default function App() {
         <Controls config={config} onChange={handleConfigChange} price={price} onOrder={handleOrder} />
       </div>
 
+      {/* DESKTOP BUTTONS */}
       <div className="hidden lg:flex fixed bottom-6 left-6 z-50 gap-4 items-center">
          <button onClick={handleDownloadReport} className="bg-white hover:bg-slate-50 text-slate-700 font-semibold py-3 px-5 rounded-xl shadow-lg border border-slate-200 flex items-center gap-3 transition-all active:scale-95">
             <div className="p-1.5 bg-green-100 rounded text-green-700"><FileText size={18} /></div>
             <span className="text-sm">Скачать смету</span>
          </button>
+         <a href="https://kovka007.ru/" target="_blank" rel="noopener noreferrer" className="bg-white hover:bg-slate-50 text-slate-700 font-semibold py-3 px-5 rounded-xl shadow-lg border border-slate-200 flex items-center gap-3 transition-all active:scale-95 no-underline">
+             <div className="p-1.5 bg-indigo-100 rounded text-indigo-700"><Globe size={18} /></div>
+             <span className="text-sm">Сайт</span>
+         </a>
       </div>
 
       <BrowserOrderModal 
