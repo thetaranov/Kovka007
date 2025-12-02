@@ -23,7 +23,6 @@ const INITIAL_CONFIG: CarportConfig = {
   hasInstallation: true,
 };
 
-// Модальное окно для браузера
 const BrowserOrderModal = ({ isOpen, onClose, onCopy }: any) => {
     if (!isOpen) return null;
     return (
@@ -59,7 +58,6 @@ export default function App() {
       window.Telegram.WebApp.ready();
       try { 
           window.Telegram.WebApp.expand(); 
-          // Расширяем на всю высоту
           document.body.style.height = window.Telegram.WebApp.viewportHeight + 'px';
       } catch (e) { console.warn(e); }
     }
@@ -83,27 +81,32 @@ export default function App() {
   useEffect(() => {
     let materialCost = 0;
     const floorArea = config.width * config.length; 
-    
+
     const baseRate = PRICING.baseTrussStructure.base;
     const widthPenalty = Math.max(0, config.width - 4.5) * PRICING.baseTrussStructure.widthFactor;
-    const trussCostPerSqm = baseRate + widthPenalty;
-    
+
+    let volumeDiscount = 1.0;
+    if (floorArea > 50) volumeDiscount = 0.95;
+    if (floorArea > 100) volumeDiscount = 0.90;
+
+    const trussCostPerSqm = (baseRate + widthPenalty) * volumeDiscount;
+
     materialCost += floorArea * trussCostPerSqm * PRICING.roofTypeMultiplier[config.roofType];
 
     const maxSpan = 6.0;
     const numCols = Math.ceil(config.width / maxSpan) + 1;
-    const postSpacing = 3.0; 
+    const postSpacing = 3.5; 
     const numRows = Math.ceil(config.length / postSpacing) + 1;
     const pillarCount = numCols * numRows;
     const totalPillarHeight = pillarCount * config.height;
-    
+
     materialCost += totalPillarHeight * PRICING.pillarMultiplier[config.pillarSize];
 
     let roofAreaMultiplier = 1.1; 
     if (config.roofType === RoofType.Gable) roofAreaMultiplier = 1.25;
     if (config.roofType === RoofType.Arched) roofAreaMultiplier = 1.30;
     if (config.roofType === RoofType.SemiArched) roofAreaMultiplier = 1.35;
-    
+
     const roofArea = floorArea * roofAreaMultiplier;
     materialCost += roofArea * PRICING.roofMaterialPricePerSqm[config.roofMaterial];
     materialCost += floorArea * PRICING.paintMultiplier[config.paintType];
@@ -121,9 +124,10 @@ export default function App() {
     let total = materialCost;
     if (config.hasInstallation) {
       let installPercent = PRICING.extras.installation;
-      if (config.height > 3.0) {
-          installPercent += PRICING.extras.highWork;
-      }
+      if (materialCost > 300000) installPercent = 0.22;
+      if (materialCost > 600000) installPercent = 0.20;
+      if (config.height > 3.2) installPercent += PRICING.extras.highWork;
+
       total = total * (1 + installPercent);
     }
 
@@ -143,12 +147,84 @@ export default function App() {
     return { pillarCount, roofArea: (config.width * config.length * 1.2).toFixed(1) }; 
   }, [config]);
 
-  const handleDownloadReport = () => { alert("Смета скачивается..."); };
+  // --- ИСПРАВЛЕННАЯ ФУНКЦИЯ СКАЧИВАНИЯ СМЕТЫ ---
+  const handleDownloadReport = async () => {
+      const bom = calculateBOM();
+      const date = new Date().toLocaleDateString('ru-RU');
+
+      const pillarProfile = config.pillarSize === PillarSize.Size60 ? '60x60x3' : config.pillarSize === PillarSize.Size80 ? '80x80x3' : '100x100x4';
+      const beamProfile = config.pillarSize === PillarSize.Size100 ? '100x100x4' : '80x80x3';
+
+      let peakHeight = config.height;
+      if (config.roofType === RoofType.Gable) {
+          peakHeight += (config.width / 2) * Math.tan(config.roofSlope * Math.PI / 180);
+      } else if (config.roofType === RoofType.Arched) {
+          peakHeight += config.width * SPECS.trussHeightArch;
+      }
+
+      const rows = [
+          ['Смета на материалы для навеса', date],
+          ['Тип', config.roofType],
+          ['Размеры (по столбам)', `${config.width}x${config.length}м`],
+          ['Высота столбов', `${config.height}м`],
+          ['Высота в пике (примерно)', `~${peakHeight.toFixed(2)}м`],
+          ['Площадь кровли', `${bom.roofArea} м2`],
+          ['Опции', [
+              config.hasTrusses ? 'Усиленные фермы' : '', 
+              config.hasGutters ? 'Водостоки' : '',
+              config.hasSideWalls ? 'Зашивка' : '',
+              config.hasFoundation ? 'Фундамент' : '',
+              config.hasInstallation ? 'Монтаж' : ''
+          ].filter(Boolean).join(', ')],
+          ['ИТОГОВАЯ СТОИМОСТЬ', `${price.toLocaleString()} RUB`],
+          [],
+          ['Наименование', 'Профиль/Материал', 'Кол-во (шт)', 'Длина 1 шт (м)', 'Всего (м/м2)', 'Примечание'],
+          ['ФУНДАМЕНТ', '', '', '', '', ''],
+          ['Бетонирование', 'Бетон М300', bom.pillarCount, '-', '-', config.hasFoundation ? 'Включено' : 'Не включено'],
+          ['МЕТАЛЛОКАРКАС', '', '', '', '', ''],
+          ['Столбы', `Труба ${pillarProfile}`, bom.pillarCount, config.height, '-', ''],
+          ['Балки', `Труба ${beamProfile}`, '-', '-', '-', ''],
+          ['Фермы', 'Труба 40x40 / 40x20', '-', '-', '-', ''],
+          ['Обрешетка', 'Труба 40x20', '-', '-', '-', ''],
+          ['КРОВЛЯ', '', '', '', '', ''],
+          ['Покрытие', config.roofMaterial, '-', '-', bom.roofArea, '']
+      ];
+
+      const csvContent = "\uFEFF" + rows.map(e => e.join(";")).join("\n");
+      const fileName = `smeta_kovka007_${date.replace(/\./g, '-')}.csv`;
+
+      // 1. Попытка использовать нативный шеринг (для мобильных Telegram)
+      if (navigator.canShare) {
+        try {
+            const file = new File([csvContent], fileName, { type: 'text/csv' });
+            if (navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    files: [file],
+                    title: 'Смета Kovka007',
+                    text: `Расчет стоимости навеса ${config.width}x${config.length}м`
+                });
+                return; // Если получилось, выходим
+            }
+        } catch (err) {
+            console.warn('Sharing failed, falling back to download', err);
+        }
+      }
+
+      // 2. Стандартное скачивание (для Десктопа)
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", fileName);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+  };
 
   const getOrderPayload = () => {
     const frameColorObj = FRAME_COLORS.find(c => c.hex === config.frameColor);
     const roofColorObj = ROOF_COLORS.find(c => c.hex === config.roofColor);
-    
+
     const areaFloor = (config.width * config.length).toFixed(2);
     let roofAreaMultiplier = 1.0;
     if (config.roofType === RoofType.Gable) roofAreaMultiplier = 1.25;
@@ -208,9 +284,8 @@ export default function App() {
   };
 
   return (
-    // touch-none и overscroll-none блокируют "резинку" на iOS
     <div className="flex flex-col lg:flex-row h-[100dvh] w-screen overflow-hidden bg-slate-100 font-sans touch-none overscroll-none fixed inset-0">
-      
+
       {/* HEADER */}
       <div className="absolute top-0 left-0 right-0 z-40 p-4 pointer-events-none flex justify-center lg:justify-start lg:p-6">
         <div className="bg-white/90 backdrop-blur-md px-6 py-2 rounded-xl shadow-sm border border-slate-200/50 text-center lg:text-left pointer-events-auto">
@@ -236,9 +311,8 @@ export default function App() {
       </div>
 
       {/* MOBILE PANEL */}
-      {/* Добавлен класс pb-safe для отступа на iPhone */}
       <div className="lg:hidden flex flex-col z-30 flex-shrink-0 bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.05)] pb-safe">
-         
+
          <div className="grid grid-cols-2 gap-3 p-3 border-b border-slate-100">
              <button onClick={handleDownloadReport} className="bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl border flex justify-center items-center gap-2 active:scale-95"><FileText size={16} className="text-green-600"/><span className="text-xs">Смета</span></button>
              <a href="https://kovka007.ru/" target="_blank" className="bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl border flex justify-center items-center gap-2 active:scale-95"><Globe size={16} className="text-indigo-600"/><span className="text-xs">Сайт</span></a>
