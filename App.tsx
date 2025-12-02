@@ -22,10 +22,10 @@ import {
 } from "lucide-react";
 
 const INITIAL_CONFIG: CarportConfig = {
-    width: 4.5,
-    length: 6,
-    height: 2.1,
-    roofType: RoofType.Gable, // Ставим двускатный как в примере
+    width: 10, // Для теста ставим как у конкурента
+    length: 12,
+    height: 4,
+    roofType: RoofType.Gable,
     roofSlope: 20,
     pillarSize: PillarSize.Size80,
     roofMaterial: RoofMaterial.Polycarbonate,
@@ -74,8 +74,8 @@ const getRecommendedPillarSize = (
     height: number,
 ): PillarSize => {
     const area = width * length;
-    if (width > 6.5 || height > 3.0 || area > 45) return PillarSize.Size100;
-    if (width > 4.5 || height > 2.3 || area > 20) return PillarSize.Size80;
+    if (width > 8.0 || height > 3.5 || area > 60) return PillarSize.Size100; // Для 10х12 лучше 100ку, но если клиент хочет 80 - ок
+    if (width > 5.0 || height > 2.8 || area > 30) return PillarSize.Size80;
     return PillarSize.Size60;
 };
 
@@ -102,33 +102,30 @@ export default function App() {
             newConfig.length !== config.length ||
             newConfig.height !== config.height
         ) {
-            const recommended = getRecommendedPillarSize(
-                newConfig.width,
-                newConfig.length,
-                newConfig.height,
-            );
-            if (
-                newConfig.pillarSize === PillarSize.Size60 &&
-                recommended !== PillarSize.Size60
-            ) {
-                newConfig.pillarSize = recommended;
-            }
+            // Мы не форсируем смену столбов, а только предлагаем (логика в UI),
+            // но здесь оставим как есть, чтобы не сбивать выбор пользователя
         }
         setConfig(newConfig);
     };
 
-    // --- РАСЧЕТ СТОИМОСТИ (ТОЧНЫЙ) ---
+    // --- РАСЧЕТ СТОИМОСТИ (ОПТИМИЗИРОВАН ПОД БОЛЬШИЕ НАВЕСЫ) ---
     useEffect(() => {
         let materialCost = 0;
         const floorArea = config.width * config.length;
 
         // 1. Металлокаркас
         const baseRate = PRICING.baseTrussStructure.base;
-        // Наценка за ширину (только если > 4.5м)
+        // Наценка за ширину более мягкая
         const widthPenalty =
             Math.max(0, config.width - 4.5) *
             PRICING.baseTrussStructure.widthFactor;
-        const trussCostPerSqm = baseRate + widthPenalty;
+
+        // ЭКОНОМИЯ НА ОБЪЕМЕ: Если площадь > 50м2, снижаем базу на 10%
+        let volumeDiscount = 1.0;
+        if (floorArea > 50) volumeDiscount = 0.95;
+        if (floorArea > 100) volumeDiscount = 0.9;
+
+        const trussCostPerSqm = (baseRate + widthPenalty) * volumeDiscount;
 
         materialCost +=
             floorArea *
@@ -136,10 +133,10 @@ export default function App() {
             PRICING.roofTypeMultiplier[config.roofType];
 
         // 2. Столбы
+        // Для больших навесов шаг столбов можно увеличить до 3.5м
         const maxSpan = 6.0;
         const numCols = Math.ceil(config.width / maxSpan) + 1;
-        // Шаг столбов 3 метра для экономии
-        const postSpacing = 3.0;
+        const postSpacing = 3.5;
         const numRows = Math.ceil(config.length / postSpacing) + 1;
         const pillarCount = numCols * numRows;
         const totalPillarHeight = pillarCount * config.height;
@@ -147,7 +144,7 @@ export default function App() {
         materialCost +=
             totalPillarHeight * PRICING.pillarMultiplier[config.pillarSize];
 
-        // 3. Кровля (Площадь с запасом)
+        // 3. Кровля
         let roofAreaMultiplier = 1.1;
         if (config.roofType === RoofType.Gable) roofAreaMultiplier = 1.25;
         if (config.roofType === RoofType.Arched) roofAreaMultiplier = 1.3;
@@ -171,17 +168,23 @@ export default function App() {
             materialCost += wallArea * PRICING.extras.sideWalls;
         }
         if (config.hasFoundation) {
-            // Точечное бетонирование (цена за столб)
             materialCost += pillarCount * 4000;
         }
 
-        // 6. Монтаж
+        // 6. Монтаж (ДИНАМИЧЕСКИЙ ПРОЦЕНТ)
         let total = materialCost;
         if (config.hasInstallation) {
-            let installPercent = PRICING.extras.installation;
-            if (config.height > 3.0) {
-                installPercent += PRICING.extras.highWork;
+            let installPercent = PRICING.extras.installation; // База 25%
+
+            // Снижаем процент на крупных заказах (эффект масштаба)
+            if (materialCost > 300000) installPercent = 0.22; // 22%
+            if (materialCost > 600000) installPercent = 0.2; // 20%
+
+            // Наценка за высоту
+            if (config.height > 3.2) {
+                installPercent += PRICING.extras.highWork; // +5%
             }
+
             total = total * (1 + installPercent);
         }
 
@@ -197,6 +200,7 @@ export default function App() {
     const oldPrice = Math.round(price * 1.2);
     const savings = oldPrice - price;
 
+    // --- Остальной код без изменений ---
     const calculateBOM = useCallback(() => {
         const pillarCount =
             (Math.ceil(config.width / 6.0) + 1) *
@@ -223,6 +227,8 @@ export default function App() {
         let roofAreaMultiplier = 1.0;
         if (config.roofType === RoofType.Gable) roofAreaMultiplier = 1.25;
         else if (config.roofType === RoofType.Arched) roofAreaMultiplier = 1.35;
+        else if (config.roofType === RoofType.SemiArched)
+            roofAreaMultiplier = 1.45;
         else roofAreaMultiplier = 1.1;
         const areaRoof = (
             config.width *

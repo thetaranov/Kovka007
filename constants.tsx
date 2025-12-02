@@ -6,6 +6,7 @@ import {
   PaintType,
 } from "./types";
 
+// Цвета оставляем без изменений
 export const ROOF_COLORS: ColorOption[] = [
   { name: "Шоколад", hex: "#3B2F2F", ral: "RAL 8017" },
   { name: "Зеленый мох", hex: "#004D40", ral: "RAL 6005" },
@@ -32,36 +33,36 @@ export const SPECS = {
   postSpacing: 2.5,
 };
 
-// === ЦЕНЫ ПОД РЫНОК (Target: Gable 4.5x6 ~165k) ===
+// === ОПТИМИЗИРОВАННЫЕ ЦЕНЫ (Под конкурентов 10х12м) ===
 export const PRICING = {
-  // Минималка 4500 (чтобы маленькие навесы не стоили копейки)
-  minPricePerSqm: 4500,
+  // Минимальная цена за м2 (чтобы не прогореть на малышах)
+  minPricePerSqm: 4200,
 
-  // Металлокаркас крыши (фермы, лаги)
+  // Металлокаркас ферм и прогонов
   baseTrussStructure: {
-    base: 1900, // Цена за м2 (сбалансировано под 165к итога)
-    widthFactor: 250, // Небольшая наценка за ширину > 4.5м
+    base: 1750, // Снизили базу (было 1900)
+    widthFactor: 180, // Сильно снизили наценку за ширину (было 300)
   },
 
-  // Столбы (Труба + работа)
+  // Столбы (Материал + Работа)
   pillarMultiplier: {
-    [PillarSize.Size60]: 950, // 60x60 (Эконом)
-    [PillarSize.Size80]: 1500, // 80x80 (Стандарт)
-    [PillarSize.Size100]: 2200, // 100x100 (Премиум)
+    [PillarSize.Size60]: 800,
+    [PillarSize.Size80]: 1400, // Чуть дешевле
+    [PillarSize.Size100]: 2100,
   },
 
-  // Кровля
+  // Кровля (Материал + Работа)
   roofMaterialPricePerSqm: {
-    [RoofMaterial.Polycarbonate]: 1100, // Качественный поликарбонат
-    [RoofMaterial.Decking]: 900, // Профлист 0.45
-    [RoofMaterial.MetalTile]: 1300, // Черепица 0.5
+    [RoofMaterial.Polycarbonate]: 1050, // Оптимизировали закупку
+    [RoofMaterial.Decking]: 850,
+    [RoofMaterial.MetalTile]: 1250,
   },
 
-  // Сложность (Двускатка дороже односкатки на 20%)
+  // Сложность крыши
   roofTypeMultiplier: {
     [RoofType.SingleSlope]: 1.0,
     [RoofType.Triangular]: 1.05,
-    [RoofType.Gable]: 1.2,
+    [RoofType.Gable]: 1.15, // Двускатка
     [RoofType.Arched]: 1.25,
     [RoofType.SemiArched]: 1.3,
   },
@@ -69,17 +70,16 @@ export const PRICING = {
   // Покраска
   paintMultiplier: {
     [PaintType.None]: 0,
-    [PaintType.Ral]: 400, // 3в1
-    [PaintType.Polymer]: 1200, // Порошок
+    [PaintType.Ral]: 350,
+    [PaintType.Polymer]: 1100,
   },
 
-  // Допы
   extras: {
-    trusses: 600,
-    gutters: 1300,
-    sideWalls: 3200,
-    foundation: 5000,
-    installation: 0.25, // Монтаж 25% (Рыночная норма)
-    highWork: 0.1, // +10% если выше 3м
+    trusses: 550,
+    gutters: 1200,
+    sideWalls: 2800,
+    foundation: 4500,
+    installation: 0.25, // Базовый монтаж 25%
+    highWork: 0.05, // Снизили наценку за высоту до 5% (было 10%)
   },
 };
