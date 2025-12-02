@@ -9,11 +9,13 @@
 
     <title>3D Конструктор Навесов | Kovka007</title>
 
-    <!-- ВЕРНУЛИ TAILWIND ЧЕРЕЗ CDN (Самый надежный способ) -->
+    <!-- ПОДКЛЮЧЕНИЕ TAILWIND ЧЕРЕЗ CDN (Гарантия работы стилей) -->
     <script src="https://cdn.tailwindcss.com"></script>
 
+    <!-- Telegram WebApp Script -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -21,13 +23,16 @@
       rel="stylesheet"
     />
 
-    <!-- ВЕРНУЛИ СТИЛИ СЮДА -->
     <style>
+      /* Базовые стили для сброса */
       body {
         font-family: "Inter", sans-serif;
-        background-color: #f8fafc;
-        overflow: hidden;
+        background-color: #f8fafc; /* Светло-серый фон */
+        overflow: hidden; /* Запрет скролла всей страницы */
+        margin: 0;
+        padding: 0;
       }
+
       /* Кастомный скроллбар */
       .custom-scrollbar::-webkit-scrollbar {
         width: 6px;
@@ -42,6 +47,7 @@
       .custom-scrollbar::-webkit-scrollbar-thumb:hover {
         background-color: #94a3b8;
       }
+
       /* Анимации */
       @keyframes fade-in-up {
         from {
