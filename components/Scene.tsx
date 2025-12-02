@@ -7,7 +7,6 @@ import {
   Html,
   useProgress,
   Grid,
-  Text,
 } from "@react-three/drei";
 import { CarportConfig } from "../types";
 import { CarportModel } from "./CarportModel";
@@ -31,56 +30,6 @@ function Loader() {
   );
 }
 
-// --- Линейка (Оптимизирована) ---
-const Ruler = () => {
-  const range = 10; // От -10 до +10
-  const ticks = [];
-  const color = "#94a3b8"; // slate-400
-
-  for (let i = -range; i <= range; i += 1) {
-    if (i === 0) continue;
-
-    // Ось X (Ширина)
-    ticks.push(
-      <Text
-        key={`x-${i}`}
-        position={[i, 0.05, -0.5]} // Чуть выше и сдвинуты
-        rotation={[-Math.PI / 2, 0, 0]}
-        fontSize={0.35}
-        color={color}
-        anchorX="center"
-        anchorY="middle"
-        fillOpacity={0.8} // Полупрозрачность для мягкости
-        // Отключаем влияние на тени и глубину, чтобы не было артефактов
-        castShadow={false}
-        receiveShadow={false}
-      >
-        {i}
-      </Text>
-    );
-
-    // Ось Z (Длина)
-    ticks.push(
-      <Text
-        key={`z-${i}`}
-        position={[-0.5, 0.05, i]}
-        rotation={[-Math.PI / 2, 0, 0]}
-        fontSize={0.35}
-        color={color}
-        anchorX="center"
-        anchorY="middle"
-        fillOpacity={0.8}
-        castShadow={false}
-        receiveShadow={false}
-      >
-        {i}
-      </Text>
-    );
-  }
-
-  return <group>{ticks}</group>;
-};
-
 export const Scene: React.FC<SceneProps> = ({ config }) => {
   const [resetKey, setResetKey] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -90,14 +39,18 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
     setResetKey((prev) => prev + 1);
   };
 
+  // Блокировка скролла страницы при касании сцены
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+
     const preventTouch = (e: TouchEvent) => {
       if (e.cancelable) e.preventDefault();
     };
+
     container.addEventListener("touchmove", preventTouch, { passive: false });
     container.addEventListener("touchstart", preventTouch, { passive: false });
+
     return () => {
       container.removeEventListener("touchmove", preventTouch);
       container.removeEventListener("touchstart", preventTouch);
@@ -110,6 +63,7 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
       className="w-full h-full bg-slate-200 relative shadow-inner overflow-hidden"
       style={{ touchAction: "none" }}
     >
+      {/* Фон */}
       <div
         className="absolute inset-0 pointer-events-none z-0 opacity-[0.10]"
         style={{
@@ -157,6 +111,7 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
             />
           </directionalLight>
 
+          {/* Сетка без цифр */}
           <Grid
             position={[0, 0.01, 0]}
             args={[30, 30]}
@@ -170,8 +125,6 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
             fadeStrength={1.5}
             infiniteGrid={true}
           />
-
-          <Ruler />
 
           <CarportModel config={config} />
 
