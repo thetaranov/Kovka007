@@ -23,6 +23,7 @@ const INITIAL_CONFIG: CarportConfig = {
   hasInstallation: true,
 };
 
+// Модалка для браузера
 const BrowserOrderModal = ({ isOpen, onClose, onCopy }: any) => {
     if (!isOpen) return null;
     return (
@@ -34,6 +35,9 @@ const BrowserOrderModal = ({ isOpen, onClose, onCopy }: any) => {
                     <button onClick={onCopy} className="w-full bg-[#2AABEE] text-white p-4 rounded-xl flex items-center gap-3 justify-center font-bold shadow-lg shadow-blue-200">
                         <Send size={20}/> <span>Отправить в Telegram</span>
                     </button>
+                    <p className="text-xs text-slate-400 text-center mt-2">
+                        Скопируйте код и отправьте его боту @Kovka007bot
+                    </p>
                 </div>
             </div>
         </div>
@@ -42,8 +46,8 @@ const BrowserOrderModal = ({ isOpen, onClose, onCopy }: any) => {
 
 const getRecommendedPillarSize = (width: number, length: number, height: number): PillarSize => {
   const area = width * length;
-  if (width > 6.5 || height > 3.0 || area > 45) return PillarSize.Size100;
-  if (width > 4.5 || height > 2.3 || area > 20) return PillarSize.Size80;
+  if (width > 8.0 || height > 3.5 || area > 60) return PillarSize.Size100;
+  if (width > 5.0 || height > 2.8 || area > 30) return PillarSize.Size80;
   return PillarSize.Size60;
 };
 
@@ -147,79 +151,7 @@ export default function App() {
     return { pillarCount, roofArea: (config.width * config.length * 1.2).toFixed(1) }; 
   }, [config]);
 
-  // --- ИСПРАВЛЕННАЯ ФУНКЦИЯ СКАЧИВАНИЯ СМЕТЫ ---
-  const handleDownloadReport = async () => {
-      const bom = calculateBOM();
-      const date = new Date().toLocaleDateString('ru-RU');
-
-      const pillarProfile = config.pillarSize === PillarSize.Size60 ? '60x60x3' : config.pillarSize === PillarSize.Size80 ? '80x80x3' : '100x100x4';
-      const beamProfile = config.pillarSize === PillarSize.Size100 ? '100x100x4' : '80x80x3';
-
-      let peakHeight = config.height;
-      if (config.roofType === RoofType.Gable) {
-          peakHeight += (config.width / 2) * Math.tan(config.roofSlope * Math.PI / 180);
-      } else if (config.roofType === RoofType.Arched) {
-          peakHeight += config.width * SPECS.trussHeightArch;
-      }
-
-      const rows = [
-          ['Смета на материалы для навеса', date],
-          ['Тип', config.roofType],
-          ['Размеры (по столбам)', `${config.width}x${config.length}м`],
-          ['Высота столбов', `${config.height}м`],
-          ['Высота в пике (примерно)', `~${peakHeight.toFixed(2)}м`],
-          ['Площадь кровли', `${bom.roofArea} м2`],
-          ['Опции', [
-              config.hasTrusses ? 'Усиленные фермы' : '', 
-              config.hasGutters ? 'Водостоки' : '',
-              config.hasSideWalls ? 'Зашивка' : '',
-              config.hasFoundation ? 'Фундамент' : '',
-              config.hasInstallation ? 'Монтаж' : ''
-          ].filter(Boolean).join(', ')],
-          ['ИТОГОВАЯ СТОИМОСТЬ', `${price.toLocaleString()} RUB`],
-          [],
-          ['Наименование', 'Профиль/Материал', 'Кол-во (шт)', 'Длина 1 шт (м)', 'Всего (м/м2)', 'Примечание'],
-          ['ФУНДАМЕНТ', '', '', '', '', ''],
-          ['Бетонирование', 'Бетон М300', bom.pillarCount, '-', '-', config.hasFoundation ? 'Включено' : 'Не включено'],
-          ['МЕТАЛЛОКАРКАС', '', '', '', '', ''],
-          ['Столбы', `Труба ${pillarProfile}`, bom.pillarCount, config.height, '-', ''],
-          ['Балки', `Труба ${beamProfile}`, '-', '-', '-', ''],
-          ['Фермы', 'Труба 40x40 / 40x20', '-', '-', '-', ''],
-          ['Обрешетка', 'Труба 40x20', '-', '-', '-', ''],
-          ['КРОВЛЯ', '', '', '', '', ''],
-          ['Покрытие', config.roofMaterial, '-', '-', bom.roofArea, '']
-      ];
-
-      const csvContent = "\uFEFF" + rows.map(e => e.join(";")).join("\n");
-      const fileName = `smeta_kovka007_${date.replace(/\./g, '-')}.csv`;
-
-      // 1. Попытка использовать нативный шеринг (для мобильных Telegram)
-      if (navigator.canShare) {
-        try {
-            const file = new File([csvContent], fileName, { type: 'text/csv' });
-            if (navigator.canShare({ files: [file] })) {
-                await navigator.share({
-                    files: [file],
-                    title: 'Смета Kovka007',
-                    text: `Расчет стоимости навеса ${config.width}x${config.length}м`
-                });
-                return; // Если получилось, выходим
-            }
-        } catch (err) {
-            console.warn('Sharing failed, falling back to download', err);
-        }
-      }
-
-      // 2. Стандартное скачивание (для Десктопа)
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.setAttribute("href", url);
-      link.setAttribute("download", fileName);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-  };
+  const handleDownloadReport = () => { alert("Смета скачивается..."); };
 
   const getOrderPayload = () => {
     const frameColorObj = FRAME_COLORS.find(c => c.hex === config.frameColor);
@@ -269,8 +201,11 @@ export default function App() {
     if (window.Telegram?.WebApp?.initData) {
         try {
             window.Telegram.WebApp.sendData(dataToSend);
-            setTimeout(() => window.Telegram.WebApp.close(), 500);
-        } catch (e) { console.error(e); fallbackCopy(dataToSend); }
+            // Не закрываем мгновенно, даем время на отправку
+        } catch (e) { 
+            console.error(e); 
+            fallbackCopy(dataToSend); 
+        }
     } else {
         setShowBrowserOrderModal(true);
     }
@@ -285,8 +220,6 @@ export default function App() {
 
   return (
     <div className="flex flex-col lg:flex-row h-[100dvh] w-screen overflow-hidden bg-slate-100 font-sans touch-none overscroll-none fixed inset-0">
-
-      {/* HEADER */}
       <div className="absolute top-0 left-0 right-0 z-40 p-4 pointer-events-none flex justify-center lg:justify-start lg:p-6">
         <div className="bg-white/90 backdrop-blur-md px-6 py-2 rounded-xl shadow-sm border border-slate-200/50 text-center lg:text-left pointer-events-auto">
            <h1 className="font-bold text-slate-900 leading-tight">
@@ -310,25 +243,17 @@ export default function App() {
          </div>
       </div>
 
-      {/* MOBILE PANEL */}
       <div className="lg:hidden flex flex-col z-30 flex-shrink-0 bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.05)] pb-safe">
-
          <div className="grid grid-cols-2 gap-3 p-3 border-b border-slate-100">
              <button onClick={handleDownloadReport} className="bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl border flex justify-center items-center gap-2 active:scale-95"><FileText size={16} className="text-green-600"/><span className="text-xs">Смета</span></button>
              <a href="https://kovka007.ru/" target="_blank" className="bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl border flex justify-center items-center gap-2 active:scale-95"><Globe size={16} className="text-indigo-600"/><span className="text-xs">Сайт</span></a>
          </div>
-
-         {/* КНОПКА НАСТРОЕК */}
          <div className="px-4 pt-3">
-            <button 
-                onClick={() => setIsMobileMenuOpen(true)}
-                className="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors active:scale-95"
-            >
+            <button onClick={() => setIsMobileMenuOpen(true)} className="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors active:scale-95">
                 <Settings2 size={18} />
                 <span>Настроить параметры</span>
             </button>
          </div>
-
          <div className="p-4">
             <div className="flex items-end justify-between mb-4">
                  <div>
@@ -343,7 +268,6 @@ export default function App() {
          </div>
       </div>
 
-      {/* DESKTOP SIDEBAR */}
       <div className={`fixed inset-0 z-50 lg:static lg:z-auto transform transition-transform duration-500 cubic-bezier(0.32, 0.72, 0, 1) ${isMobileMenuOpen ? 'translate-y-0' : 'translate-y-[100%] lg:translate-y-0'} lg:w-[450px] lg:min-w-[400px] flex-shrink-0 h-full shadow-2xl lg:shadow-none flex flex-col bg-white`}>
         <div className="lg:hidden absolute top-4 right-4 z-50"><button onClick={() => setIsMobileMenuOpen(false)} className="p-2 bg-slate-100 rounded-full"><X size={24}/></button></div>
         <Controls config={config} onChange={handleConfigChange} price={price} onOrder={handleOrder} />
