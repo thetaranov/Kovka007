@@ -25,8 +25,8 @@ const INITIAL_CONFIG: CarportConfig = {
     width: 4.5,
     length: 6,
     height: 2.1,
-    roofType: RoofType.SingleSlope,
-    roofSlope: 10,
+    roofType: RoofType.Gable, // Ставим двускатный как в примере
+    roofSlope: 20,
     pillarSize: PillarSize.Size80,
     roofMaterial: RoofMaterial.Polycarbonate,
     paintType: PaintType.Ral,
@@ -39,7 +39,7 @@ const INITIAL_CONFIG: CarportConfig = {
     hasInstallation: true,
 };
 
-// ... BrowserOrderModal component ...
+// ... BrowserOrderModal (тот же самый) ...
 const BrowserOrderModal = ({ isOpen, onClose, onCopy, onEmail }: any) => {
     if (!isOpen) return null;
     return (
@@ -117,14 +117,14 @@ export default function App() {
         setConfig(newConfig);
     };
 
-    // --- НОВАЯ ЛОГИКА РАСЧЕТА СТОИМОСТИ ---
+    // --- РАСЧЕТ СТОИМОСТИ (ТОЧНЫЙ) ---
     useEffect(() => {
         let materialCost = 0;
         const floorArea = config.width * config.length;
 
-        // 1. Металлокаркас крыши (Зависит от ширины пролета)
+        // 1. Металлокаркас
         const baseRate = PRICING.baseTrussStructure.base;
-        // Наценка начинается, если ширина больше 4.5м
+        // Наценка за ширину (только если > 4.5м)
         const widthPenalty =
             Math.max(0, config.width - 4.5) *
             PRICING.baseTrussStructure.widthFactor;
@@ -135,10 +135,10 @@ export default function App() {
             trussCostPerSqm *
             PRICING.roofTypeMultiplier[config.roofType];
 
-        // 2. Столбы (Зависит от высоты и кол-ва)
+        // 2. Столбы
         const maxSpan = 6.0;
         const numCols = Math.ceil(config.width / maxSpan) + 1;
-        // Упрощаем шаг столбов до 3м для экономии (как у конкурентов)
+        // Шаг столбов 3 метра для экономии
         const postSpacing = 3.0;
         const numRows = Math.ceil(config.length / postSpacing) + 1;
         const pillarCount = numCols * numRows;
@@ -147,8 +147,8 @@ export default function App() {
         materialCost +=
             totalPillarHeight * PRICING.pillarMultiplier[config.pillarSize];
 
-        // 3. Кровля
-        let roofAreaMultiplier = 1.05;
+        // 3. Кровля (Площадь с запасом)
+        let roofAreaMultiplier = 1.1;
         if (config.roofType === RoofType.Gable) roofAreaMultiplier = 1.25;
         if (config.roofType === RoofType.Arched) roofAreaMultiplier = 1.3;
         if (config.roofType === RoofType.SemiArched) roofAreaMultiplier = 1.35;
@@ -171,8 +171,8 @@ export default function App() {
             materialCost += wallArea * PRICING.extras.sideWalls;
         }
         if (config.hasFoundation) {
-            // Считаем точечно (3500 за столб), а не плиту
-            materialCost += pillarCount * 3500;
+            // Точечное бетонирование (цена за столб)
+            materialCost += pillarCount * 4000;
         }
 
         // 6. Монтаж
@@ -185,7 +185,7 @@ export default function App() {
             total = total * (1 + installPercent);
         }
 
-        // 7. МИНИМАЛКА (4500 руб/м2)
+        // 7. Минимум
         const minTotal = floorArea * PRICING.minPricePerSqm;
         if (total < minTotal) {
             total = minTotal;
@@ -198,10 +198,9 @@ export default function App() {
     const savings = oldPrice - price;
 
     const calculateBOM = useCallback(() => {
-        const maxSpan = 6.0;
-        const numCols = Math.ceil(config.width / maxSpan) + 1;
-        const numRows = Math.ceil(config.length / SPECS.postSpacing) + 1;
-        const pillarCount = numCols * numRows;
+        const pillarCount =
+            (Math.ceil(config.width / 6.0) + 1) *
+            (Math.ceil(config.length / 3.0) + 1);
         return {
             pillarCount,
             roofArea: (config.width * config.length * 1.2).toFixed(1),
@@ -220,13 +219,10 @@ export default function App() {
             (c) => c.hex === config.roofColor,
         );
 
-        // Расчет площадей
         const areaFloor = (config.width * config.length).toFixed(2);
         let roofAreaMultiplier = 1.0;
         if (config.roofType === RoofType.Gable) roofAreaMultiplier = 1.25;
         else if (config.roofType === RoofType.Arched) roofAreaMultiplier = 1.35;
-        else if (config.roofType === RoofType.SemiArched)
-            roofAreaMultiplier = 1.45;
         else roofAreaMultiplier = 1.1;
         const areaRoof = (
             config.width *
@@ -287,7 +283,7 @@ export default function App() {
 
     const fallbackCopy = (text: string) => {
         navigator.clipboard.writeText(text).then(() => {
-            alert("📋 Данные скопированы! Вставьте их в бот.");
+            alert("📋 Данные заказа скопированы! Вставьте их в бот.");
             window.open("https://t.me/Kovka007bot", "_blank");
         });
     };

@@ -32,54 +32,54 @@ export const SPECS = {
   postSpacing: 2.5,
 };
 
-// === НОВАЯ ЭКОНОМИКА (КОНКУРЕНТНАЯ) ===
+// === ЦЕНЫ ПОД РЫНОК (Target: Gable 4.5x6 ~165k) ===
 export const PRICING = {
-  // Минимальная цена за квадрат (чтобы не уходить в минус на мелких заказах)
+  // Минималка 4500 (чтобы маленькие навесы не стоили копейки)
   minPricePerSqm: 4500,
 
-  // Базовая стоимость металла ферм и лаг за м2
-  // Зависит от ширины: чем шире, тем дороже ферма
+  // Металлокаркас крыши (фермы, лаги)
   baseTrussStructure: {
-    base: 1900, // Базовая цена металла на крышу за м2
-    widthFactor: 300, // +300р к базе за каждый метр ширины свыше 4.5м
+    base: 1900, // Цена за м2 (сбалансировано под 165к итога)
+    widthFactor: 250, // Небольшая наценка за ширину > 4.5м
   },
 
-  // Стоимость 1 п.м. столба (Труба + резка + сварка пятки)
+  // Столбы (Труба + работа)
   pillarMultiplier: {
-    [PillarSize.Size60]: 850, // 60x60
-    [PillarSize.Size80]: 1400, // 80x80
-    [PillarSize.Size100]: 2100, // 100x100
+    [PillarSize.Size60]: 950, // 60x60 (Эконом)
+    [PillarSize.Size80]: 1500, // 80x80 (Стандарт)
+    [PillarSize.Size100]: 2200, // 100x100 (Премиум)
   },
 
-  // Кровля (Материал + саморезы + работа)
+  // Кровля
   roofMaterialPricePerSqm: {
-    [RoofMaterial.Polycarbonate]: 1100, // Поликарбонат
-    [RoofMaterial.Decking]: 850, // Профлист (самый дешевый)
-    [RoofMaterial.MetalTile]: 1250, // Металлочерепица
+    [RoofMaterial.Polycarbonate]: 1100, // Качественный поликарбонат
+    [RoofMaterial.Decking]: 900, // Профлист 0.45
+    [RoofMaterial.MetalTile]: 1300, // Черепица 0.5
   },
 
-  // Коэффициенты сложности монтажа крыши
+  // Сложность (Двускатка дороже односкатки на 20%)
   roofTypeMultiplier: {
     [RoofType.SingleSlope]: 1.0,
     [RoofType.Triangular]: 1.05,
-    [RoofType.Gable]: 1.15, // Двускатка
-    [RoofType.Arched]: 1.25, // Арка
+    [RoofType.Gable]: 1.2,
+    [RoofType.Arched]: 1.25,
     [RoofType.SemiArched]: 1.3,
   },
 
-  // Покраска (Материал + Работа)
+  // Покраска
   paintMultiplier: {
     [PaintType.None]: 0,
-    [PaintType.Ral]: 400, // Эмаль
-    [PaintType.Polymer]: 1200, // Порошок (дорого)
+    [PaintType.Ral]: 400, // 3в1
+    [PaintType.Polymer]: 1200, // Порошок
   },
 
+  // Допы
   extras: {
-    trusses: 600, // Доп. усиление ферм
-    gutters: 1300, // Водосток
-    sideWalls: 3000, // Зашивка стен
-    foundation: 5000, // Бетонирование
-    installation: 0.25, // Монтаж 25% (рынок)
-    highWork: 0.1, // Наценка 10% за высоту > 3.0м
+    trusses: 600,
+    gutters: 1300,
+    sideWalls: 3200,
+    foundation: 5000,
+    installation: 0.25, // Монтаж 25% (Рыночная норма)
+    highWork: 0.1, // +10% если выше 3м
   },
 };
