@@ -7,7 +7,7 @@ import {
   Html,
   useProgress,
   Grid,
-  Text, // <--- Для цифр
+  Text,
 } from "@react-three/drei";
 import { CarportConfig } from "../types";
 import { CarportModel } from "./CarportModel";
@@ -31,42 +31,50 @@ function Loader() {
   );
 }
 
-// --- Компонент Линейки (Цифры на полу) ---
+// --- Линейка (Оптимизирована) ---
 const Ruler = () => {
-  const range = 12; // От -12 до +12
+  const range = 10; // От -10 до +10
   const ticks = [];
+  const color = "#94a3b8"; // slate-400
 
   for (let i = -range; i <= range; i += 1) {
-    if (i === 0) continue; // Пропускаем ноль в центре
+    if (i === 0) continue;
 
     // Ось X (Ширина)
     ticks.push(
       <Text
         key={`x-${i}`}
-        position={[i, 0.02, -0.3]} // Чуть смещаем цифры, чтобы не на линии
-        rotation={[-Math.PI / 2, 0, 0]} // Лежат на полу
-        fontSize={0.4}
-        color="#94a3b8" // slate-400
+        position={[i, 0.05, -0.5]} // Чуть выше и сдвинуты
+        rotation={[-Math.PI / 2, 0, 0]}
+        fontSize={0.35}
+        color={color}
         anchorX="center"
         anchorY="middle"
+        fillOpacity={0.8} // Полупрозрачность для мягкости
+        // Отключаем влияние на тени и глубину, чтобы не было артефактов
+        castShadow={false}
+        receiveShadow={false}
       >
         {i}
-      </Text>,
+      </Text>
     );
 
     // Ось Z (Длина)
     ticks.push(
       <Text
         key={`z-${i}`}
-        position={[-0.3, 0.02, i]}
+        position={[-0.5, 0.05, i]}
         rotation={[-Math.PI / 2, 0, 0]}
-        fontSize={0.4}
-        color="#94a3b8"
+        fontSize={0.35}
+        color={color}
         anchorX="center"
         anchorY="middle"
+        fillOpacity={0.8}
+        castShadow={false}
+        receiveShadow={false}
       >
         {i}
-      </Text>,
+      </Text>
     );
   }
 
@@ -82,18 +90,14 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
     setResetKey((prev) => prev + 1);
   };
 
-  // --- Блокировка скролла ---
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-
     const preventTouch = (e: TouchEvent) => {
       if (e.cancelable) e.preventDefault();
     };
-
     container.addEventListener("touchmove", preventTouch, { passive: false });
     container.addEventListener("touchstart", preventTouch, { passive: false });
-
     return () => {
       container.removeEventListener("touchmove", preventTouch);
       container.removeEventListener("touchstart", preventTouch);
@@ -106,7 +110,6 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
       className="w-full h-full bg-slate-200 relative shadow-inner overflow-hidden"
       style={{ touchAction: "none" }}
     >
-      {/* Background Pattern */}
       <div
         className="absolute inset-0 pointer-events-none z-0 opacity-[0.10]"
         style={{
@@ -128,8 +131,7 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
         shadows
         dpr={[1, 1.5]}
         gl={{ powerPreference: "high-performance", antialias: false }}
-        // Увеличили FOV до 50 и отодвинули камеру (было [8, 6, 10])
-        camera={{ position: [12, 10, 15], fov: 50 }}
+        camera={{ position: [10, 8, 12], fov: 50 }}
         className="z-10 relative"
         style={{
           touchAction: "none",
@@ -151,33 +153,31 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
           >
             <orthographicCamera
               attach="shadow-camera"
-              args={[-15, 15, 15, -15]} // Расширили область теней
+              args={[-15, 15, 15, -15]}
             />
           </directionalLight>
 
-          {/* --- Сетка --- */}
           <Grid
             position={[0, 0.01, 0]}
-            args={[30, 30]} // Увеличили размер сетки (30х30м)
+            args={[30, 30]}
             cellSize={1}
             cellThickness={0.6}
             cellColor="#94a3b8"
-            sectionSize={5} // Каждые 5 метров жирная линия
+            sectionSize={5}
             sectionThickness={1.2}
             sectionColor="#64748b"
-            fadeDistance={40} // Сетка видна дальше
+            fadeDistance={30}
             fadeStrength={1.5}
             infiniteGrid={true}
           />
 
-          {/* --- Линейка с цифрами --- */}
           <Ruler />
 
           <CarportModel config={config} />
 
           <ContactShadows
             resolution={512}
-            scale={50} // Увеличили область теней под навесом
+            scale={50}
             blur={2}
             opacity={0.5}
             far={10}
@@ -188,8 +188,8 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
             makeDefault
             minPolarAngle={0}
             maxPolarAngle={Math.PI / 2 - 0.05}
-            minDistance={5}
-            maxDistance={50} // Позволяем отлетать дальше
+            minDistance={3}
+            maxDistance={40}
             target={[0, config.height / 2, 0]}
             enablePan={false}
             enableZoom={true}
