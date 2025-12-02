@@ -16,61 +16,62 @@ export const FRAME_COLORS: ColorOption[] = [
   { name: 'Шоколад', hex: '#3E2723', ral: 'RAL 8017' },
 ];
 
-// Physical Dimensions (in meters)
 export const SPECS = {
-  trussThickness: 0.04, // 40mm profile
-  trussHeightGable: 0.25, // Ratio of width
-  trussHeightArch: 0.15, // Ratio of width
-  trussHeightSingle: 0.15, // Slope rise ratio
-  purlinSize: 0.04, // 40mm
-  mauerlatHeight: 0.1, // 100mm beam
-  postSpacing: 2.5, // Max distance between posts
+  trussThickness: 0.04, 
+  trussHeightGable: 0.25, 
+  trussHeightArch: 0.15, 
+  trussHeightSingle: 0.15, 
+  purlinSize: 0.04, 
+  mauerlatHeight: 0.1, 
+  postSpacing: 2.5, 
 };
 
-// COMPETITIVE PRICING UPDATE
-// Target: ~8000 RUB/m2 for small, ~7000 RUB/m2 for large projects (Turnkey)
+// === НОВАЯ ЭКОНОМИКА (2025) ===
 export const PRICING = {
-  // Base metal structure price depends on volume.
-  // We use linear interpolation between smallArea and largeArea.
-  baseStructure: {
-    smallArea: 20,    // <= 20 m2
-    largeArea: 80,    // >= 80 m2
-    priceSmall: 3600, // RUB per sqm of floor area (Metal only)
-    priceLarge: 2600, // RUB per sqm of floor area (Metal only)
+  // Минимальная рентабельная цена за м2 "под ключ"
+  minPricePerSqm: 7000, 
+
+  // Стоимость ферм и прогонов зависит от ширины пролета
+  baseTrussStructure: {
+    base: 3200,        // База за м2 при ширине <= 4м
+    widthFactor: 450,  // +450р за каждый метр ширины свыше 4м (усложнение фермы)
   },
   
-  // Cost per LINEAR METER of pillar height
+  // Стоимость столба (Материал + Работа) за 1 п.м.
   pillarMultiplier: {
-    [PillarSize.Size60]: 600,  // per meter
-    [PillarSize.Size80]: 950,  // per meter
-    [PillarSize.Size100]: 1450, // per meter
+    [PillarSize.Size60]: 1100,
+    [PillarSize.Size80]: 1900,
+    [PillarSize.Size100]: 2800,
   },
 
+  // Кровля (Материал + Работа)
   roofMaterialPricePerSqm: {
-    [RoofMaterial.Polycarbonate]: 850,
-    [RoofMaterial.Decking]: 750,
-    [RoofMaterial.MetalTile]: 1100,
+    [RoofMaterial.Polycarbonate]: 1950, // Поликарбонат (дорогой)
+    [RoofMaterial.Decking]: 1200,       // Профлист (дешевле)
+    [RoofMaterial.MetalTile]: 1700,     // Черепица
   },
 
+  // Сложность геометрии крыши
   roofTypeMultiplier: {
     [RoofType.SingleSlope]: 1.0,
-    [RoofType.Triangular]: 1.05,
-    [RoofType.Gable]: 1.15,
-    [RoofType.Arched]: 1.25,
-    [RoofType.SemiArched]: 1.35,
+    [RoofType.Triangular]: 1.1,
+    [RoofType.Gable]: 1.25,
+    [RoofType.Arched]: 1.35,
+    [RoofType.SemiArched]: 1.45,
   },
 
   paintMultiplier: {
     [PaintType.None]: 0,
-    [PaintType.Ral]: 350, // Per sqm
-    [PaintType.Polymer]: 950,
+    [PaintType.Ral]: 700, 
+    [PaintType.Polymer]: 1600,
   },
 
   extras: {
-    trusses: 450, // per sqm reinforcement
-    gutters: 1200, // per meter length
-    sideWalls: 2500, // per sqm wall
-    foundation: 5000, // per sqm
-    installation: 0.30, // 30% of total
+    trusses: 900,        // Усиление (р/м2)
+    gutters: 2000,       // Водосток (р/п.м с двух сторон)
+    sideWalls: 4500,     // Зашивка стен (р/м2)
+    foundation: 8500,    // Бетон (р/м2)
+    installation: 0.35,  // Монтаж: 35% от материалов
+    highWork: 0.15,      // Наценка за высоту > 3.2м (+15% к монтажу)
   }
 };
