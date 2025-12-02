@@ -17,8 +17,7 @@ import {
     TrendingDown,
     Send,
     Copy,
-    Download,
-    Mail,
+    Settings2,
 } from "lucide-react";
 
 const INITIAL_CONFIG: CarportConfig = {
@@ -39,8 +38,8 @@ const INITIAL_CONFIG: CarportConfig = {
     hasInstallation: true,
 };
 
-// ... (BrowserOrderModal код тот же) ...
-const BrowserOrderModal = ({ isOpen, onClose, onCopy, onEmail }: any) => {
+// Модальное окно для браузера
+const BrowserOrderModal = ({ isOpen, onClose, onCopy }: any) => {
     if (!isOpen) return null;
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -90,6 +89,9 @@ export default function App() {
             window.Telegram.WebApp.ready();
             try {
                 window.Telegram.WebApp.expand();
+                // Увеличиваем высоту viewport для учета панелей
+                document.body.style.height =
+                    window.Telegram.WebApp.viewportHeight + "px";
             } catch (e) {
                 console.warn(e);
             }
@@ -122,7 +124,6 @@ export default function App() {
         let materialCost = 0;
         const floorArea = config.width * config.length;
 
-        // 1. Металлокаркас
         const baseRate = PRICING.baseTrussStructure.base;
         const widthPenalty =
             Math.max(0, config.width - 4.5) *
@@ -134,7 +135,6 @@ export default function App() {
             trussCostPerSqm *
             PRICING.roofTypeMultiplier[config.roofType];
 
-        // 2. Столбы
         const maxSpan = 6.0;
         const numCols = Math.ceil(config.width / maxSpan) + 1;
         const postSpacing = 3.0;
@@ -145,7 +145,6 @@ export default function App() {
         materialCost +=
             totalPillarHeight * PRICING.pillarMultiplier[config.pillarSize];
 
-        // 3. Кровля
         let roofAreaMultiplier = 1.1;
         if (config.roofType === RoofType.Gable) roofAreaMultiplier = 1.25;
         if (config.roofType === RoofType.Arched) roofAreaMultiplier = 1.3;
@@ -154,11 +153,8 @@ export default function App() {
         const roofArea = floorArea * roofAreaMultiplier;
         materialCost +=
             roofArea * PRICING.roofMaterialPricePerSqm[config.roofMaterial];
-
-        // 4. Покраска
         materialCost += floorArea * PRICING.paintMultiplier[config.paintType];
 
-        // 5. Опции
         if (config.hasTrusses)
             materialCost += floorArea * PRICING.extras.trusses;
         if (config.hasGutters)
@@ -172,7 +168,6 @@ export default function App() {
             materialCost += pillarCount * 4000;
         }
 
-        // 6. Монтаж
         let total = materialCost;
         if (config.hasInstallation) {
             let installPercent = PRICING.extras.installation;
@@ -182,7 +177,6 @@ export default function App() {
             total = total * (1 + installPercent);
         }
 
-        // 7. Минимум
         const minTotal = floorArea * PRICING.minPricePerSqm;
         if (total < minTotal) {
             total = minTotal;
@@ -280,7 +274,7 @@ export default function App() {
 
     const fallbackCopy = (text: string) => {
         navigator.clipboard.writeText(text).then(() => {
-            alert("📋 Данные заказа скопированы! Вставьте их в бот.");
+            alert("📋 Данные скопированы! Вставьте их в бот.");
             window.open("https://t.me/Kovka007bot", "_blank");
         });
     };
@@ -326,7 +320,8 @@ export default function App() {
             </div>
 
             {/* MOBILE PANEL */}
-            <div className="lg:hidden flex flex-col z-30 flex-shrink-0 bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+            <div className="lg:hidden flex flex-col z-30 flex-shrink-0 bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.05)] pb-safe">
+                {/* Top Row */}
                 <div className="grid grid-cols-2 gap-3 p-3 border-b border-slate-100">
                     <button
                         onClick={handleDownloadReport}
@@ -344,7 +339,20 @@ export default function App() {
                         <span className="text-xs">Сайт</span>
                     </a>
                 </div>
-                <div className="p-4 pb-8 safe-area-bottom">
+
+                {/* Settings Button (Mobile Only) */}
+                <div className="px-4 pt-3">
+                    <button
+                        onClick={() => setIsMobileMenuOpen(true)}
+                        className="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors active:scale-95"
+                    >
+                        <Settings2 size={18} />
+                        <span>Настроить параметры</span>
+                    </button>
+                </div>
+
+                {/* Price & Order */}
+                <div className="p-4">
                     <div className="flex items-end justify-between mb-4">
                         <div>
                             <span className="text-slate-400 line-through text-xs font-medium">
