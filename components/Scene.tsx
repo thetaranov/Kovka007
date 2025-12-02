@@ -39,18 +39,14 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
     setResetKey((prev) => prev + 1);
   };
 
-  // Блокировка скролла страницы при касании сцены
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-
     const preventTouch = (e: TouchEvent) => {
       if (e.cancelable) e.preventDefault();
     };
-
     container.addEventListener("touchmove", preventTouch, { passive: false });
     container.addEventListener("touchstart", preventTouch, { passive: false });
-
     return () => {
       container.removeEventListener("touchmove", preventTouch);
       container.removeEventListener("touchstart", preventTouch);
@@ -65,7 +61,7 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
     >
       {/* Фон */}
       <div
-        className="absolute inset-0 pointer-events-none z-0 opacity-[0.10]"
+        className="absolute inset-0 pointer-events-none z-0 opacity-[0.05]"
         style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='Inter, sans-serif' font-weight='900' font-size='14' fill='%231e293b' text-anchor='middle' transform='rotate(-45 50 50)'%3Ekovka007%3C/text%3E%3C/svg%3E")`,
           backgroundRepeat: "repeat",
@@ -84,8 +80,8 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
         key={resetKey}
         shadows
         dpr={[1, 1.5]}
-        gl={{ powerPreference: "high-performance", antialias: false }}
-        camera={{ position: [10, 8, 12], fov: 50 }}
+        gl={{ powerPreference: "high-performance", antialias: true }} // Включил сглаживание для четкости
+        camera={{ position: [10, 8, 12], fov: 45 }} // Чуть уменьшил FOV для "плотности" картинки
         className="z-10 relative"
         style={{
           touchAction: "none",
@@ -95,44 +91,46 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
         }}
       >
         <Suspense fallback={<Loader />}>
-          <Environment preset="city" />
-
-          <ambientLight intensity={0.8} />
+          {/* Освещение без тумана */}
+          <ambientLight intensity={0.7} />
           <directionalLight
-            position={[5, 12, 5]}
-            intensity={1.2}
+            position={[10, 20, 10]}
+            intensity={1.5}
             castShadow
-            shadow-mapSize={[1024, 1024]}
+            shadow-mapSize={[2048, 2048]} // Вернул качество теней для четкости
             shadow-bias={-0.0005}
           >
             <orthographicCamera
               attach="shadow-camera"
-              args={[-15, 15, 15, -15]}
+              args={[-20, 20, 20, -20]}
             />
           </directionalLight>
 
-          {/* Сетка без цифр */}
+          {/* Легкая подсветка снизу, чтобы не было черных теней */}
+          <hemisphereLight intensity={0.3} groundColor="#f8fafc" />
+
+          {/* Контрастная сетка */}
           <Grid
             position={[0, 0.01, 0]}
-            args={[30, 30]}
+            args={[40, 40]}
             cellSize={1}
-            cellThickness={0.6}
-            cellColor="#94a3b8"
+            cellThickness={1} // Жирнее
+            cellColor="#94a3b8" // Более темный серый
             sectionSize={5}
-            sectionThickness={1.2}
-            sectionColor="#64748b"
-            fadeDistance={30}
-            fadeStrength={1.5}
+            sectionThickness={1.5}
+            sectionColor="#475569" // Темно-серый для секций
+            fadeDistance={50} // Дальше видимость
+            fadeStrength={2} // Меньше затухания
             infiniteGrid={true}
           />
 
           <CarportModel config={config} />
 
           <ContactShadows
-            resolution={512}
-            scale={50}
-            blur={2}
-            opacity={0.5}
+            resolution={1024}
+            scale={60}
+            blur={2.5}
+            opacity={0.6} // Чуть темнее тень
             far={10}
             color="#000000"
           />
@@ -142,7 +140,7 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
             minPolarAngle={0}
             maxPolarAngle={Math.PI / 2 - 0.05}
             minDistance={3}
-            maxDistance={40}
+            maxDistance={50}
             target={[0, config.height / 2, 0]}
             enablePan={false}
             enableZoom={true}
