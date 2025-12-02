@@ -6,6 +6,7 @@ import {
   ContactShadows,
   Html,
   useProgress,
+  Grid, // <--- ИМПОРТИРУЕМ GRID
 } from "@react-three/drei";
 import { CarportConfig } from "../types";
 import { CarportModel } from "./CarportModel";
@@ -44,13 +45,11 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
     if (!container) return;
 
     const preventTouch = (e: TouchEvent) => {
-      // Если событие можно отменить, отменяем его (это блокирует скролл страницы)
       if (e.cancelable) {
         e.preventDefault();
       }
     };
 
-    // Добавляем слушатели с { passive: false }, чтобы preventDefault работал
     container.addEventListener("touchmove", preventTouch, { passive: false });
     container.addEventListener("touchstart", preventTouch, { passive: false });
 
@@ -64,7 +63,7 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
     <div
       ref={containerRef}
       className="w-full h-full bg-slate-200 relative shadow-inner overflow-hidden"
-      style={{ touchAction: "none" }} // Дублируем запрет жестов через CSS
+      style={{ touchAction: "none" }} 
     >
       {/* Background Pattern */}
       <div
@@ -86,7 +85,6 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
       <Canvas
         key={resetKey}
         shadows
-        // Оптимизация производительности
         dpr={[1, 1.5]}
         gl={{ powerPreference: "high-performance", antialias: false }}
         camera={{ position: [8, 6, 10], fov: 40 }}
@@ -114,6 +112,22 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
               args={[-10, 10, 10, -10]}
             />
           </directionalLight>
+
+          {/* --- СЕТКА НА ПОЛУ --- */}
+          <Grid 
+            position={[0, 0.01, 0]} // Чуть приподнимаем, чтобы не мерцала с полом
+            args={[20, 20]} // Размер сетки 20x20 метров
+            cellSize={1} // Основная ячейка 1 метр
+            cellThickness={0.6} // Толщина линий ячейки
+            cellColor="#64748b" // Цвет основных линий (slate-500)
+            sectionSize={5} // Секции по 5 метров (жирные линии)
+            sectionThickness={1.2} // Толщина секций
+            sectionColor="#475569" // Цвет секций (slate-600)
+            fadeDistance={20} // Сетка исчезает вдали
+            fadeStrength={1}
+            followCamera={false} 
+            infiniteGrid={true} // Бесконечная сетка
+          />
 
           <CarportModel config={config} />
 
