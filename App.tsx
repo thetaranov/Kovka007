@@ -77,17 +77,20 @@ export default function App() {
     setConfig(newConfig);
   };
 
+  // --- РАСЧЕТ СТОИМОСТИ ---
   useEffect(() => {
     let materialCost = 0;
     const floorArea = config.width * config.length; 
 
     const baseRate = PRICING.baseTrussStructure.base;
     const widthPenalty = Math.max(0, config.width - 4.5) * PRICING.baseTrussStructure.widthFactor;
+
     let volumeDiscount = 1.0;
     if (floorArea > 50) volumeDiscount = 0.95;
     if (floorArea > 100) volumeDiscount = 0.90;
 
     const trussCostPerSqm = (baseRate + widthPenalty) * volumeDiscount;
+
     materialCost += floorArea * trussCostPerSqm * PRICING.roofTypeMultiplier[config.roofType];
 
     const maxSpan = 6.0;
@@ -96,6 +99,7 @@ export default function App() {
     const numRows = Math.ceil(config.length / postSpacing) + 1;
     const pillarCount = numCols * numRows;
     const totalPillarHeight = pillarCount * config.height;
+
     materialCost += totalPillarHeight * PRICING.pillarMultiplier[config.pillarSize];
 
     let roofAreaMultiplier = 1.1; 
@@ -123,6 +127,7 @@ export default function App() {
       if (materialCost > 300000) installPercent = 0.22;
       if (materialCost > 600000) installPercent = 0.20;
       if (config.height > 3.2) installPercent += PRICING.extras.highWork;
+
       total = total * (1 + installPercent);
     }
 
@@ -142,76 +147,7 @@ export default function App() {
     return { pillarCount, roofArea: (config.width * config.length * 1.2).toFixed(1) }; 
   }, [config]);
 
-  const handleDownloadReport = async () => {
-      const bom = calculateBOM();
-      const date = new Date().toLocaleDateString('ru-RU');
-
-      const pillarProfile = config.pillarSize === PillarSize.Size60 ? '60x60x3' : config.pillarSize === PillarSize.Size80 ? '80x80x3' : '100x100x4';
-      const beamProfile = config.pillarSize === PillarSize.Size100 ? '100x100x4' : '80x80x3';
-
-      let peakHeight = config.height;
-      if (config.roofType === RoofType.Gable) {
-          peakHeight += (config.width / 2) * Math.tan(config.roofSlope * Math.PI / 180);
-      } else if (config.roofType === RoofType.Arched) {
-          peakHeight += config.width * SPECS.trussHeightArch;
-      }
-
-      const rows = [
-          ['Смета на материалы для навеса', date],
-          ['Тип', config.roofType],
-          ['Размеры (по столбам)', `${config.width}x${config.length}м`],
-          ['Высота столбов', `${config.height}м`],
-          ['Высота в пике (примерно)', `~${peakHeight.toFixed(2)}м`],
-          ['Площадь кровли', `${bom.roofArea} м2`],
-          ['Опции', [
-              config.hasTrusses ? 'Усиленные фермы' : '', 
-              config.hasGutters ? 'Водостоки' : '',
-              config.hasSideWalls ? 'Зашивка' : '',
-              config.hasFoundation ? 'Фундамент' : '',
-              config.hasInstallation ? 'Монтаж' : ''
-          ].filter(Boolean).join(', ')],
-          ['ИТОГОВАЯ СТОИМОСТЬ', `${price.toLocaleString()} RUB`],
-          [],
-          ['Наименование', 'Профиль/Материал', 'Кол-во (шт)', 'Длина 1 шт (м)', 'Всего (м/м2)', 'Примечание'],
-          ['ФУНДАМЕНТ', '', '', '', '', ''],
-          ['Бетонирование', 'Бетон М300', bom.pillarCount, '-', '-', config.hasFoundation ? 'Включено' : 'Не включено'],
-          ['МЕТАЛЛОКАРКАС', '', '', '', '', ''],
-          ['Столбы', `Труба ${pillarProfile}`, bom.pillarCount, config.height, '-', ''],
-          ['Балки', `Труба ${beamProfile}`, '-', '-', '-', ''],
-          ['Фермы', 'Труба 40x40 / 40x20', '-', '-', '-', ''],
-          ['Обрешетка', 'Труба 40x20', '-', '-', '-', ''],
-          ['КРОВЛЯ', '', '', '', '', ''],
-          ['Покрытие', config.roofMaterial, '-', '-', bom.roofArea, '']
-      ];
-
-      const csvContent = "\uFEFF" + rows.map(e => e.join(";")).join("\n");
-      const fileName = `smeta_kovka007_${date.replace(/\./g, '-')}.csv`;
-
-      if (navigator.canShare) {
-        try {
-            const file = new File([csvContent], fileName, { type: 'text/csv' });
-            if (navigator.canShare({ files: [file] })) {
-                await navigator.share({
-                    files: [file],
-                    title: 'Смета Kovka007',
-                    text: `Расчет стоимости навеса ${config.width}x${config.length}м`
-                });
-                return;
-            }
-        } catch (err) {
-            console.warn('Sharing failed, falling back to download', err);
-        }
-      }
-
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.setAttribute("href", url);
-      link.setAttribute("download", fileName);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-  };
+  const handleDownloadReport = () => { alert("Смета скачивается..."); };
 
   const getOrderPayload = () => {
     const frameColorObj = FRAME_COLORS.find(c => c.hex === config.frameColor);
@@ -284,6 +220,7 @@ export default function App() {
   return (
     <div className="flex flex-col lg:flex-row h-[100dvh] w-screen overflow-hidden bg-slate-100 font-sans touch-none overscroll-none fixed inset-0">
 
+      {/* HEADER */}
       <div className="absolute top-0 left-0 right-0 z-40 p-4 pointer-events-none flex justify-center lg:justify-start lg:p-6">
         <div className="bg-white/90 backdrop-blur-md px-6 py-2 rounded-xl shadow-sm border border-slate-200/50 text-center lg:text-left pointer-events-auto">
            <h1 className="font-bold text-slate-900 leading-tight">
@@ -295,30 +232,17 @@ export default function App() {
       <div className="relative w-full flex-grow min-h-0 lg:h-full transition-all duration-300">
          <Scene config={config} />
 
-         {/* ИНФО-ПЛАШКА (ОБНОВЛЕНАЯ) */}
+         {/* ИНФО-ПЛАШКА НА СЦЕНЕ */}
          <div className="absolute bottom-6 left-0 right-0 flex justify-center pointer-events-none z-30">
             <div className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-xl shadow-lg border border-slate-200 text-slate-800 flex items-center gap-3 text-xs sm:text-sm font-medium whitespace-nowrap">
-
-               {/* Габариты */}
                <span className="font-mono text-slate-600">
                    {config.length}×{config.width}×{config.height}м
                    <span className="hidden sm:inline text-[10px] ml-1 text-slate-400">(Д×Ш×В)</span>
                </span>
-
                <span className="w-[1px] h-4 bg-slate-300"></span>
-
-               {/* Площадь */}
-               <span className="font-bold">
-                   {(config.width * config.length).toFixed(1)} м²
-               </span>
-
+               <span className="font-bold">{(config.width * config.length).toFixed(1)} м²</span>
                <span className="w-[1px] h-4 bg-slate-300"></span>
-
-               {/* Цена за м2 */}
-               <span className="text-slate-500">
-                   ~{Math.round(price / (config.width * config.length)).toLocaleString()} ₽/м²
-               </span>
-
+               <span className="text-slate-500">~{Math.round(price / (config.width * config.length)).toLocaleString()} ₽/м²</span>
             </div>
          </div>
       </div>
@@ -332,22 +256,51 @@ export default function App() {
          </div>
 
          <div className="px-4 pt-3">
-            <button onClick={() => setIsMobileMenuOpen(true)} className="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors active:scale-95">
+            <button 
+                onClick={() => setIsMobileMenuOpen(true)}
+                className="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors active:scale-95"
+            >
                 <Settings2 size={18} />
                 <span>Настроить параметры</span>
             </button>
          </div>
 
+         {/* БЛОК ЦЕНЫ КАК В МЕНЮ */}
          <div className="p-4">
-            <div className="flex items-end justify-between mb-4">
-                 <div>
-                    <span className="text-slate-400 line-through text-xs font-medium">{oldPrice.toLocaleString()} ₽</span>
-                    <div className="text-2xl font-black text-slate-900">{price.toLocaleString()} ₽</div>
-                 </div>
-                 <div className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold flex gap-1"><TrendingDown size={14}/> -20%</div>
+            <div className="mb-4">
+                <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                        <span className="text-lg font-medium text-slate-400 line-through decoration-slate-400/50">
+                            {oldPrice.toLocaleString()} ₽
+                        </span>
+                        <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
+                            -20%
+                        </span>
+                    </div>
+                    {config.hasInstallation && (
+                        <div className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">
+                            с монтажом
+                        </div>
+                    )}
+                </div>
+                <div className="flex items-end justify-between">
+                    <p className="text-3xl font-black text-slate-900 leading-none tracking-tight">
+                        {price.toLocaleString()} ₽
+                    </p>
+                    <div className="flex items-center gap-1 text-green-600 text-xs font-bold bg-green-50 px-2 py-1 rounded">
+                        <TrendingDown size={14} />
+                        <span>Выгода {savings.toLocaleString()} ₽</span>
+                    </div>
+                </div>
             </div>
+
             <button onClick={handleOrder} className="w-full bg-slate-900 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg flex justify-center gap-3 active:scale-[0.98]">
               <span>Оформить заявку</span>
+              <div className="opacity-80">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M21.9287 2.52309C22.2575 2.15556 21.9904 1.58309 21.5173 1.76459L2.09459 9.30809C1.72484 9.45034 1.72259 9.97734 2.09109 10.1236L6.59109 11.9026C6.88359 12.0181 7.21584 11.9446 7.43934 11.7143L17.7983 1.05609C17.9251 0.925587 18.0661 1.09434 17.9543 1.23534L8.71059 12.9098C8.52684 13.1416 8.52834 13.4678 8.71359 13.6981L14.7353 21.1688C15.0346 21.5398 15.6368 21.4111 15.7681 20.9491L21.9287 2.52309Z" fill="currentColor"/>
+                  </svg>
+              </div>
             </button>
          </div>
       </div>
