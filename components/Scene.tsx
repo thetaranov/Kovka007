@@ -1,4 +1,4 @@
-import React, { Suspense, useState } from "react";
+import React, { Suspense, useState, useEffect, useRef } from "react";
 import { Canvas } from "@react-three/fiber";
 import {
   OrbitControls,
@@ -31,16 +31,40 @@ function Loader() {
 
 export const Scene: React.FC<SceneProps> = ({ config }) => {
   const [resetKey, setResetKey] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const handleReset = (e: React.MouseEvent) => {
     e.stopPropagation();
     setResetKey((prev) => prev + 1);
   };
 
+  // --- ВАЖНО: Блокировка скролла при касании 3D-сцены ---
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const preventTouch = (e: TouchEvent) => {
+      // Если событие можно отменить, отменяем его (это блокирует скролл страницы)
+      if (e.cancelable) {
+        e.preventDefault();
+      }
+    };
+
+    // Добавляем слушатели с { passive: false }, чтобы preventDefault работал
+    container.addEventListener("touchmove", preventTouch, { passive: false });
+    container.addEventListener("touchstart", preventTouch, { passive: false });
+
+    return () => {
+      container.removeEventListener("touchmove", preventTouch);
+      container.removeEventListener("touchstart", preventTouch);
+    };
+  }, []);
+
   return (
     <div
+      ref={containerRef}
       className="w-full h-full bg-slate-200 relative shadow-inner overflow-hidden"
-      style={{ touchAction: "none" }}
+      style={{ touchAction: "none" }} // Дублируем запрет жестов через CSS
     >
       {/* Background Pattern */}
       <div
@@ -62,13 +86,17 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
       <Canvas
         key={resetKey}
         shadows
-        // ОПТИМИЗАЦИЯ 1: Ограничиваем плотность пикселей. [1, 1.5] - идеально для производительности на мобильных.
+        // Оптимизация производительности
         dpr={[1, 1.5]}
-        // ОПТИМИЗАЦИЯ 2: Настройки WebGL для скорости
         gl={{ powerPreference: "high-performance", antialias: false }}
         camera={{ position: [8, 6, 10], fov: 40 }}
         className="z-10 relative"
-        style={{ touchAction: "none", width: "100%", height: "100%" }}
+        style={{
+          touchAction: "none",
+          width: "100%",
+          height: "100%",
+          outline: "none",
+        }}
       >
         <Suspense fallback={<Loader />}>
           <Environment preset="city" />
@@ -78,7 +106,6 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
             position={[5, 12, 5]}
             intensity={1.2}
             castShadow
-            // ОПТИМИЗАЦИЯ 3: Уменьшаем разрешение карты теней (было 2048)
             shadow-mapSize={[1024, 1024]}
             shadow-bias={-0.0005}
           >
@@ -90,7 +117,6 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
 
           <CarportModel config={config} />
 
-          {/* ОПТИМИЗАЦИЯ 4: Уменьшаем качество теней на земле */}
           <ContactShadows
             resolution={512}
             scale={40}
@@ -108,6 +134,9 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
             maxDistance={30}
             target={[0, config.height / 2, 0]}
             enablePan={false}
+            enableZoom={true}
+            enableDamping={true}
+            dampingFactor={0.05}
           />
         </Suspense>
       </Canvas>

@@ -2,14 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
+html,
 body {
   font-family: 'Inter', sans-serif;
   background-color: #f8fafc;
+
+  /* --- БЛОКИРОВКА СКРОЛЛА --- */
   overflow: hidden;
+  /* Скрываем полосы прокрутки */
+  overscroll-behavior: none;
+  /* Запрещаем "оттягивание" страницы на iOS/Android */
+  touch-action: none;
+  /* Отключаем стандартные жесты браузера */
+
+  /* Фиксация размеров */
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
   margin: 0;
   padding: 0;
 }
 
+#root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Кастомный скроллбар для внутренних контейнеров */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
 }
@@ -27,11 +49,12 @@ body {
   background-color: #94a3b8;
 }
 
-/* Безопасный отступ снизу для iOS */
+/* Безопасный отступ снизу для iOS (челка/полоска) */
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 20px);
 }
 
+/* Анимации */
 @keyframes fade-in-up {
   from {
     opacity: 0;
