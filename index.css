@@ -1,10 +1,7 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@theme {
-  --font-sans: 'Inter', sans-serif;
-}
-
-/* Глобальные стили */
 body {
   font-family: 'Inter', sans-serif;
   background-color: #f8fafc;
@@ -13,7 +10,6 @@ body {
   padding: 0;
 }
 
-/* Кастомный скроллбар */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
 }
@@ -31,7 +27,6 @@ body {
   background-color: #94a3b8;
 }
 
-/* Анимации */
 @keyframes fade-in-up {
   from {
     opacity: 0;
