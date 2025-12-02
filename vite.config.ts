@@ -1,9 +1,24 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "tailwindcss";
+import autoprefixer from "autoprefixer";
 
 export default defineConfig({
   plugins: [react()],
-  // УБРАЛИ БЛОК CSS/POSTCSS ОТСЮДА
+  css: {
+    postcss: {
+      plugins: [
+        tailwindcss({
+          content: ["./index.html", "./**/*.{js,ts,jsx,tsx}"],
+          theme: {
+            extend: {},
+          },
+          plugins: [],
+        }),
+        autoprefixer(),
+      ],
+    },
+  },
   server: {
     host: "0.0.0.0",
     port: 5000,
