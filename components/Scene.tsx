@@ -1,18 +1,38 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Environment, ContactShadows } from '@react-three/drei';
+import { OrbitControls, Environment, ContactShadows, Html, useProgress } from '@react-three/drei';
 import { CarportConfig } from '../types';
 import { CarportModel } from './CarportModel';
+import { RefreshCw, Loader2 } from 'lucide-react';
 
 interface SceneProps {
   config: CarportConfig;
 }
 
+function Loader() {
+  const { progress } = useProgress();
+  return (
+    <Html center>
+      <div className="flex flex-col items-center justify-center p-3 bg-white/90 backdrop-blur rounded-xl shadow-lg border border-slate-100">
+        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mb-2" />
+        <span className="text-xs font-bold text-slate-600 tabular-nums">{progress.toFixed(0)}%</span>
+      </div>
+    </Html>
+  );
+}
+
 export const Scene: React.FC<SceneProps> = ({ config }) => {
+  // Key to force-remount the Canvas on error/reset
+  const [resetKey, setResetKey] = useState(0);
+
+  const handleReset = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setResetKey(prev => prev + 1);
+  };
+
   return (
     <div 
       className="w-full h-full bg-slate-200 relative shadow-inner overflow-hidden"
-      // 1. Запрещаем действия браузера на контейнере
       style={{ touchAction: 'none' }}
     >
       {/* Static CSS Watermark Background - Darker Kovka007 */}
@@ -25,7 +45,17 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
         }}
       />
 
+      {/* Reset 3D Scene Button */}
+      <button
+        onClick={handleReset}
+        className="absolute top-20 right-4 lg:top-4 lg:right-4 z-20 p-2 bg-white/80 hover:bg-white backdrop-blur-sm rounded-lg shadow-sm border border-slate-200 text-slate-500 hover:text-indigo-600 active:scale-95 transition-all"
+        title="Перезагрузить 3D сцену"
+      >
+        <RefreshCw size={20} />
+      </button>
+
       <Canvas 
+        key={resetKey}
         shadows 
         camera={{ position: [8, 6, 10], fov: 40 }} 
         className="z-10 relative"
@@ -33,7 +63,7 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
         // Это заставит телефон передавать свайпы в OrbitControls, а не скроллить страницу.
         style={{ touchAction: 'none', width: '100%', height: '100%' }}
       >
-        <Suspense fallback={null}>
+        <Suspense fallback={<Loader />}>
           <Environment preset="city" />
           
           <ambientLight intensity={0.8} />
@@ -58,8 +88,6 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
             minDistance={5}
             maxDistance={30}
             target={[0, config.height/2, 0]}
-            // Опционально: можно отключить смещение (панорамирование) двумя пальцами, 
-            // чтобы модель не "улетала" с экрана, оставив только вращение и зум.
             enablePan={false} 
           />
         </Suspense>

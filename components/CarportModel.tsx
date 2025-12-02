@@ -455,8 +455,9 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config }) => {
            );
         }
 
+        // FIXED: Removed the erroneous .map that was creating new objects in the loop
         return <group position={[0, baseY, 0]}>
-            {strips.map((s, i) => <mesh key={i} castShadow receiveShadow><primitive object={s.type === BoxBeam ? new THREE.Object3D() : new THREE.Object3D()} /></mesh>)}{strips}
+            {strips}
         </group>;
     } else {
         // Arched

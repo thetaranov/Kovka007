@@ -1,4 +1,3 @@
-
 export interface ColorOption {
   name: string;
   hex: string;
@@ -89,22 +88,6 @@ declare global {
         };
         showAlert?: (message: string, callback?: () => void) => void;
       }
-    }
-  }
-
-  // Augment JSX namespace for React Three Fiber elements
-  namespace JSX {
-    interface IntrinsicElements {
-      mesh: any;
-      group: any;
-      boxGeometry: any;
-      meshStandardMaterial: any;
-      cylinderGeometry: any;
-      planeGeometry: any;
-      primitive: any;
-      ambientLight: any;
-      directionalLight: any;
-      orthographicCamera: any;
     }
   }
 }
