@@ -23,17 +23,44 @@ const INITIAL_CONFIG: CarportConfig = {
   hasInstallation: true,
 };
 
-const BrowserOrderModal = ({ isOpen, onClose, onCopy }: any) => {
+// Модальное окно для браузера (когда нельзя отправить данные автоматически)
+const BrowserOrderModal = ({ isOpen, onClose, orderData }: { isOpen: boolean, onClose: () => void, orderData: string }) => {
     if (!isOpen) return null;
+
+    const handleCopy = () => {
+        // Попытка скопировать через API
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(orderData).then(() => {
+                alert("✅ Скопировано! Теперь отправьте этот текст боту @Kovka007bot");
+                window.open('https://t.me/Kovka007bot', '_blank');
+                onClose();
+            }).catch(() => {
+                // Fallback если API не сработал
+                prompt("Скопируйте этот код и отправьте боту:", orderData);
+                onClose();
+            });
+        } else {
+            // Fallback для старых браузеров
+            prompt("Скопируйте этот код и отправьте боту:", orderData);
+            onClose();
+        }
+    };
+
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
             <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-fade-in-up">
                 <div className="flex justify-between mb-4"><h3 className="text-xl font-bold">Оформить заявку</h3><button onClick={onClose}><X/></button></div>
                 <div className="space-y-3">
-                    <button onClick={onCopy} className="w-full bg-[#2AABEE] text-white p-4 rounded-xl flex items-center gap-3 justify-center font-bold shadow-lg shadow-blue-200">
-                        <Send size={20}/> <span>Отправить в Telegram</span>
+                    <p className="text-sm text-slate-600 mb-4">Вы открыли сайт в браузере. Чтобы оформить заказ, скопируйте код и отправьте его нашему боту в Telegram.</p>
+
+                    <button onClick={handleCopy} className="w-full bg-[#2AABEE] hover:bg-[#229ED9] text-white p-4 rounded-xl flex items-center gap-3 justify-center font-bold shadow-lg shadow-blue-200 transition-colors">
+                        <Copy size={20}/> <span>Скопировать и перейти в Telegram</span>
                     </button>
+
+                    <div className="bg-slate-100 p-3 rounded-lg text-xs text-slate-500 font-mono break-all overflow-hidden h-16 opacity-70">
+                        {orderData}
+                    </div>
                 </div>
             </div>
         </div>
@@ -52,6 +79,7 @@ export default function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showBrowserOrderModal, setShowBrowserOrderModal] = useState(false);
   const [price, setPrice] = useState(0);
+  const [orderJson, setOrderJson] = useState(""); // Храним JSON для модалки
 
   useEffect(() => {
     if (window.Telegram?.WebApp) {
@@ -194,27 +222,22 @@ export default function App() {
     const payload = getOrderPayload();
     const dataToSend = JSON.stringify(payload);
 
-    if (window.Telegram && window.Telegram.WebApp) {
-        if (typeof window.Telegram.WebApp.sendData === 'function') {
-            try {
-                window.Telegram.WebApp.sendData(dataToSend);
-            } catch (e) {
-                console.error("sendData failed:", e);
-                fallbackCopy(dataToSend);
-            }
-        } else {
-            fallbackCopy(dataToSend);
+    // 1. Пробуем отправить через Telegram WebApp
+    if (window.Telegram?.WebApp?.initData) {
+        try {
+            window.Telegram.WebApp.sendData(dataToSend);
+            // Не закрываем сразу, вдруг ошибка
+        } catch (e) {
+            console.error("WebApp sendData failed:", e);
+            // Если не вышло, показываем модалку
+            setOrderJson(dataToSend);
+            setShowBrowserOrderModal(true);
         }
     } else {
+        // 2. Если мы в браузере - показываем модалку
+        setOrderJson(dataToSend);
         setShowBrowserOrderModal(true);
     }
-  };
-
-  const fallbackCopy = (text: string) => {
-      navigator.clipboard.writeText(text).then(() => {
-          alert("📋 Данные заказа скопированы! Вставьте их в бот.");
-          window.open('https://t.me/Kovka007bot', '_blank');
-      });
   };
 
   return (
@@ -232,7 +255,6 @@ export default function App() {
       <div className="relative w-full flex-grow min-h-0 lg:h-full transition-all duration-300">
          <Scene config={config} />
 
-         {/* ИНФО-ПЛАШКА НА СЦЕНЕ */}
          <div className="absolute bottom-6 left-0 right-0 flex justify-center pointer-events-none z-30">
             <div className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-xl shadow-lg border border-slate-200 text-slate-800 flex items-center gap-3 text-xs sm:text-sm font-medium whitespace-nowrap">
                <span className="font-mono text-slate-600">
@@ -249,58 +271,26 @@ export default function App() {
 
       {/* MOBILE PANEL */}
       <div className="lg:hidden flex flex-col z-30 flex-shrink-0 bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.05)] pb-safe">
-
          <div className="grid grid-cols-2 gap-3 p-3 border-b border-slate-100">
              <button onClick={handleDownloadReport} className="bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl border flex justify-center items-center gap-2 active:scale-95"><FileText size={16} className="text-green-600"/><span className="text-xs">Смета</span></button>
              <a href="https://kovka007.ru/" target="_blank" rel="noopener noreferrer" className="bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl border flex justify-center items-center gap-2 active:scale-95"><Globe size={16} className="text-indigo-600"/><span className="text-xs">Сайт</span></a>
          </div>
-
          <div className="px-4 pt-3">
-            <button 
-                onClick={() => setIsMobileMenuOpen(true)}
-                className="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors active:scale-95"
-            >
+            <button onClick={() => setIsMobileMenuOpen(true)} className="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors active:scale-95">
                 <Settings2 size={18} />
                 <span>Настроить параметры</span>
             </button>
          </div>
-
-         {/* БЛОК ЦЕНЫ КАК В МЕНЮ */}
          <div className="p-4">
-            <div className="mb-4">
-                <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                        <span className="text-lg font-medium text-slate-400 line-through decoration-slate-400/50">
-                            {oldPrice.toLocaleString()} ₽
-                        </span>
-                        <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
-                            -20%
-                        </span>
-                    </div>
-                    {config.hasInstallation && (
-                        <div className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">
-                            с монтажом
-                        </div>
-                    )}
-                </div>
-                <div className="flex items-end justify-between">
-                    <p className="text-3xl font-black text-slate-900 leading-none tracking-tight">
-                        {price.toLocaleString()} ₽
-                    </p>
-                    <div className="flex items-center gap-1 text-green-600 text-xs font-bold bg-green-50 px-2 py-1 rounded">
-                        <TrendingDown size={14} />
-                        <span>Выгода {savings.toLocaleString()} ₽</span>
-                    </div>
-                </div>
+            <div className="flex items-end justify-between mb-4">
+                 <div>
+                    <span className="text-slate-400 line-through text-xs font-medium">{oldPrice.toLocaleString()} ₽</span>
+                    <div className="text-2xl font-black text-slate-900">{price.toLocaleString()} ₽</div>
+                 </div>
+                 <div className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold flex gap-1"><TrendingDown size={14}/> -20%</div>
             </div>
-
             <button onClick={handleOrder} className="w-full bg-slate-900 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg flex justify-center gap-3 active:scale-[0.98]">
               <span>Оформить заявку</span>
-              <div className="opacity-80">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M21.9287 2.52309C22.2575 2.15556 21.9904 1.58309 21.5173 1.76459L2.09459 9.30809C1.72484 9.45034 1.72259 9.97734 2.09109 10.1236L6.59109 11.9026C6.88359 12.0181 7.21584 11.9446 7.43934 11.7143L17.7983 1.05609C17.9251 0.925587 18.0661 1.09434 17.9543 1.23534L8.71059 12.9098C8.52684 13.1416 8.52834 13.4678 8.71359 13.6981L14.7353 21.1688C15.0346 21.5398 15.6368 21.4111 15.7681 20.9491L21.9287 2.52309Z" fill="currentColor"/>
-                  </svg>
-              </div>
             </button>
          </div>
       </div>
@@ -321,7 +311,7 @@ export default function App() {
       <BrowserOrderModal 
           isOpen={showBrowserOrderModal} 
           onClose={() => setShowBrowserOrderModal(false)}
-          onCopy={() => { fallbackCopy(JSON.stringify(getOrderPayload())); setShowBrowserOrderModal(false); }}
+          orderData={orderJson}
       />
     </div>
   );

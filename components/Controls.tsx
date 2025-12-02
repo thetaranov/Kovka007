@@ -56,7 +56,7 @@ const ColorOptionBtn: React.FC<{ hex: string; selected: boolean; onClick: () => 
 const RoofIcon: React.FC<{ type: RoofType; active: boolean }> = ({ type, active }) => {
     const color = active ? '#4f46e5' : '#64748b';
     const fill = active ? '#eef2ff' : 'transparent';
-    
+
     if (type === RoofType.Arched) {
         return (
             <svg width="100%" height="24" viewBox="0 0 40 24" fill="none" className="mx-auto">
@@ -122,10 +122,10 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
 
   return (
     <div className="flex flex-col h-full bg-white border-l border-slate-200">
-      
+
       <div className="flex-1 overflow-y-auto custom-scrollbar">
          <div className="p-6 space-y-8">
-            
+
             <section>
                 <h3 className="font-bold text-sm uppercase tracking-wide text-indigo-600 mb-4">Тип конструкции</h3>
                 <div className="grid grid-cols-5 gap-1.5">
@@ -165,11 +165,12 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
                         <span className="text-xs font-bold font-mono">{area} м²</span>
                     </div>
                 </div>
-                
-                <Slider label="Ширина навеса" value={config.width} min={MIN_WIDTH} max={MAX_WIDTH} step={0.1} unit="м" onChange={(v) => handleChange('width', v)} />
+
+                {/* ИЗМЕНЕН ПОРЯДОК: Длина -> Ширина -> Высота */}
                 <Slider label="Длина навеса" value={config.length} min={MIN_LENGTH} max={MAX_LENGTH} step={0.1} unit="м" onChange={(v) => handleChange('length', v)} />
+                <Slider label="Ширина навеса" value={config.width} min={MIN_WIDTH} max={MAX_WIDTH} step={0.1} unit="м" onChange={(v) => handleChange('width', v)} />
                 <Slider label="Высота столбов" value={config.height} min={MIN_HEIGHT} max={MAX_HEIGHT} step={0.1} unit="м" onChange={(v) => handleChange('height', v)} />
-                
+
                 {(config.roofType !== RoofType.Arched) && (
                     <Slider 
                         label={config.roofType === RoofType.SemiArched ? "Высота подъема (угол)" : "Угол наклона"}
@@ -185,7 +186,7 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
                         }
                     />
                 )}
-                
+
                 <div className="mt-4">
                     <label className="text-xs uppercase font-bold text-slate-500 tracking-wider block mb-2">Сечение столбов</label>
                     <div className="grid grid-cols-3 gap-2">
@@ -312,7 +313,6 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
             </div>
         </div>
         <button
-          type="button"
           onClick={onOrder}
           className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
         >
