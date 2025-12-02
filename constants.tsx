@@ -6,7 +6,6 @@ import {
   PaintType,
 } from "./types";
 
-// Цвета оставляем без изменений
 export const ROOF_COLORS: ColorOption[] = [
   { name: "Шоколад", hex: "#3B2F2F", ral: "RAL 8017" },
   { name: "Зеленый мох", hex: "#004D40", ral: "RAL 6005" },
@@ -33,53 +32,47 @@ export const SPECS = {
   postSpacing: 2.5,
 };
 
-// === ОПТИМИЗИРОВАННЫЕ ЦЕНЫ (Под конкурентов 10х12м) ===
+// === ЦЕНЫ ПОД РЫНОК (Target: Gable 4.5x6 ~165k) ===
 export const PRICING = {
-  // Минимальная цена за м2 (чтобы не прогореть на малышах)
-  minPricePerSqm: 4200,
+  minPricePerSqm: 4500,
 
-  // Металлокаркас ферм и прогонов
   baseTrussStructure: {
-    base: 1750, // Снизили базу (было 1900)
-    widthFactor: 180, // Сильно снизили наценку за ширину (было 300)
+    base: 1900,
+    widthFactor: 250,
   },
 
-  // Столбы (Материал + Работа)
   pillarMultiplier: {
-    [PillarSize.Size60]: 800,
-    [PillarSize.Size80]: 1400, // Чуть дешевле
-    [PillarSize.Size100]: 2100,
+    [PillarSize.Size60]: 950,
+    [PillarSize.Size80]: 1500,
+    [PillarSize.Size100]: 2200,
   },
 
-  // Кровля (Материал + Работа)
   roofMaterialPricePerSqm: {
-    [RoofMaterial.Polycarbonate]: 1050, // Оптимизировали закупку
-    [RoofMaterial.Decking]: 850,
-    [RoofMaterial.MetalTile]: 1250,
+    [RoofMaterial.Polycarbonate]: 1100,
+    [RoofMaterial.Decking]: 900,
+    [RoofMaterial.MetalTile]: 1300,
   },
 
-  // Сложность крыши
   roofTypeMultiplier: {
     [RoofType.SingleSlope]: 1.0,
     [RoofType.Triangular]: 1.05,
-    [RoofType.Gable]: 1.15, // Двускатка
+    [RoofType.Gable]: 1.2,
     [RoofType.Arched]: 1.25,
     [RoofType.SemiArched]: 1.3,
   },
 
-  // Покраска
   paintMultiplier: {
     [PaintType.None]: 0,
-    [PaintType.Ral]: 350,
-    [PaintType.Polymer]: 1100,
+    [PaintType.Ral]: 400,
+    [PaintType.Polymer]: 1200,
   },
 
   extras: {
-    trusses: 550,
-    gutters: 1200,
-    sideWalls: 2800,
-    foundation: 4500,
-    installation: 0.25, // Базовый монтаж 25%
-    highWork: 0.05, // Снизили наценку за высоту до 5% (было 10%)
+    trusses: 600,
+    gutters: 1300,
+    sideWalls: 3200,
+    foundation: 5000,
+    installation: 0.25,
+    highWork: 0.1,
   },
 };

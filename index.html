@@ -8,15 +8,12 @@
     />
 
     <title>3D Конструктор Навесов | Kovka007</title>
-    <meta
-      name="description"
-      content="Рассчитайте стоимость навеса онлайн. 3D конструктор, мгновенный расчет, заказ в Telegram."
-    />
 
-    <!-- Telegram Script -->
+    <!-- ПОДКЛЮЧЕНИЕ TAILWIND (CDN) - ГАРАНТИЯ РАБОТЫ СТИЛЕЙ -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -24,7 +21,39 @@
       rel="stylesheet"
     />
 
-    <!-- Сюда больше НЕ подключаем CDN Tailwind, Vite сам подставит index.css -->
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+        background-color: #f8fafc;
+        overflow: hidden;
+      }
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background-color: #cbd5e1;
+        border-radius: 20px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background-color: #94a3b8;
+      }
+      @keyframes fade-in-up {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .animate-fade-in-up {
+        animation: fade-in-up 0.3s ease-out forwards;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
