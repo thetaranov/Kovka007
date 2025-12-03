@@ -22,19 +22,14 @@ const BoxBeam: React.FC<{
   const d = depth || thickness;
   const length = start.distanceTo(end);
   const position = useMemo(() => start.clone().lerp(end, 0.5), [start, end]);
-  const quaternion = useMemo(() => {
-      const direction = end.clone().sub(start).normalize();
-      const up = new THREE.Vector3(0, 1, 0);
-      // Avoid degenerate case where direction is parallel to up
-      if (Math.abs(direction.dot(up)) > 0.99) {
-          return new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), direction);
-      }
-      return new THREE.Quaternion().setFromUnitVectors(up, direction);
-  }, [start, end]);
+
+  // Упрощенная логика поворота для 2D-плоскости (XY)
+  const angle = Math.atan2(end.y - start.y, end.x - start.x);
+  const rotation = useMemo(() => new THREE.Euler(0, 0, angle), [angle]);
 
   return (
-    <mesh position={position} quaternion={quaternion} castShadow receiveShadow>
-      <boxGeometry args={[thickness, length, d]} />
+    <mesh position={position} rotation={rotation} castShadow receiveShadow>
+      <boxGeometry args={[length, thickness, d]} />
       <meshStandardMaterial 
         color={color} 
         roughness={roughness} 
@@ -272,16 +267,8 @@ const CalculatedTruss: React.FC<{
         const from = geometry.nodes[elem.from];
         const to = geometry.nodes[elem.to];
 
-        const start = new THREE.Vector3(
-          from.x - geometry.span/2, // Центрируем по X
-          from.y,
-          0
-        );
-        const end = new THREE.Vector3(
-          to.x - geometry.span/2,
-          to.y,
-          0
-        );
+        const start = new THREE.Vector3(from.x - geometry.span/2, from.y, 0);
+        const end = new THREE.Vector3( to.x - geometry.span/2, to.y, 0);
 
         let thickness = 0.04;
         let depth = 0.04;
@@ -311,6 +298,7 @@ const CalculatedTruss: React.FC<{
     </group>
   );
 };
+
 
 // --- HELPER COMPONENTS ---
 

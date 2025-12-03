@@ -195,12 +195,17 @@ export default function App() {
         setCalculationMode('calculated');
     };
 
-    if (calculationMode === 'calculated' && calculationResult) {
+    const handleBackToEdit = () => {
+        setCalculationMode('edit');
+        // Не сбрасываем calculationResult, чтобы можно было вернуться к нему
+    };
+
+    if (appMode === 'calculator' && calculationMode === 'calculated' && calculationResult) {
         return (
             <FinalModel 
                 config={config}
                 calculation={calculationResult}
-                onBack={() => setCalculationMode('edit')}
+                onBack={handleBackToEdit}
             />
         );
     }
