@@ -1,14 +1,15 @@
-
 import React, { useEffect } from 'react';
-import { CarportConfig, RoofType, PillarSize, RoofMaterial, PaintType, MIN_WIDTH, MAX_WIDTH, MIN_LENGTH, MAX_LENGTH, MIN_HEIGHT, MAX_HEIGHT } from '../types';
+import { CarportConfig, RoofType, PillarSize, RoofMaterial, PaintType, MIN_WIDTH, MAX_WIDTH, MIN_LENGTH, MAX_LENGTH, MIN_HEIGHT, MAX_HEIGHT, CalculationResult } from '../types';
 import { ROOF_COLORS, FRAME_COLORS, SNOW_REGIONS, WIND_REGIONS } from '../constants';
-import { Check, Ruler, Maximize2, MapPin } from 'lucide-react';
+import { TrussCalculator } from './TrussCalculator';
+import { Check, Ruler, Maximize2, MapPin, TrendingDown } from 'lucide-react';
 
 interface ControlsProps {
   config: CarportConfig;
   onChange: (newConfig: CarportConfig) => void;
   price: number;
   onOrder: () => void;
+  onCalculated: (result: CalculationResult) => void; // <--- Добавлено
 }
 
 const Slider: React.FC<{
@@ -100,7 +101,7 @@ const RoofIcon: React.FC<{ type: RoofType; active: boolean }> = ({ type, active 
     );
 }
 
-export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onOrder }) => {
+export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onOrder, onCalculated }) => {
   const handleChange = (key: keyof CarportConfig, value: any) => {
     onChange({ ...config, [key]: value });
   };
@@ -115,9 +116,11 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
     if (config.roofType !== RoofType.Arched && config.roofSlope > maxAllowedAngle) {
         handleChange('roofSlope', maxAllowedAngle);
     }
-  }, [config.roofType, config.roofSlope, maxAllowedAngle]);
+  }, [config.roofType, config.width, config.roofSlope, maxAllowedAngle]);
 
   const area = (config.width * config.length).toFixed(1);
+  const oldPrice = Math.round(price * 1.2);
+  const savings = oldPrice - price;
 
   return (
     <div className="flex flex-col h-full bg-white border-l border-slate-200">
@@ -221,7 +224,6 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
 
             <section className="pt-6 border-t border-slate-100">
                 <h3 className="font-bold text-sm uppercase tracking-wide text-indigo-600 mb-4">Материалы</h3>
-
                 <div className="mb-4">
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Материал кровли</label>
                     <select 
@@ -234,7 +236,6 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
                         <option value={RoofMaterial.Decking}>Профнастил</option>
                     </select>
                 </div>
-
                 <div className="grid grid-cols-2 gap-4 mt-6">
                     <div>
                         <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Цвет каркаса</label>
@@ -254,7 +255,49 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
                     </div>
                 </div>
             </section>
+
+             {/* Блок автоматического расчета */}
+             <section className="pt-6 border-t border-slate-100">
+                <h3 className="font-bold text-sm uppercase tracking-wide text-indigo-600 mb-4">
+                    Автоматический расчет фермы
+                </h3>
+                <TrussCalculator 
+                    config={config}
+                    onCalculated={onCalculated}
+                />
+            </section>
          </div>
+      </div>
+
+       {/* Нижний блок с ценой и кнопкой заказа */}
+      <div className="p-6 bg-white border-t border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-10">
+        <div className="mb-4">
+            <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2">
+                    <span className="text-lg font-medium text-slate-400 line-through decoration-slate-400/50">
+                        {oldPrice.toLocaleString()} ₽
+                    </span>
+                    <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
+                        -20%
+                    </span>
+                </div>
+            </div>
+            <div className="flex items-end justify-between">
+                <p className="text-3xl font-black text-slate-900 leading-none tracking-tight">
+                    {price.toLocaleString()} ₽
+                </p>
+                <div className="flex items-center gap-1 text-green-600 text-xs font-bold bg-green-50 px-2 py-1 rounded">
+                    <TrendingDown size={14} />
+                    <span>Выгода {savings.toLocaleString()} ₽</span>
+                </div>
+            </div>
+        </div>
+        <button
+          onClick={onOrder}
+          className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
+        >
+          <span>Оформить заявку</span>
+        </button>
       </div>
     </div>
   );

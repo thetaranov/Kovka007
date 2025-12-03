@@ -1,9 +1,7 @@
-
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { Scene } from "./components/Scene";
 import { Controls } from "./components/Controls";
-import { TrussCalculator } from "./components/TrussCalculator";
-import { FinalModel } from "./components/FinalModel";
+import { FinalModel } from "./components/FinalModel"; // <--- Добавлен импорт
 import {
     CarportConfig,
     RoofType,
@@ -240,7 +238,7 @@ export default function App() {
             </div>
 
             <div className="relative w-full flex-grow min-h-0 lg:h-full transition-all duration-300">
-                <Scene config={config} calculation={null} />
+                <Scene config={config} calculation={calculationResult} />
 
                 {/* INFO PILL */}
                 <div className="absolute bottom-6 left-0 right-0 flex justify-center pointer-events-none z-30 px-4">
@@ -305,21 +303,14 @@ export default function App() {
                         <X size={24} />
                     </button>
                 </div>
-                
+
                 <Controls
                     config={config}
                     onChange={setConfig}
                     price={price}
                     onOrder={handleOrder}
+                    onCalculated={handleCalculationComplete}
                 />
-
-                <div className="px-6 py-4 border-t border-slate-200 bg-slate-50">
-                    <h3 className="font-bold text-sm uppercase tracking-wide text-indigo-600 mb-4">Автоматический расчет</h3>
-                    <TrussCalculator 
-                        config={config}
-                        onCalculated={handleCalculationComplete}
-                    />
-                </div>
             </div>
 
             <BrowserOrderModal

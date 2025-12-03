@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import * as THREE from 'three';
 import { CarportConfig, RoofType, PillarSize, RoofMaterial, CalculationResult } from '../types';
@@ -26,7 +25,6 @@ const BoxBeam: React.FC<{
   const quaternion = useMemo(() => {
       const direction = end.clone().sub(start).normalize();
       const up = new THREE.Vector3(0, 1, 0);
-      // Avoid degenerate case where direction is parallel to up
       if (Math.abs(direction.dot(up)) > 0.99) {
           return new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), direction);
       }
@@ -284,8 +282,7 @@ const CalculatedTruss: React.FC<{
           0
         );
 
-        // Определяем толщину профиля из расчета
-        let thickness = 0.04; // default
+        let thickness = 0.04;
         let depth = 0.04;
 
         if (elem.type === 'topChord') {
@@ -323,8 +320,7 @@ const Purlins = ({ config }: { config: CarportConfig }) => {
     const color = frameColor;
     const purlinThick = 0.04;
     const purlinDepth = 0.04;
-    
-    // Beam Height offset (based on pillar size)
+
     const pSize = pillarSize === PillarSize.Size60 ? 0.06 : pillarSize === PillarSize.Size80 ? 0.08 : 0.10;
     const beamH = pSize; 
 
@@ -367,7 +363,6 @@ const Purlins = ({ config }: { config: CarportConfig }) => {
              y = hBase + Cy + R_purlin * Math.sin(theta);
              rotZ = theta + Math.PI/2;
         } else {
-             // Arched
              const rise = width * SPECS.trussHeightArch;
              const R = (Math.pow(width/2, 2) + Math.pow(rise, 2)) / (2 * rise);
              const Cy = -(R - rise);
@@ -389,7 +384,7 @@ const Purlins = ({ config }: { config: CarportConfig }) => {
 
 const RoofSkin = ({ config }: { config: CarportConfig }) => {
     const { width, length, height, roofType, roofColor, roofMaterial, roofSlope, pillarSize } = config;
-    
+
     const pSize = pillarSize === PillarSize.Size60 ? 0.06 : pillarSize === PillarSize.Size80 ? 0.08 : 0.10;
     const beamH = pSize;
     const overhang = 0.4;
@@ -418,7 +413,6 @@ const RoofSkin = ({ config }: { config: CarportConfig }) => {
 
        return (
          <group position={[0, baseY + rise, 0]}>
-           {/* Left Slope */}
            <group position={[-width/4 - overhang/2, localY, 0]} rotation={[0, 0, rad]}>
                 <mesh castShadow receiveShadow>
                     <boxGeometry args={[slopeLen, 0.01, totalL]} />
@@ -426,7 +420,6 @@ const RoofSkin = ({ config }: { config: CarportConfig }) => {
                 </mesh>
            </group>
 
-           {/* Right Slope */}
            <group position={[width/4 + overhang/2, localY, 0]} rotation={[0, 0, -rad]}>
                 <mesh castShadow receiveShadow>
                     <boxGeometry args={[slopeLen, 0.01, totalL]} />
@@ -479,7 +472,6 @@ const RoofSkin = ({ config }: { config: CarportConfig }) => {
         const tLeft = startTheta + overhang * anglePerMeter;
         const tRight = endTheta - overhang * anglePerMeter;
 
-        // Render Strips
         const segments = 24;
         const strips = [];
         for (let i=0; i<segments; i++) {
@@ -507,7 +499,6 @@ const RoofSkin = ({ config }: { config: CarportConfig }) => {
             {strips}
         </group>;
     } else {
-        // Arched
         const rise = width * SPECS.trussHeightArch;
         const radius = (Math.pow(width/2, 2) + Math.pow(rise, 2)) / (2 * rise);
         const centerY = -(radius - rise);
@@ -530,8 +521,6 @@ const RoofSkin = ({ config }: { config: CarportConfig }) => {
     }
 };
 
-// --- MAIN MODEL ---
-
 export const CarportModel: React.FC<CarportModelProps> = ({ config, calculation }) => {
   const { width, length, height, roofType, frameColor, roofColor, pillarSize, roofMaterial, hasSideWalls, roofSlope = 20 } = config;
 
@@ -542,7 +531,6 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config, calculation 
   const isAsymmetric = roofType === RoofType.SingleSlope || roofType === RoofType.SemiArched;
   const asymmetricRise = isAsymmetric ? width * Math.tan((roofSlope * Math.PI) / 180) : 0;
 
-  // Grid Calculation - Ensures intermediate pillars follow the roof curve
   const grid = useMemo(() => {
     const spacing = SPECS.postSpacing;
     const numRows = Math.ceil(length / spacing); 
@@ -555,7 +543,6 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config, calculation 
     const posts: React.ReactNode[] = [];
     const beams: React.ReactNode[] = [];
 
-    // Pre-calculate Arched/SemiArched curve params
     let sa_R = 0, sa_Cy = 0, sa_Cx = 0;
     if (roofType === RoofType.SemiArched) {
         const rise = asymmetricRise;
@@ -625,9 +612,7 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config, calculation 
       {grid.posts}
       {grid.beams}
 
-      {/* Если есть расчет - показываем рассчитанные фермы, иначе - стандартные */}
       {calculation ? (
-        // Показываем рассчитанные фермы
         Array.from({length: trussCount}).map((_, i) => {
           const z = -length/2 + i * trussSpacing;
           return (
@@ -641,7 +626,6 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config, calculation 
           );
         })
       ) : (
-        // Стандартные фермы
         Array.from({length: trussCount}).map((_, i) => {
           const z = -length/2 + i * trussSpacing;
           return (
@@ -658,7 +642,7 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config, calculation 
 
       <Purlins config={config} />
       <RoofSkin config={config} />
-      
+
       {hasSideWalls && (
         <group>
             <mesh position={[0, height/2, -length/2 + pSize/2]} receiveShadow>
