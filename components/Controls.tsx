@@ -76,6 +76,10 @@ const RoofIcon: React.FC<{ type: RoofType; active: boolean }> = ({ type, active 
 }
 
 export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onOrder, appMode, onCalculated }) => {
+  const handleChange = (key: keyof CarportConfig, value: any) => {
+    onChange({ ...config, [key]: value });
+  };
+
   const handleRegionChange = (regionId: number) => {
     const region = CONSTRUCTION_REGIONS.find(r => r.id === regionId);
     if (region) {
@@ -91,7 +95,7 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
 
   useEffect(() => {
     if (config.roofType !== RoofType.Arched && config.roofSlope > maxAllowedAngle) {
-        onChange({ ...config, roofSlope: maxAllowedAngle });
+        handleChange('roofSlope', maxAllowedAngle);
     }
   }, [config.roofType, config.width, config.roofSlope, maxAllowedAngle]);
 
@@ -109,7 +113,7 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
                 <h3 className="font-bold text-sm uppercase tracking-wide text-indigo-600 mb-4">Тип конструкции</h3>
                 <div className="grid grid-cols-5 gap-1.5">
                     {[{ v: RoofType.Arched, l: 'Арочный' },{ v: RoofType.SemiArched, l: 'Полуарка' },{ v: RoofType.SingleSlope, l: '1-скат' },{ v: RoofType.Triangular, l: 'Треуг.' },{ v: RoofType.Gable, l: '2-скат' },].map(opt => (
-                        <button key={opt.v} onClick={() => onChange({ ...config, roofType: opt.v })} className={`flex flex-col items-center justify-center p-1.5 rounded-xl border-2 transition-all h-20 ${ config.roofType === opt.v ? 'border-indigo-600 bg-indigo-50/50' : 'border-slate-100 hover:border-slate-300 hover:bg-slate-50' }`} >
+                        <button key={opt.v} onClick={() => handleChange('roofType', opt.v)} className={`flex flex-col items-center justify-center p-1.5 rounded-xl border-2 transition-all h-20 ${ config.roofType === opt.v ? 'border-indigo-600 bg-indigo-50/50' : 'border-slate-100 hover:border-slate-300 hover:bg-slate-50' }`} >
                             <RoofIcon type={opt.v} active={config.roofType === opt.v} />
                             <span className={`text-[9px] sm:text-[10px] font-bold mt-1.5 leading-tight text-center ${config.roofType === opt.v ? 'text-indigo-700' : 'text-slate-500'}`}>{opt.l}</span>
                         </button>
@@ -122,14 +126,14 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
                     <div className="flex items-center gap-2 text-slate-800"><Ruler size={18} /><h3 className="font-bold text-sm uppercase tracking-wide">Размеры</h3></div>
                     <div className="flex items-center gap-1.5 bg-slate-100 px-2 py-1 rounded text-slate-600"><Maximize2 size={14} /><span className="text-xs font-bold font-mono">{area} м²</span></div>
                 </div>
-                <Slider label="Длина навеса" value={config.length} min={MIN_LENGTH} max={MAX_LENGTH} step={0.1} unit="м" onChange={(v) => onChange({ ...config, length: v })} />
-                <Slider label="Ширина навеса" value={config.width} min={MIN_WIDTH} max={MAX_WIDTH} step={0.1} unit="м" onChange={(v) => onChange({ ...config, width: v })} />
-                <Slider label="Высота столбов" value={config.height} min={MIN_HEIGHT} max={MAX_HEIGHT} step={0.1} unit="м" onChange={(v) => onChange({ ...config, height: v })} />
+                <Slider label="Длина навеса" value={config.length} min={MIN_LENGTH} max={MAX_LENGTH} step={0.1} unit="м" onChange={(v) => handleChange('length', v)} />
+                <Slider label="Ширина навеса" value={config.width} min={MIN_WIDTH} max={MAX_WIDTH} step={0.1} unit="м" onChange={(v) => handleChange('width', v)} />
+                <Slider label="Высота столбов" value={config.height} min={MIN_HEIGHT} max={MAX_HEIGHT} step={0.1} unit="м" onChange={(v) => handleChange('height', v)} />
                 {(config.roofType !== RoofType.Arched) && (
                     <Slider 
                         label={config.roofType === RoofType.SemiArched ? "Высота подъема (угол)" : "Угол наклона"}
                         value={Math.min(config.roofSlope, maxAllowedAngle)} min={5} max={maxAllowedAngle} step={1} unit="°" 
-                        onChange={(v) => onChange({ ...config, roofSlope: v })}
+                        onChange={(v) => handleChange('roofSlope', v)}
                         extraInfo={config.roofType === RoofType.Gable 
                              ? `Подъем: ${((config.width/2) * Math.tan(config.roofSlope * Math.PI/180)).toFixed(2)} м` 
                              : `Подъем: ${(config.width * Math.tan(config.roofSlope * Math.PI/180)).toFixed(2)} м`
@@ -159,7 +163,7 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
                 <h3 className="font-bold text-sm uppercase tracking-wide text-indigo-600 mb-4">Материалы</h3>
                 <div className="mb-4">
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Материал кровли</label>
-                    <select value={config.roofMaterial} onChange={(e) => onChange({ ...config, roofMaterial: e.target.value as RoofMaterial })} className="w-full bg-slate-50 border border-slate-200 text-slate-700 py-2.5 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" >
+                    <select value={config.roofMaterial} onChange={(e) => handleChange('roofMaterial', e.target.value as RoofMaterial)} className="w-full bg-slate-50 border border-slate-200 text-slate-700 py-2.5 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" >
                         <option value={RoofMaterial.Polycarbonate}>Сотовый поликарбонат</option>
                         <option value={RoofMaterial.MetalTile}>Металлочерепица</option>
                         <option value={RoofMaterial.Decking}>Профнастил</option>
@@ -169,13 +173,13 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
                     <div>
                         <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Цвет каркаса</label>
                         <div className="flex flex-wrap gap-2">
-                            {FRAME_COLORS.map(c => (<ColorOptionBtn key={c.hex} hex={c.hex} selected={config.frameColor === c.hex} onClick={() => onChange({ ...config, frameColor: c.hex })} />))}
+                            {FRAME_COLORS.map(c => (<ColorOptionBtn key={c.hex} hex={c.hex} selected={config.frameColor === c.hex} onClick={() => handleChange('frameColor', c.hex)} />))}
                         </div>
                     </div>
                     <div>
                         <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Цвет кровли</label>
                         <div className="flex flex-wrap gap-2">
-                            {ROOF_COLORS.map(c => (<ColorOptionBtn key={c.hex} hex={c.hex} selected={config.roofColor === c.hex} onClick={() => onChange({ ...config, roofColor: c.hex })} />))}
+                            {ROOF_COLORS.map(c => (<ColorOptionBtn key={c.hex} hex={c.hex} selected={config.roofColor === c.hex} onClick={() => handleChange('roofColor', c.hex)} />))}
                         </div>
                     </div>
                 </div>
@@ -184,20 +188,12 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
             <section className="pt-6 border-t border-slate-100">
                 <h3 className="font-bold text-sm uppercase tracking-wide text-indigo-600 mb-4">Опции</h3>
                 <div className="space-y-3">
-                    {[
-                        { k: 'hasTrusses', l: 'Усиленные фермы' },
-                        { k: 'hasSideWalls', l: 'Боковая зашивка' },
-                        { k: 'hasGutters', l: 'Водостоки' },
-                        { k: 'hasFoundation', l: 'Бетонный фундамент' },
-                        { k: 'hasInstallation', l: 'Монтаж под ключ' }
-                    ].map((item) => (
+                    {[ { k: 'hasTrusses', l: 'Усиленные фермы' }, { k: 'hasSideWalls', l: 'Боковая зашивка' }, { k: 'hasGutters', l: 'Водостоки' }, { k: 'hasFoundation', l: 'Бетонный фундамент' }, { k: 'hasInstallation', l: 'Монтаж под ключ' } ].map((item) => (
                         <label key={item.k} className="flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors"
-                            onClick={() => onChange({ ...config, [item.k]: !config[item.k as keyof CarportConfig]})}
+                            onClick={() => handleChange(item.k as keyof CarportConfig, !config[item.k as keyof CarportConfig])}
                         >
                             <span className="text-sm font-medium text-slate-700">{item.l}</span>
-                            <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
-                                config[item.k as keyof CarportConfig] ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-slate-300'
-                            }`}>
+                            <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${ config[item.k as keyof CarportConfig] ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-slate-300' }`}>
                                 {config[item.k as keyof CarportConfig] && <Check className="w-3.5 h-3.5 text-white" />}
                             </div>
                             <input type="checkbox" className="hidden" readOnly checked={config[item.k as keyof CarportConfig] as boolean} />
