@@ -21,7 +21,7 @@ export enum PillarSize {
 export enum RoofMaterial {
   Polycarbonate = 'polycarbonate',
   MetalTile = 'metaltile',
-  Decking = 'decking', // Profnastil
+  Decking = 'decking',
 }
 
 export enum PaintType {
@@ -30,27 +30,25 @@ export enum PaintType {
   Polymer = 'polymer',
 }
 
+export type AppMode = 'visualizer' | 'calculator';
+
 export interface CarportConfig {
-  width: number; // meters
-  length: number; // meters
-  height: number; // meters (Clearance height at lowest point)
+  width: number;
+  length: number;
+  height: number;
   pillarSize: PillarSize;
-
   roofType: RoofType;
-  roofSlope: number; // degrees
+  roofSlope: number;
   roofMaterial: RoofMaterial;
-
   frameColor: string;
   roofColor: string;
   paintType: PaintType;
-
   hasTrusses: boolean;
   hasSideWalls: boolean;
   hasGutters: boolean;
   hasFoundation: boolean;
   hasInstallation: boolean;
-  
-  // Structural parameters
+  constructionRegionId: number;
   snowRegion: number;
   windRegion: number;
 }
@@ -62,82 +60,32 @@ export const MAX_LENGTH = 12;
 export const MIN_HEIGHT = 2;
 export const MAX_HEIGHT = 4;
 
-// Structural Types
 export interface Profile {
-  name: string;
-  h: number; // mm
-  b: number; // mm
-  t: number; // mm
-  A: number; // cm2 area
-  Ix: number; // cm4 moment of inertia
-  Iy: number; // cm4
-  Wx: number; // cm3 section modulus
-  Wy: number; // cm3
-  i_x: number; // cm radius of gyration
-  i_y: number; // cm
-  weight: number; // kg/m
+  name: string; h: number; b: number; t: number; A: number; Ix: number; Iy: number; Wx: number; Wy: number; i_x: number; i_y: number; weight: number;
 }
 
 export interface TrussGeometry {
-  span: number; // m
-  height: number; // m
-  panelCount: number;
-  panelLength: number; // m
+  span: number; height: number; panelCount: number; panelLength: number;
   nodes: Array<{x: number, y: number, z?: number}>;
-  elements: Array<{
-    from: number;
-    to: number;
-    type: 'topChord' | 'bottomChord' | 'web' | 'pillar';
-    length: number;
-  }>;
+  elements: Array<{ from: number; to: number; type: 'topChord' | 'bottomChord' | 'web' | 'pillar'; length: number; }>;
 }
 
 export interface ElementSections {
-  topChord: Profile;
-  bottomChord: Profile;
-  web: Profile;
-  pillar: Profile;
-  purlin: Profile;
+  topChord: Profile; bottomChord: Profile; web: Profile; pillar: Profile; purlin: Profile;
 }
 
 export interface LoadAnalysis {
-  snowLoad: number; // kPa
-  windLoad: number; // kPa
-  deadLoad: number; // kPa
-  totalLinearLoad: number; // kN/m on truss
-  maxMoment: number; // kNm
-  maxShear: number; // kN
-  maxAxialTop: number; // kN (Compression)
-  maxAxialBottom: number; // kN (Tension)
-  maxAxialWeb: number; // kN
-  utilization: {
-    top: number; // %
-    bottom: number;
-    web: number;
-    pillar: number;
-  }
+  snowLoad: number; windLoad: number; deadLoad: number; totalLinearLoad: number; maxMoment: number; maxShear: number; maxAxialTop: number; maxAxialBottom: number; maxAxialWeb: number;
+  utilization: { top: number; bottom: number; web: number; pillar: number; }
 }
 
 export interface BillOfMaterials {
-  items: Array<{
-    name: string;
-    profile: string;
-    length: number;
-    quantity: number;
-    weight: number;
-  }>;
-  totalWeight: number;
-  totalCost: number;
+  items: Array<{ name: string; profile: string; length: number; quantity: number; weight: number; }>;
+  totalWeight: number; totalCost: number;
 }
 
 export interface CalculationResult {
-  success: boolean;
-  geometry: TrussGeometry;
-  sections: ElementSections;
-  loads: LoadAnalysis;
-  dxfContent: string;
-  bom: BillOfMaterials;
-  warnings: string[];
+  success: boolean; geometry: TrussGeometry; sections: ElementSections; loads: LoadAnalysis; dxfContent: string; bom: BillOfMaterials; warnings: string[];
 }
 
 export interface TrussCalculation extends CalculationResult {}
@@ -152,11 +100,5 @@ declare global {
         sendData: (data: string) => void;
       };
     };
-  }
-
-  namespace JSX {
-    interface IntrinsicElements {
-      [elemName: string]: any;
-    }
   }
 }
