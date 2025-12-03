@@ -1,15 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Scene } from "./components/Scene";
 import { Controls } from "./components/Controls";
-import { TrussCalculator } from "./components/TrussCalculator";
 import {
     CarportConfig,
     RoofType,
     PillarSize,
     RoofMaterial,
     PaintType,
-    TrussCalculation,
-    CalculationResult,
 } from "./types";
 import { PRICING, FRAME_COLORS, ROOF_COLORS, SPECS } from "./constants";
 import {
@@ -21,7 +18,6 @@ import {
     Send,
     Copy,
     Settings2,
-    Calculator,
 } from "lucide-react";
 
 const INITIAL_CONFIG: CarportConfig = {
@@ -105,8 +101,6 @@ export default function App() {
     const [showBrowserOrderModal, setShowBrowserOrderModal] = useState(false);
     const [price, setPrice] = useState(0);
     const [orderJson, setOrderJson] = useState("");
-    const [calculationResult, setCalculationResult] = useState<CalculationResult | null>(null);
-    const [calculationMode, setCalculationMode] = useState<'edit' | 'calculated'>('edit');
 
     useEffect(() => {
         if (window.Telegram?.WebApp) {
@@ -307,11 +301,6 @@ export default function App() {
         }
     };
 
-    const handleCalculationComplete = (result: CalculationResult) => {
-        setCalculationResult(result);
-        setCalculationMode('calculated');
-    };
-
     return (
         <div className="flex flex-col lg:flex-row h-[100dvh] w-screen overflow-hidden bg-slate-100 font-sans touch-none overscroll-none fixed inset-0">
             {/* HEADER */}
@@ -330,7 +319,7 @@ export default function App() {
             </div>
 
             <div className="relative w-full flex-grow min-h-0 lg:h-full transition-all duration-300">
-                <Scene config={config} calculation={calculationResult} />
+                <Scene config={config} />
 
                 {/* ИНФО-ПЛАШКА */}
                 <div className="absolute bottom-6 left-0 right-0 flex justify-center pointer-events-none z-30 px-4">
@@ -458,17 +447,6 @@ export default function App() {
                     price={price}
                     onOrder={handleOrder}
                 />
-
-                {/* Блок автоматического расчета */}
-                <div className="px-6 py-4 border-t border-slate-200 bg-slate-50">
-                    <h3 className="font-bold text-sm uppercase tracking-wide text-indigo-600 mb-4">
-                        Автоматический расчет фермы
-                    </h3>
-                    <TrussCalculator 
-                        config={config}
-                        onCalculated={handleCalculationComplete}
-                    />
-                </div>
             </div>
 
             {/* DESKTOP BUTTONS */}

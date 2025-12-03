@@ -8,19 +8,50 @@ import {
   useProgress,
   Grid,
 } from "@react-three/drei";
-import { CarportConfig, CalculationResult } from "../types";
+import { CarportConfig } from "../types";
 import { CarportModel } from "./CarportModel";
 import { RefreshCw, Loader2 } from "lucide-react";
 
 interface SceneProps {
   config: CarportConfig;
-  calculation?: CalculationResult | null;
 }
 
-// ... остальной код Scene остается без изменений, только обновляем пропсы
+function Loader() {
+  const { progress } = useProgress();
+  return (
+    <Html center>
+      <div className="flex flex-col items-center justify-center p-3 bg-white/90 backdrop-blur rounded-xl shadow-lg border border-slate-100">
+        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mb-2" />
+        <span className="text-xs font-bold text-slate-600 tabular-nums">
+          {progress.toFixed(0)}%
+        </span>
+      </div>
+    </Html>
+  );
+}
 
-export const Scene: React.FC<SceneProps> = ({ config, calculation }) => {
-  // ... остальной код Scene без изменений
+export const Scene: React.FC<SceneProps> = ({ config }) => {
+  const [resetKey, setResetKey] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleReset = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setResetKey((prev) => prev + 1);
+  };
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const preventTouch = (e: TouchEvent) => {
+      if (e.cancelable) e.preventDefault();
+    };
+    container.addEventListener("touchmove", preventTouch, { passive: false });
+    container.addEventListener("touchstart", preventTouch, { passive: false });
+    return () => {
+      container.removeEventListener("touchmove", preventTouch);
+      container.removeEventListener("touchstart", preventTouch);
+    };
+  }, []);
 
   return (
     <div
@@ -49,8 +80,8 @@ export const Scene: React.FC<SceneProps> = ({ config, calculation }) => {
         key={resetKey}
         shadows
         dpr={[1, 1.5]}
-        gl={{ powerPreference: "high-performance", antialias: true }}
-        camera={{ position: [10, 8, 12], fov: 45 }}
+        gl={{ powerPreference: "high-performance", antialias: true }} // Включил сглаживание для четкости
+        camera={{ position: [10, 8, 12], fov: 45 }} // Чуть уменьшил FOV для "плотности" картинки
         className="z-10 relative"
         style={{
           touchAction: "none",
@@ -66,7 +97,7 @@ export const Scene: React.FC<SceneProps> = ({ config, calculation }) => {
             position={[10, 20, 10]}
             intensity={1.5}
             castShadow
-            shadow-mapSize={[2048, 2048]}
+            shadow-mapSize={[2048, 2048]} // Вернул качество теней для четкости
             shadow-bias={-0.0005}
           >
             <orthographicCamera
@@ -83,24 +114,23 @@ export const Scene: React.FC<SceneProps> = ({ config, calculation }) => {
             position={[0, 0.01, 0]}
             args={[40, 40]}
             cellSize={1}
-            cellThickness={1}
-            cellColor="#94a3b8"
+            cellThickness={1} // Жирнее
+            cellColor="#94a3b8" // Более темный серый
             sectionSize={5}
             sectionThickness={1.5}
-            sectionColor="#475569"
-            fadeDistance={50}
-            fadeStrength={2}
+            sectionColor="#475569" // Темно-серый для секций
+            fadeDistance={50} // Дальше видимость
+            fadeStrength={2} // Меньше затухания
             infiniteGrid={true}
           />
 
-          {/* Передаем calculation в CarportModel */}
-          <CarportModel config={config} calculation={calculation} />
+          <CarportModel config={config} />
 
           <ContactShadows
             resolution={1024}
             scale={60}
             blur={2.5}
-            opacity={0.6}
+            opacity={0.6} // Чуть темнее тень
             far={10}
             color="#000000"
           />
