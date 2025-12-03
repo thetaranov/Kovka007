@@ -1,10 +1,11 @@
 import React, { useMemo } from 'react';
 import * as THREE from 'three';
-import { CarportConfig, RoofType, PillarSize, RoofMaterial } from '../types';
+import { CarportConfig, RoofType, PillarSize, RoofMaterial, TrussCalculation } from '../types';
 import { SPECS } from '../constants';
 
 interface CarportModelProps {
   config: CarportConfig;
+  calculation?: TrussCalculation;
 }
 
 const BoxBeam: React.FC<{ 
@@ -100,7 +101,7 @@ const TriangularTruss: React.FC<{ width: number; angle: number; color: string }>
       <BoxBeam start={new THREE.Vector3(-halfW, 0, 0)} end={new THREE.Vector3(halfW, rise, 0)} thickness={t} color={color} />
       <BoxBeam start={new THREE.Vector3(halfW, 0, 0)} end={new THREE.Vector3(halfW, rise, 0)} thickness={t} color={color} />
       <BoxBeam start={new THREE.Vector3(-halfW, 0, 0)} end={new THREE.Vector3(-halfW, 0.1, 0)} thickness={t} color={color} />
-      
+
       {Array.from({ length: segments }).map((_, i) => {
          if (i === segments) return null;
          const xBase = -halfW + i * segWidth;
@@ -129,7 +130,7 @@ const SingleSlopeTruss: React.FC<{ width: number; angle: number; color: string }
   const halfW = width / 2;
   const t = SPECS.trussThickness;
   const depth = 0.35; 
-  
+
   const topStart = new THREE.Vector3(-halfW, depth, 0);
   const topEnd = new THREE.Vector3(halfW, rise + depth, 0);
   const botStart = new THREE.Vector3(-halfW, 0, 0);
@@ -166,10 +167,10 @@ const SemiArchedTruss: React.FC<{ width: number; angle: number; color: string }>
   const trussDepth = 0.35;
   const rad = (angle * Math.PI) / 180;
   const rise = width * Math.tan(rad);
-  
+
   const R_bot = (Math.pow(width, 2) + Math.pow(rise, 2)) / (2 * rise);
   const R_top = R_bot + trussDepth; 
-  
+
   const Cy = rise - R_bot; 
   const Cx = width / 2;
   const startTheta = Math.atan2(0 - Cy, -width/2 - Cx);
@@ -211,17 +212,17 @@ const ArchedTruss: React.FC<{ width: number; color: string; overhang?: number }>
   const rise = width * SPECS.trussHeightArch;
   const t = SPECS.trussThickness;
   const trussDepth = 0.35; 
-  
+
   const R_top = (Math.pow(width/2, 2) + Math.pow(rise, 2)) / (2 * rise);
   const Cy = rise - R_top; 
   const R_bot = R_top - trussDepth; 
-  
+
   const totalW = width + 2 * overhang;
   const halfAngle = Math.asin((totalW/2) / R_top);
-  
+
   const startTheta = Math.PI/2 - halfAngle;
   const endTheta = Math.PI/2 + halfAngle;
-  
+
   const segments = Math.max(12, Math.ceil(totalW / 0.6));
   const topPoints: THREE.Vector3[] = [];
   const botPoints: THREE.Vector3[] = [];
@@ -254,9 +255,53 @@ const ArchedTruss: React.FC<{ width: number; color: string; overhang?: number }>
   );
 };
 
+// --- CALCULATED TRUSS COMPONENT ---
+const CalculatedTruss: React.FC<{ 
+  geometry: TrussCalculation['geometry']; 
+  sections: TrussCalculation['sections']; 
+  color: string 
+}> = ({ geometry, sections, color }) => {
+  const scale = 0.01; // масштаб для перевода в метры
+
+  return (
+    <group>
+      {geometry.elements.map((elem, idx) => {
+        const from = geometry.nodes[elem.from];
+        const to = geometry.nodes[elem.to];
+
+        const start = new THREE.Vector3(
+          (from.x - geometry.span/2) * scale,
+          from.y * scale,
+          0
+        );
+        const end = new THREE.Vector3(
+          (to.x - geometry.span/2) * scale,
+          to.y * scale,
+          0
+        );
+
+        // Толщина профиля в зависимости от типа элемента и сечения
+        const thickness = elem.type === 'chord' ? 
+          sections.thickness/1000 : 
+          (sections.thickness-0.5)/1000;
+
+        return (
+          <BoxBeam
+            key={idx}
+            start={start}
+            end={end}
+            thickness={thickness}
+            color={color}
+          />
+        );
+      })}
+    </group>
+  );
+};
+
 // --- MAIN MODEL ---
 
-export const CarportModel: React.FC<CarportModelProps> = ({ config }) => {
+export const CarportModel: React.FC<CarportModelProps> = ({ config, calculation }) => {
   const { width, length, height, roofType, frameColor, roofColor, pillarSize, roofMaterial, hasSideWalls, roofSlope = 20 } = config;
 
   const pSize = pillarSize === PillarSize.Size60 ? 0.06 : pillarSize === PillarSize.Size80 ? 0.08 : 0.10;
@@ -265,7 +310,7 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config }) => {
 
   const isAsymmetric = roofType === RoofType.SingleSlope || roofType === RoofType.SemiArched;
   const asymmetricRise = isAsymmetric ? width * Math.tan((roofSlope * Math.PI) / 180) : 0;
-  
+
   // Grid Calculation - Ensures intermediate pillars follow the roof curve
   const grid = useMemo(() => {
     const spacing = SPECS.postSpacing;
@@ -287,7 +332,7 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config }) => {
         sa_Cx = width / 2;
         sa_Cy = rise - sa_R;
     }
-    
+
     let arch_R = 0, arch_Cy = 0;
     if (roofType === RoofType.Arched) {
         const rise = width * SPECS.trussHeightArch;
@@ -300,9 +345,9 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config }) => {
     for (let c = 0; c < numCols; c++) {
         const xOffset = c * colSpacing;
         const x = -width/2 + xOffset;
-        
+
         let hAtX = height;
-        
+
         if (roofType === RoofType.SingleSlope) {
             const ratio = xOffset / width;
             hAtX = height + ratio * asymmetricRise;
@@ -358,16 +403,16 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config }) => {
        const rad = (roofSlope * Math.PI) / 180;
        const rise = (width / 2) * Math.tan(rad);
        const slopeLen = (width/2 + overhang) / Math.cos(rad);
-       
+
        const purlinH = 0.04;
        const trussHalf = SPECS.trussThickness / 2;
        const skinHalf = 0.005; 
        const perpOffset = trussHalf + purlinH + skinHalf;
        const vertOffset = perpOffset / Math.cos(rad);
-       
+
        const midpointDrop = (rise + overhang * Math.tan(rad)) / 2;
        const localY = -midpointDrop + vertOffset;
-       
+
        return (
          <group position={[0, baseY + rise, 0]}>
            {/* Left Slope */}
@@ -391,13 +436,13 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config }) => {
         const rad = (roofSlope * Math.PI) / 180;
         const rise = width * Math.tan(rad);
         const slopeLen = (width + overhang * 2) / Math.cos(rad);
-        
+
         const purlinH = 0.04; 
         const trussHalf = SPECS.trussThickness / 2; 
         const skinHalf = 0.005; 
         const perpOffset = trussHalf + purlinH + skinHalf;
         const vertOffset = perpOffset / Math.cos(rad);
-        
+
         const trussBaseY = roofType === RoofType.SingleSlope ? 0.35 : 0;
         const centerRise = rise / 2;
         const totalY = trussBaseY + centerRise + vertOffset;
@@ -419,7 +464,7 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config }) => {
         const R_top = R_bot + 0.35; 
         const Cx = width / 2;
         const Cy = rise - R_bot;
-        
+
         const purlinH = 0.04;
         const trussHalf = SPECS.trussThickness / 2;
         const skinHalf = 0.005;
@@ -430,7 +475,7 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config }) => {
         const anglePerMeter = 1 / R_skin;
         const tLeft = startTheta + overhang * anglePerMeter;
         const tRight = endTheta - overhang * anglePerMeter;
-        
+
         // Render Strips
         const segments = 24;
         const strips = [];
@@ -455,7 +500,6 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config }) => {
            );
         }
 
-        // FIXED: Removed the erroneous .map that was creating new objects in the loop
         return <group position={[0, baseY, 0]}>
             {strips}
         </group>;
@@ -464,12 +508,12 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config }) => {
         const rise = width * SPECS.trussHeightArch;
         const radius = (Math.pow(width/2, 2) + Math.pow(rise, 2)) / (2 * rise);
         const centerY = -(radius - rise);
-        
+
         const purlinH = 0.04;
         const trussHalf = SPECS.trussThickness / 2;
         const skinHalf = 0.005;
         const skinRadius = radius + trussHalf + purlinH + skinHalf;
-        
+
         const totalAngle = 2 * Math.asin((totalW/2) / skinRadius);
 
         return (
@@ -489,7 +533,7 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config }) => {
     const color = frameColor;
     const purlinThick = 0.04;
     const purlinDepth = 0.04;
-    
+
     for(let i=0; i<=count; i++) {
         const ratio = i/count;
         const xRaw = -width/2 + width * ratio;
@@ -522,9 +566,9 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config }) => {
              const startTheta = Math.atan2(0 - Cy, -width/2 - Cx);
              const endTheta = Math.PI / 2;
              const theta = startTheta - (startTheta - endTheta) * ratio;
-             
+
              const R_purlin = R_top + SPECS.trussThickness/2 + purlinDepth/2;
-             
+
              x = Cx + R_purlin * Math.cos(theta);
              y = hBase + Cy + R_purlin * Math.sin(theta);
              rotZ = theta + Math.PI/2;
@@ -536,7 +580,7 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config }) => {
              const startTheta = Math.PI/2 - halfAngle;
              const totalTheta = 2 * halfAngle;
              const currentTheta = startTheta + ratio * totalTheta;
-             
+
              x = R * Math.cos(currentTheta);
              y = hBase + Cy + R * Math.sin(currentTheta);
              y += SPECS.trussThickness/2 + purlinThick/2; 
@@ -552,18 +596,38 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config }) => {
     <group>
       {grid.posts}
       {grid.beams}
-      {Array.from({length: trussCount}).map((_, i) => {
-        const z = -length/2 + i * trussSpacing;
-        return (
-          <group key={`truss-${i}`} position={[0, height + beamH, z]}>
-             {roofType === RoofType.Gable && <GableTruss width={width} angle={roofSlope} color={frameColor} />}
-             {roofType === RoofType.SingleSlope && <SingleSlopeTruss width={width} angle={roofSlope} color={frameColor} />}
-             {roofType === RoofType.Triangular && <TriangularTruss width={width} angle={roofSlope} color={frameColor} />}
-             {roofType === RoofType.SemiArched && <SemiArchedTruss width={width} angle={roofSlope} color={frameColor} />}
-             {roofType === RoofType.Arched && <ArchedTruss width={width} color={frameColor} overhang={overhang} />}
-          </group>
-        );
-      })}
+
+      {/* Если есть расчет - показываем рассчитанные фермы, иначе - стандартные */}
+      {calculation ? (
+        // Показываем рассчитанные фермы
+        Array.from({length: trussCount}).map((_, i) => {
+          const z = -length/2 + i * trussSpacing;
+          return (
+            <group key={`calculated-truss-${i}`} position={[0, height + beamH, z]}>
+              <CalculatedTruss 
+                geometry={calculation.geometry}
+                sections={calculation.sections}
+                color={frameColor}
+              />
+            </group>
+          );
+        })
+      ) : (
+        // Стандартные фермы
+        Array.from({length: trussCount}).map((_, i) => {
+          const z = -length/2 + i * trussSpacing;
+          return (
+            <group key={`truss-${i}`} position={[0, height + beamH, z]}>
+               {roofType === RoofType.Gable && <GableTruss width={width} angle={roofSlope} color={frameColor} />}
+               {roofType === RoofType.SingleSlope && <SingleSlopeTruss width={width} angle={roofSlope} color={frameColor} />}
+               {roofType === RoofType.Triangular && <TriangularTruss width={width} angle={roofSlope} color={frameColor} />}
+               {roofType === RoofType.SemiArched && <SemiArchedTruss width={width} angle={roofSlope} color={frameColor} />}
+               {roofType === RoofType.Arched && <ArchedTruss width={width} color={frameColor} overhang={overhang} />}
+            </group>
+          );
+        })
+      )}
+
       <Purlins />
       <RoofSkin />
       {hasSideWalls && (
