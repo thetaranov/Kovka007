@@ -69,6 +69,7 @@ export const CONSTRUCTION_REGIONS = [
     { id: 5, name: "Свердловская обл. (Екатеринбург)", snow: 4, wind: 3 },
     { id: 6, name: "Республика Татарстан (Казань)", snow: 4, wind: 2 },
     { id: 7, name: "Ростовская обл.", snow: 2, wind: 3 },
+    { id: 8, name: "Самарская обл.", snow: 3, wind: 2},
 ];
 
 export const PRICING = {

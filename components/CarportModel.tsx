@@ -23,12 +23,15 @@ const BoxBeam: React.FC<{
   const length = start.distanceTo(end);
   const position = useMemo(() => start.clone().lerp(end, 0.5), [start, end]);
 
-  const angle = Math.atan2(end.y - start.y, end.x - start.x);
-  const rotation = useMemo(() => new THREE.Euler(0, 0, angle), [angle]);
+  // Возвращаем исходную логику поворота для плоских ферм
+  const quaternion = useMemo(() => {
+      const direction = end.clone().sub(start).normalize();
+      return new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
+  }, [start, end]);
 
   return (
-    <mesh position={position} rotation={rotation} castShadow receiveShadow>
-      <boxGeometry args={[length, thickness, d]} />
+    <mesh position={position} quaternion={quaternion} castShadow receiveShadow>
+      <boxGeometry args={[thickness, length, d]} />
       <meshStandardMaterial 
         color={color} 
         roughness={roughness} 
@@ -267,14 +270,30 @@ const CalculatedTruss: React.FC<{
         const from = geometry.nodes[elem.from];
         const to = geometry.nodes[elem.to];
 
-        const start = new THREE.Vector3(from.x - geometry.span/2, from.y, 0);
-        const end = new THREE.Vector3( to.x - geometry.span/2, to.y, 0);
+        const start = new THREE.Vector3(
+          from.x - geometry.span/2, // Центрируем по X
+          from.y,
+          0
+        );
+        const end = new THREE.Vector3(
+          to.x - geometry.span/2,
+          to.y,
+          0
+        );
 
         let thickness = 0.04;
+        let depth = 0.04;
 
-        if (elem.type === 'topChord') thickness = sections.topChord.t / 1000;
-        else if (elem.type === 'bottomChord') thickness = sections.bottomChord.t / 1000;
-        else if (elem.type === 'web') thickness = sections.web.t / 1000;
+        if (elem.type === 'topChord') {
+            thickness = sections.topChord.b / 1000;
+            depth = sections.topChord.h / 1000;
+        } else if (elem.type === 'bottomChord') {
+            thickness = sections.bottomChord.b / 1000;
+            depth = sections.bottomChord.h / 1000;
+        } else if (elem.type === 'web') {
+            thickness = sections.web.b / 1000;
+            depth = sections.web.h / 1000;
+        }
 
         return (
           <BoxBeam
@@ -282,7 +301,7 @@ const CalculatedTruss: React.FC<{
             start={start}
             end={end}
             thickness={thickness}
-            depth={thickness}
+            depth={depth}
             color={color}
           />
         );
@@ -613,8 +632,8 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config, calculation 
         })
       )}
 
-      <Purlins config={config} />
-      <RoofSkin config={config} />
+      {!calculation && <Purlins config={config} />}
+      {!calculation && <RoofSkin config={config} />}
 
       {hasSideWalls && (
         <group>

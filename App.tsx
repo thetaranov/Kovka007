@@ -89,6 +89,12 @@ export default function App() {
         }
     }, []);
 
+    // Сброс расчета при переключении режима
+    useEffect(() => {
+        setCalculationResult(null);
+        setCalculationMode('edit');
+    }, [appMode]);
+
     useEffect(() => {
         let materialCost = 0;
         const floorArea = config.width * config.length;
@@ -160,7 +166,7 @@ export default function App() {
 
     const handleBackToEdit = () => {
         setCalculationMode('edit');
-        setCalculationResult(null); // Сбрасываем расчет, чтобы вернуться к визуальной модели
+        setCalculationResult(null);
     };
 
     if (appMode === 'calculator' && calculationMode === 'calculated' && calculationResult) {
@@ -205,6 +211,14 @@ export default function App() {
             <div className={`fixed inset-0 z-50 lg:static lg:z-auto transform transition-transform duration-500 cubic-bezier(0.32, 0.72, 0, 1) ${isMobileMenuOpen ? "translate-y-0" : "translate-y-[100%] lg:translate-y-0"} lg:w-[450px] lg:min-w-[400px] flex-shrink-0 h-full shadow-2xl lg:shadow-none flex flex-col bg-white`}>
                 <div className="lg:hidden absolute top-4 right-4 z-50"><button onClick={() => setIsMobileMenuOpen(false)} className="p-2 bg-slate-100 rounded-full"><X size={24} /></button></div>
                 <Controls config={config} onChange={setConfig} price={price} onOrder={handleOrder} appMode={appMode} onCalculated={handleCalculationComplete} />
+            </div>
+             <div className="hidden lg:flex fixed bottom-6 left-6 z-50 gap-4 items-center">
+                <button onClick={handleDownloadReport} className="bg-white hover:bg-slate-50 text-slate-700 font-semibold py-3 px-5 rounded-xl shadow-lg border border-slate-200 flex items-center gap-3 transition-all active:scale-95">
+                    <div className="p-1.5 bg-green-100 rounded text-green-700"><FileText size={18} /></div><span className="text-sm">Скачать смету</span>
+                </button>
+                <a href="https://kovka007.ru/" target="_blank" rel="noopener noreferrer" className="bg-white hover:bg-slate-50 text-slate-700 font-semibold py-3 px-5 rounded-xl shadow-lg border border-slate-200 flex items-center gap-3 transition-all active:scale-95 no-underline">
+                    <div className="p-1.5 bg-indigo-100 rounded text-indigo-700"><Globe size={18} /></div><span className="text-sm">Сайт</span>
+                </a>
             </div>
             <BrowserOrderModal isOpen={showBrowserOrderModal} onClose={() => setShowBrowserOrderModal(false)} orderData={orderJson} />
         </div>
