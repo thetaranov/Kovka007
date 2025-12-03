@@ -21,7 +21,7 @@ export enum PillarSize {
 export enum RoofMaterial {
   Polycarbonate = 'polycarbonate',
   MetalTile = 'metaltile',
-  Decking = 'decking', // Profnastil
+  Decking = 'decking',
 }
 
 export enum PaintType {
@@ -30,25 +30,28 @@ export enum PaintType {
   Polymer = 'polymer',
 }
 
+export type AppMode = 'visualizer' | 'calculator';
+export type EngineeringView = 'perspective' | 'front' | 'side';
+
 export interface CarportConfig {
-  width: number; // meters
-  length: number; // meters
-  height: number; // meters (Clearance height at lowest point)
+  width: number;
+  length: number;
+  height: number;
   pillarSize: PillarSize;
-  
   roofType: RoofType;
-  roofSlope: number; // degrees
+  roofSlope: number;
   roofMaterial: RoofMaterial;
-  
   frameColor: string;
   roofColor: string;
   paintType: PaintType;
-
   hasTrusses: boolean;
   hasSideWalls: boolean;
   hasGutters: boolean;
   hasFoundation: boolean;
   hasInstallation: boolean;
+  constructionRegionId: number;
+  snowRegion: number;
+  windRegion: number;
 }
 
 export const MIN_WIDTH = 3;
@@ -58,36 +61,45 @@ export const MAX_LENGTH = 12;
 export const MIN_HEIGHT = 2;
 export const MAX_HEIGHT = 4;
 
-// Telegram WebApp Types
+export interface Profile {
+  name: string; h: number; b: number; t: number; A: number; Ix: number; Iy: number; Wx: number; Wy: number; i_x: number; i_y: number; weight: number;
+}
+
+export interface TrussGeometry {
+  span: number; height: number; panelCount: number; panelLength: number;
+  nodes: Array<{x: number, y: number, z?: number}>;
+  elements: Array<{ from: number; to: number; type: 'topChord' | 'bottomChord' | 'web' | 'pillar'; length: number; }>;
+}
+
+export interface ElementSections {
+  topChord: Profile; bottomChord: Profile; web: Profile; pillar: Profile; purlin: Profile;
+}
+
+export interface LoadAnalysis {
+  snowLoad: number; windLoad: number; deadLoad: number; totalLinearLoad: number; maxMoment: number; maxShear: number; maxAxialTop: number; maxAxialBottom: number; maxAxialWeb: number;
+  utilization: { top: number; bottom: number; web: number; pillar: number; }
+}
+
+export interface BillOfMaterials {
+  items: Array<{ name: string; profile: string; length: number; quantity: number; weight: number; }>;
+  totalWeight: number; totalCost: number;
+}
+
+export interface CalculationResult {
+  success: boolean; geometry: TrussGeometry; sections: ElementSections; loads: LoadAnalysis; dxfContent: string; bom: BillOfMaterials; warnings: string[];
+}
+
+export interface TrussCalculation extends CalculationResult {}
+
 declare global {
   interface Window {
     Telegram?: {
       WebApp: {
-        initData: string;
-        initDataUnsafe: any;
-        version: string;
-        isVersionAtLeast: (version: string) => boolean;
         ready: () => void;
         expand: () => void;
-        close: () => void;
-        sendData: (data: string) => void;
-        isExpanded: boolean;
         viewportHeight: number;
-        viewportStableHeight: number;
-        isVerticalSwipesEnabled?: boolean;
-        disableVerticalSwipes?: () => void;
-        enableVerticalSwipes?: () => void;
-        MainButton: {
-            text: string;
-            color: string;
-            textColor: string;
-            isVisible: boolean;
-            isActive: boolean;
-            show: () => void;
-            hide: () => void;
-        };
-        showAlert?: (message: string, callback?: () => void) => void;
-      }
-    }
+        sendData: (data: string) => void;
+      };
+    };
   }
 }
