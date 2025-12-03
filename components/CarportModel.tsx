@@ -25,6 +25,7 @@ const BoxBeam: React.FC<{
   const quaternion = useMemo(() => {
       const direction = end.clone().sub(start).normalize();
       const up = new THREE.Vector3(0, 1, 0);
+      // Avoid degenerate case where direction is parallel to up
       if (Math.abs(direction.dot(up)) > 0.99) {
           return new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), direction);
       }
@@ -46,7 +47,7 @@ const BoxBeam: React.FC<{
   );
 });
 
-// --- TRUSS COMPONENTS ---
+// --- TRUSS COMPONENTS (VISUALIZER MODE) ---
 
 const GableTruss: React.FC<{ width: number; angle: number; color: string }> = ({ width, angle, color }) => {
   const rad = (angle * Math.PI) / 180;
@@ -259,7 +260,7 @@ const ArchedTruss: React.FC<{ width: number; color: string; overhang?: number }>
   );
 };
 
-// --- CALCULATED TRUSS COMPONENT ---
+// --- CALCULATED TRUSS COMPONENT (CALCULATOR MODE) ---
 const CalculatedTruss: React.FC<{ 
   geometry: CalculationResult['geometry']; 
   sections: CalculationResult['sections']; 
@@ -520,6 +521,8 @@ const RoofSkin = ({ config }: { config: CarportConfig }) => {
         );
     }
 };
+
+// --- MAIN MODEL ---
 
 export const CarportModel: React.FC<CarportModelProps> = ({ config, calculation }) => {
   const { width, length, height, roofType, frameColor, roofColor, pillarSize, roofMaterial, hasSideWalls, roofSlope = 20 } = config;
