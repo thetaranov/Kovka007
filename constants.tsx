@@ -31,11 +31,10 @@ export const SPECS = {
   purlinSize: 0.04,
   mauerlatHeight: 0.1,
   postSpacing: 2.5,
-  steelGrade: 245, // MPa (C245)
-  gammaC: 1.0, // Operating condition factor
+  steelGrade: 245,
+  gammaC: 1.0,
 };
 
-// Профильные трубы ГОСТ 30245-2003 / ГОСТ 8639-82
 export const PROFILES: Profile[] = [
   { name: "40x40x2", h: 40, b: 40, t: 2, A: 2.92, Ix: 6.74, Iy: 6.74, Wx: 3.37, Wy: 3.37, i_x: 1.52, i_y: 1.52, weight: 2.29 },
   { name: "50x50x3", h: 50, b: 50, t: 3, A: 5.41, Ix: 19.53, Iy: 19.53, Wx: 7.81, Wy: 7.81, i_x: 1.90, i_y: 1.90, weight: 4.25 },

@@ -89,7 +89,6 @@ export default function App() {
         }
     }, []);
 
-    // Сброс расчета при переключении режима
     useEffect(() => {
         setCalculationResult(null);
         setCalculationMode('edit');
@@ -185,7 +184,7 @@ export default function App() {
                 </div>
             </div>
             <div className="relative w-full flex-grow min-h-0 lg:h-full transition-all duration-300">
-                <Scene config={config} calculation={appMode === 'calculator' ? calculationResult : null} />
+                <Scene config={config} calculation={appMode === 'calculator' ? calculationResult : null} appMode={appMode} />
                 <div className="absolute bottom-6 left-0 right-0 flex justify-center pointer-events-none z-30 px-4">
                     <div className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-xl shadow-lg border border-slate-200 text-slate-800 flex items-center gap-3 text-xs sm:text-sm font-medium whitespace-nowrap overflow-x-auto hide-scrollbar max-w-full">
                         <div className="flex items-baseline gap-1"><span className="font-bold text-slate-700">{config.length}×{config.width}×{config.height}м</span></div>

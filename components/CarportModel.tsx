@@ -5,9 +5,10 @@ import { SPECS } from '../constants';
 
 interface CarportModelProps {
   config: CarportConfig;
-  calculation?: CalculationResult | null;
+  calculation?: CalculationResult | null; // Сделаем проп опциональным
 }
 
+// ИСХОДНАЯ, РАБОЧАЯ ВЕРСИЯ BoxBeam
 const BoxBeam: React.FC<{ 
   start: THREE.Vector3; 
   end: THREE.Vector3; 
@@ -22,11 +23,13 @@ const BoxBeam: React.FC<{
   const d = depth || thickness;
   const length = start.distanceTo(end);
   const position = useMemo(() => start.clone().lerp(end, 0.5), [start, end]);
-
-  // Возвращаем исходную логику поворота для плоских ферм
   const quaternion = useMemo(() => {
       const direction = end.clone().sub(start).normalize();
-      return new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
+      const up = new THREE.Vector3(0, 1, 0);
+      if (Math.abs(direction.dot(up)) > 0.99) {
+          return new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), direction);
+      }
+      return new THREE.Quaternion().setFromUnitVectors(up, direction);
   }, [start, end]);
 
   return (
@@ -44,7 +47,7 @@ const BoxBeam: React.FC<{
   );
 });
 
-// --- VISUAL TRUSS COMPONENTS ---
+// --- TRUSS COMPONENTS (ДЛЯ ВИЗУАЛИЗАЦИИ) ---
 
 const GableTruss: React.FC<{ width: number; angle: number; color: string }> = ({ width, angle, color }) => {
   const rad = (angle * Math.PI) / 180;
@@ -257,8 +260,7 @@ const ArchedTruss: React.FC<{ width: number; color: string; overhang?: number }>
   );
 };
 
-
-// --- CALCULATED TRUSS COMPONENT (CALCULATOR MODE) ---
+// --- CALCULATED TRUSS COMPONENT ---
 const CalculatedTruss: React.FC<{ 
   geometry: CalculationResult['geometry']; 
   sections: CalculationResult['sections']; 
@@ -270,16 +272,8 @@ const CalculatedTruss: React.FC<{
         const from = geometry.nodes[elem.from];
         const to = geometry.nodes[elem.to];
 
-        const start = new THREE.Vector3(
-          from.x - geometry.span/2, // Центрируем по X
-          from.y,
-          0
-        );
-        const end = new THREE.Vector3(
-          to.x - geometry.span/2,
-          to.y,
-          0
-        );
+        const start = new THREE.Vector3(from.x - geometry.span/2, from.y, 0);
+        const end = new THREE.Vector3( to.x - geometry.span/2, to.y, 0);
 
         let thickness = 0.04;
         let depth = 0.04;
@@ -312,7 +306,6 @@ const CalculatedTruss: React.FC<{
 
 
 // --- HELPER COMPONENTS ---
-
 const Purlins = ({ config }: { config: CarportConfig }) => {
     const { width, length, height, roofType, frameColor, roofSlope, pillarSize } = config;
     const count = Math.ceil(width / 0.6);
@@ -491,9 +484,7 @@ const RoofSkin = ({ config }: { config: CarportConfig }) => {
            );
         }
 
-        return <group position={[0, baseY, 0]}>
-            {strips}
-        </group>;
+        return <group position={[0, baseY, 0]}>{strips}</group>;
     } else {
         const rise = width * SPECS.trussHeightArch;
         const radius = (Math.pow(width/2, 2) + Math.pow(rise, 2)) / (2 * rise);
@@ -518,7 +509,7 @@ const RoofSkin = ({ config }: { config: CarportConfig }) => {
 };
 
 export const CarportModel: React.FC<CarportModelProps> = ({ config, calculation }) => {
-  const { width, length, height, roofType, frameColor, roofColor, pillarSize, roofMaterial, hasSideWalls, roofSlope = 20 } = config;
+  const { width, length, height, roofType, frameColor, roofColor, pillarSize, hasSideWalls, roofSlope = 20 } = config;
 
   const pSize = pillarSize === PillarSize.Size60 ? 0.06 : pillarSize === PillarSize.Size80 ? 0.08 : 0.10;
   const beamH = pSize; 
@@ -632,8 +623,12 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config, calculation 
         })
       )}
 
-      {!calculation && <Purlins config={config} />}
-      {!calculation && <RoofSkin config={config} />}
+      {!calculation && (
+        <>
+          <Purlins config={config} />
+          <RoofSkin config={config} />
+        </>
+      )}
 
       {hasSideWalls && (
         <group>

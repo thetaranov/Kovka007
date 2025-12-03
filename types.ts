@@ -31,6 +31,7 @@ export enum PaintType {
 }
 
 export type AppMode = 'visualizer' | 'calculator';
+export type EngineeringView = 'perspective' | 'front' | 'side';
 
 export interface CarportConfig {
   width: number;
@@ -60,7 +61,6 @@ export const MAX_LENGTH = 12;
 export const MIN_HEIGHT = 2;
 export const MAX_HEIGHT = 4;
 
-// Structural Types
 export interface Profile {
   name: string; h: number; b: number; t: number; A: number; Ix: number; Iy: number; Wx: number; Wy: number; i_x: number; i_y: number; weight: number;
 }
@@ -91,7 +91,6 @@ export interface CalculationResult {
 
 export interface TrussCalculation extends CalculationResult {}
 
-// Telegram WebApp Types
 declare global {
   interface Window {
     Telegram?: {
