@@ -1,22 +1,24 @@
+
 import React, { useState, useEffect, useCallback } from "react";
 import { Scene } from "./components/Scene";
 import { Controls } from "./components/Controls";
+import { TrussCalculator } from "./components/TrussCalculator";
+import { FinalModel } from "./components/FinalModel";
 import {
     CarportConfig,
     RoofType,
     PillarSize,
     RoofMaterial,
     PaintType,
+    CalculationResult,
 } from "./types";
 import { PRICING, FRAME_COLORS, ROOF_COLORS, SPECS } from "./constants";
 import {
-    Menu,
     X,
     FileText,
     Globe,
     TrendingDown,
     Send,
-    Copy,
     Settings2,
 } from "lucide-react";
 
@@ -36,9 +38,10 @@ const INITIAL_CONFIG: CarportConfig = {
     hasSideWalls: false,
     hasFoundation: false,
     hasInstallation: true,
+    snowRegion: 3, // Moscow
+    windRegion: 1, // Moscow
 };
 
-// Модальное окно для браузера
 const BrowserOrderModal = ({ isOpen, onClose, orderData }: any) => {
     if (!isOpen) return null;
 
@@ -84,23 +87,14 @@ const BrowserOrderModal = ({ isOpen, onClose, orderData }: any) => {
     );
 };
 
-const getRecommendedPillarSize = (
-    width: number,
-    length: number,
-    height: number,
-): PillarSize => {
-    const area = width * length;
-    if (width > 8.0 || height > 3.5 || area > 60) return PillarSize.Size100;
-    if (width > 5.0 || height > 2.8 || area > 30) return PillarSize.Size80;
-    return PillarSize.Size60;
-};
-
 export default function App() {
     const [config, setConfig] = useState<CarportConfig>(INITIAL_CONFIG);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [showBrowserOrderModal, setShowBrowserOrderModal] = useState(false);
     const [price, setPrice] = useState(0);
     const [orderJson, setOrderJson] = useState("");
+    const [calculationResult, setCalculationResult] = useState<CalculationResult | null>(null);
+    const [calculationMode, setCalculationMode] = useState<'edit' | 'calculated'>('edit');
 
     useEffect(() => {
         if (window.Telegram?.WebApp) {
@@ -115,36 +109,13 @@ export default function App() {
         }
     }, []);
 
-    const handleConfigChange = (newConfig: CarportConfig) => {
-        if (
-            newConfig.width !== config.width ||
-            newConfig.length !== config.length ||
-            newConfig.height !== config.height
-        ) {
-            const recommended = getRecommendedPillarSize(
-                newConfig.width,
-                newConfig.length,
-                newConfig.height,
-            );
-            if (
-                newConfig.pillarSize === PillarSize.Size60 &&
-                recommended !== PillarSize.Size60
-            ) {
-                newConfig.pillarSize = recommended;
-            }
-        }
-        setConfig(newConfig);
-    };
-
-    // --- РАСЧЕТ СТОИМОСТИ ---
+    // --- РАСЧЕТ СТОИМОСТИ (Упрощенный для UI) ---
     useEffect(() => {
         let materialCost = 0;
         const floorArea = config.width * config.length;
 
         const baseRate = PRICING.baseTrussStructure.base;
-        const widthPenalty =
-            Math.max(0, config.width - 4.5) *
-            PRICING.baseTrussStructure.widthFactor;
+        const widthPenalty = Math.max(0, config.width - 4.5) * PRICING.baseTrussStructure.widthFactor;
 
         let volumeDiscount = 1.0;
         if (floorArea > 50) volumeDiscount = 0.95;
@@ -152,10 +123,7 @@ export default function App() {
 
         const trussCostPerSqm = (baseRate + widthPenalty) * volumeDiscount;
 
-        materialCost +=
-            floorArea *
-            trussCostPerSqm *
-            PRICING.roofTypeMultiplier[config.roofType];
+        materialCost += floorArea * trussCostPerSqm * PRICING.roofTypeMultiplier[config.roofType];
 
         const maxSpan = 6.0;
         const numCols = Math.ceil(config.width / maxSpan) + 1;
@@ -164,8 +132,7 @@ export default function App() {
         const pillarCount = numCols * numRows;
         const totalPillarHeight = pillarCount * config.height;
 
-        materialCost +=
-            totalPillarHeight * PRICING.pillarMultiplier[config.pillarSize];
+        materialCost += totalPillarHeight * PRICING.pillarMultiplier[config.pillarSize];
 
         let roofAreaMultiplier = 1.1;
         if (config.roofType === RoofType.Gable) roofAreaMultiplier = 1.25;
@@ -173,17 +140,13 @@ export default function App() {
         if (config.roofType === RoofType.SemiArched) roofAreaMultiplier = 1.35;
 
         const roofArea = floorArea * roofAreaMultiplier;
-        materialCost +=
-            roofArea * PRICING.roofMaterialPricePerSqm[config.roofMaterial];
+        materialCost += roofArea * PRICING.roofMaterialPricePerSqm[config.roofMaterial];
         materialCost += floorArea * PRICING.paintMultiplier[config.paintType];
 
-        if (config.hasTrusses)
-            materialCost += floorArea * PRICING.extras.trusses;
-        if (config.hasGutters)
-            materialCost += config.length * 2 * PRICING.extras.gutters;
+        if (config.hasTrusses) materialCost += floorArea * PRICING.extras.trusses;
+        if (config.hasGutters) materialCost += config.length * 2 * PRICING.extras.gutters;
         if (config.hasSideWalls) {
-            const wallArea =
-                config.length * config.height + config.width * config.height;
+            const wallArea = config.length * config.height + config.width * config.height;
             materialCost += wallArea * PRICING.extras.sideWalls;
         }
         if (config.hasFoundation) {
@@ -211,46 +174,13 @@ export default function App() {
     const oldPrice = Math.round(price * 1.2);
     const savings = oldPrice - price;
 
-    const calculateBOM = useCallback(() => {
-        const pillarCount =
-            (Math.ceil(config.width / 6.0) + 1) *
-            (Math.ceil(config.length / 3.0) + 1);
-        return {
-            pillarCount,
-            roofArea: (config.width * config.length * 1.2).toFixed(1),
-        };
-    }, [config]);
-
     const handleDownloadReport = () => {
         alert("Смета скачивается...");
     };
 
     const getOrderPayload = () => {
-        const frameColorObj = FRAME_COLORS.find(
-            (c) => c.hex === config.frameColor,
-        );
-        const roofColorObj = ROOF_COLORS.find(
-            (c) => c.hex === config.roofColor,
-        );
-
-        const areaFloor = (config.width * config.length).toFixed(2);
-        let roofAreaMultiplier = 1.0;
-        if (config.roofType === RoofType.Gable) roofAreaMultiplier = 1.25;
-        else if (config.roofType === RoofType.Arched) roofAreaMultiplier = 1.35;
-        else roofAreaMultiplier = 1.1;
-        const areaRoof = (
-            config.width *
-            config.length *
-            roofAreaMultiplier
-        ).toFixed(2);
-
-        let peakHeight = config.height;
-        if (config.roofType === RoofType.Gable)
-            peakHeight +=
-                (config.width / 2) *
-                Math.tan((config.roofSlope * Math.PI) / 180);
-        else if (config.roofType === RoofType.Arched)
-            peakHeight += config.width * SPECS.trussHeightArch;
+        const frameColorObj = FRAME_COLORS.find((c) => c.hex === config.frameColor);
+        const roofColorObj = ROOF_COLORS.find((c) => c.hex === config.roofColor);
 
         return {
             id: `CFG-${Date.now().toString(36).toUpperCase().slice(-5)}`,
@@ -258,23 +188,9 @@ export default function App() {
             width: config.width,
             length: config.length,
             height: config.height,
-            height_peak: parseFloat(peakHeight.toFixed(2)),
-            slope: config.roofSlope,
-            pillar: config.pillarSize,
-            area_floor: areaFloor,
-            area_roof: areaRoof,
-            material: config.roofMaterial,
-            paint: config.paintType,
+            price: price,
             color_frame: frameColorObj ? frameColorObj.name : config.frameColor,
             color_roof: roofColorObj ? roofColorObj.name : config.roofColor,
-            opts: {
-                trusses: config.hasTrusses,
-                gutters: config.hasGutters,
-                walls: config.hasSideWalls,
-                found: config.hasFoundation,
-                install: config.hasInstallation,
-            },
-            price: price,
         };
     };
 
@@ -284,13 +200,7 @@ export default function App() {
 
         if (window.Telegram && window.Telegram.WebApp) {
             if (typeof window.Telegram.WebApp.sendData === "function") {
-                try {
-                    window.Telegram.WebApp.sendData(dataToSend);
-                } catch (e) {
-                    console.error("sendData failed:", e);
-                    setOrderJson(dataToSend);
-                    setShowBrowserOrderModal(true);
-                }
+                window.Telegram.WebApp.sendData(dataToSend);
             } else {
                 setOrderJson(dataToSend);
                 setShowBrowserOrderModal(true);
@@ -301,49 +211,47 @@ export default function App() {
         }
     };
 
+    const handleCalculationComplete = (result: CalculationResult) => {
+        setCalculationResult(result);
+        setCalculationMode('calculated');
+    };
+
+    // --- RENDER ---
+
+    if (calculationMode === 'calculated' && calculationResult) {
+        return (
+            <FinalModel 
+                config={config}
+                calculation={calculationResult}
+                onBack={() => setCalculationMode('edit')}
+            />
+        );
+    }
+
     return (
         <div className="flex flex-col lg:flex-row h-[100dvh] w-screen overflow-hidden bg-slate-100 font-sans touch-none overscroll-none fixed inset-0">
             {/* HEADER */}
             <div className="absolute top-0 left-0 right-0 z-40 p-4 pointer-events-none flex justify-center lg:justify-start lg:p-6">
                 <div className="bg-white/90 backdrop-blur-md px-6 py-2 rounded-xl shadow-sm border border-slate-200/50 text-center lg:text-left pointer-events-auto">
                     <h1 className="font-bold text-slate-900 leading-tight">
-                        Kovka007{" "}
-                        <span className="hidden lg:inline text-slate-400">
-                            |
-                        </span>{" "}
-                        <span className="text-xs font-normal text-slate-500 uppercase tracking-wider">
-                            конструктор
-                        </span>
+                        Kovka007 <span className="hidden lg:inline text-slate-400">|</span> <span className="text-xs font-normal text-slate-500 uppercase tracking-wider">конструктор</span>
                     </h1>
                 </div>
             </div>
 
             <div className="relative w-full flex-grow min-h-0 lg:h-full transition-all duration-300">
-                <Scene config={config} />
+                <Scene config={config} calculation={null} />
 
-                {/* ИНФО-ПЛАШКА */}
+                {/* INFO PILL */}
                 <div className="absolute bottom-6 left-0 right-0 flex justify-center pointer-events-none z-30 px-4">
                     <div className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-xl shadow-lg border border-slate-200 text-slate-800 flex items-center gap-3 text-xs sm:text-sm font-medium whitespace-nowrap overflow-x-auto hide-scrollbar max-w-full">
                         <div className="flex items-baseline gap-1">
-                            <span className="font-bold text-slate-700">
-                                {config.length}×{config.width}×{config.height}м
-                            </span>
-                            <span className="text-[10px] text-slate-400 font-normal">
-                                (Д×Ш×В)
-                            </span>
+                            <span className="font-bold text-slate-700">{config.length}×{config.width}×{config.height}м</span>
                         </div>
                         <span className="w-px h-3 bg-slate-300 flex-shrink-0"></span>
-                        <span className="font-bold text-slate-700">
-                            {(config.width * config.length).toFixed(1)} м²
-                        </span>
+                        <span className="font-bold text-slate-700">{(config.width * config.length).toFixed(1)} м²</span>
                         <span className="w-px h-3 bg-slate-300 flex-shrink-0"></span>
-                        <span className="text-slate-500">
-                            ~
-                            {Math.round(
-                                price / (config.width * config.length),
-                            ).toLocaleString()}{" "}
-                            ₽/м²
-                        </span>
+                        <span className="text-slate-500">~{Math.round(price / (config.width * config.length)).toLocaleString()} ₽/м²</span>
                     </div>
                 </div>
             </div>
@@ -351,29 +259,18 @@ export default function App() {
             {/* MOBILE PANEL */}
             <div className="lg:hidden flex flex-col z-30 flex-shrink-0 bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.05)] pb-safe">
                 <div className="grid grid-cols-2 gap-3 p-3 border-b border-slate-100">
-                    <button
-                        onClick={handleDownloadReport}
-                        className="bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl border flex justify-center items-center gap-2 active:scale-95"
-                    >
+                    <button onClick={handleDownloadReport} className="bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl border flex justify-center items-center gap-2 active:scale-95">
                         <FileText size={16} className="text-green-600" />
                         <span className="text-xs">Смета</span>
                     </button>
-                    <a
-                        href="https://kovka007.ru/"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl border flex justify-center items-center gap-2 active:scale-95"
-                    >
+                    <a href="https://kovka007.ru/" target="_blank" rel="noopener noreferrer" className="bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl border flex justify-center items-center gap-2 active:scale-95">
                         <Globe size={16} className="text-indigo-600" />
                         <span className="text-xs">Сайт</span>
                     </a>
                 </div>
 
                 <div className="px-4 pt-3">
-                    <button
-                        onClick={() => setIsMobileMenuOpen(true)}
-                        className="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors active:scale-95"
-                    >
+                    <button onClick={() => setIsMobileMenuOpen(true)} className="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors active:scale-95">
                         <Settings2 size={18} />
                         <span>Настроить параметры</span>
                     </button>
@@ -383,94 +280,46 @@ export default function App() {
                     <div className="mb-4">
                         <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center gap-2">
-                                <span className="text-lg font-medium text-slate-400 line-through decoration-slate-400/50">
-                                    {oldPrice.toLocaleString()} ₽
-                                </span>
-                                <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
-                                    -20%
-                                </span>
+                                <span className="text-lg font-medium text-slate-400 line-through decoration-slate-400/50">{oldPrice.toLocaleString()} ₽</span>
+                                <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">-20%</span>
                             </div>
-                            {config.hasInstallation && (
-                                <div className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">
-                                    с монтажом
-                                </div>
-                            )}
                         </div>
                         <div className="flex items-end justify-between">
-                            <p className="text-3xl font-black text-slate-900 leading-none tracking-tight">
-                                {price.toLocaleString()} ₽
-                            </p>
+                            <p className="text-3xl font-black text-slate-900 leading-none tracking-tight">{price.toLocaleString()} ₽</p>
                             <div className="flex items-center gap-1 text-green-600 text-xs font-bold bg-green-50 px-2 py-1 rounded">
                                 <TrendingDown size={14} />
                                 <span>Выгода {savings.toLocaleString()} ₽</span>
                             </div>
                         </div>
                     </div>
-                    <button
-                        onClick={handleOrder}
-                        className="w-full bg-slate-900 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg flex justify-center gap-3 active:scale-[0.98]"
-                    >
+                    <button onClick={handleOrder} className="w-full bg-slate-900 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg flex justify-center gap-3 active:scale-[0.98]">
                         <span>Оформить заявку</span>
-                        <div className="opacity-80 ml-2">
-                            <svg
-                                width="20"
-                                height="20"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                            >
-                                <path
-                                    d="M21.9287 2.52309C22.2575 2.15556 21.9904 1.58309 21.5173 1.76459L2.09459 9.30809C1.72484 9.45034 1.72259 9.97734 2.09109 10.1236L6.59109 11.9026C6.88359 12.0181 7.21584 11.9446 7.43934 11.7143L17.7983 1.05609C17.9251 0.925587 18.0661 1.09434 17.9543 1.23534L8.71059 12.9098C8.52684 13.1416 8.52834 13.4678 8.71359 13.6981L14.7353 21.1688C15.0346 21.5398 15.6368 21.4111 15.7681 20.9491L21.9287 2.52309Z"
-                                    fill="currentColor"
-                                />
-                            </svg>
-                        </div>
                     </button>
                 </div>
             </div>
 
-            {/* DESKTOP SIDEBAR */}
-            <div
-                className={`fixed inset-0 z-50 lg:static lg:z-auto transform transition-transform duration-500 cubic-bezier(0.32, 0.72, 0, 1) ${isMobileMenuOpen ? "translate-y-0" : "translate-y-[100%] lg:translate-y-0"} lg:w-[450px] lg:min-w-[400px] flex-shrink-0 h-full shadow-2xl lg:shadow-none flex flex-col bg-white`}
-            >
+            {/* SIDEBAR */}
+            <div className={`fixed inset-0 z-50 lg:static lg:z-auto transform transition-transform duration-500 cubic-bezier(0.32, 0.72, 0, 1) ${isMobileMenuOpen ? "translate-y-0" : "translate-y-[100%] lg:translate-y-0"} lg:w-[450px] lg:min-w-[400px] flex-shrink-0 h-full shadow-2xl lg:shadow-none flex flex-col bg-white`}>
                 <div className="lg:hidden absolute top-4 right-4 z-50">
-                    <button
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className="p-2 bg-slate-100 rounded-full"
-                    >
+                    <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 bg-slate-100 rounded-full">
                         <X size={24} />
                     </button>
                 </div>
+                
                 <Controls
                     config={config}
-                    onChange={handleConfigChange}
+                    onChange={setConfig}
                     price={price}
                     onOrder={handleOrder}
                 />
-            </div>
 
-            {/* DESKTOP BUTTONS */}
-            <div className="hidden lg:flex fixed bottom-6 left-6 z-50 gap-4 items-center">
-                <button
-                    onClick={handleDownloadReport}
-                    className="bg-white hover:bg-slate-50 text-slate-700 font-semibold py-3 px-5 rounded-xl shadow-lg border border-slate-200 flex items-center gap-3 transition-all active:scale-95"
-                >
-                    <div className="p-1.5 bg-green-100 rounded text-green-700">
-                        <FileText size={18} />
-                    </div>
-                    <span className="text-sm">Скачать смету</span>
-                </button>
-                <a
-                    href="https://kovka007.ru/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="bg-white hover:bg-slate-50 text-slate-700 font-semibold py-3 px-5 rounded-xl shadow-lg border border-slate-200 flex items-center gap-3 transition-all active:scale-95 no-underline"
-                >
-                    <div className="p-1.5 bg-indigo-100 rounded text-indigo-700">
-                        <Globe size={18} />
-                    </div>
-                    <span className="text-sm">Сайт</span>
-                </a>
+                <div className="px-6 py-4 border-t border-slate-200 bg-slate-50">
+                    <h3 className="font-bold text-sm uppercase tracking-wide text-indigo-600 mb-4">Автоматический расчет</h3>
+                    <TrussCalculator 
+                        config={config}
+                        onCalculated={handleCalculationComplete}
+                    />
+                </div>
             </div>
 
             <BrowserOrderModal

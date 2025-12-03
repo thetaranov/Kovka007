@@ -1,65 +1,18 @@
-import React, { Suspense, useState, useEffect, useRef } from "react";
+import React, { Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
-import {
-  OrbitControls,
-  Environment,
-  ContactShadows,
-  Html,
-  useProgress,
-  Grid,
-} from "@react-three/drei";
-import { CarportConfig } from "../types";
+import { OrbitControls, ContactShadows, Grid, Environment } from "@react-three/drei";
+import { CarportConfig, CalculationResult } from "../types";
 import { CarportModel } from "./CarportModel";
-import { RefreshCw, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 interface SceneProps {
   config: CarportConfig;
+  calculation: CalculationResult | null;
 }
 
-function Loader() {
-  const { progress } = useProgress();
+export const Scene: React.FC<SceneProps> = ({ config, calculation }) => {
   return (
-    <Html center>
-      <div className="flex flex-col items-center justify-center p-3 bg-white/90 backdrop-blur rounded-xl shadow-lg border border-slate-100">
-        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mb-2" />
-        <span className="text-xs font-bold text-slate-600 tabular-nums">
-          {progress.toFixed(0)}%
-        </span>
-      </div>
-    </Html>
-  );
-}
-
-export const Scene: React.FC<SceneProps> = ({ config }) => {
-  const [resetKey, setResetKey] = useState(0);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const handleReset = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setResetKey((prev) => prev + 1);
-  };
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    const preventTouch = (e: TouchEvent) => {
-      if (e.cancelable) e.preventDefault();
-    };
-    container.addEventListener("touchmove", preventTouch, { passive: false });
-    container.addEventListener("touchstart", preventTouch, { passive: false });
-    return () => {
-      container.removeEventListener("touchmove", preventTouch);
-      container.removeEventListener("touchstart", preventTouch);
-    };
-  }, []);
-
-  return (
-    <div
-      ref={containerRef}
-      className="w-full h-full bg-slate-200 relative shadow-inner overflow-hidden"
-      style={{ touchAction: "none" }}
-    >
-      {/* Фон */}
+    <div className="w-full h-full bg-slate-200 relative shadow-inner overflow-hidden" style={{ touchAction: "none" }}>
       <div
         className="absolute inset-0 pointer-events-none z-0 opacity-[0.05]"
         style={{
@@ -69,68 +22,45 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
         }}
       />
 
-      <button
-        onClick={handleReset}
-        className="absolute top-20 right-4 lg:top-4 lg:right-4 z-20 p-2 bg-white/80 hover:bg-white backdrop-blur-sm rounded-lg shadow-sm border border-slate-200 text-slate-500 hover:text-indigo-600 active:scale-95 transition-all"
-      >
-        <RefreshCw size={20} />
-      </button>
-
       <Canvas
-        key={resetKey}
         shadows
         dpr={[1, 1.5]}
-        gl={{ powerPreference: "high-performance", antialias: true }} // Включил сглаживание для четкости
-        camera={{ position: [10, 8, 12], fov: 45 }} // Чуть уменьшил FOV для "плотности" картинки
+        gl={{ powerPreference: "high-performance", antialias: true }}
+        camera={{ position: [10, 8, 12], fov: 45 }}
         className="z-10 relative"
-        style={{
-          touchAction: "none",
-          width: "100%",
-          height: "100%",
-          outline: "none",
-        }}
       >
-        <Suspense fallback={<Loader />}>
-          {/* Освещение без тумана */}
+        <Suspense fallback={null}>
           <ambientLight intensity={0.7} />
           <directionalLight
             position={[10, 20, 10]}
             intensity={1.5}
             castShadow
-            shadow-mapSize={[2048, 2048]} // Вернул качество теней для четкости
+            shadow-mapSize={[2048, 2048]}
             shadow-bias={-0.0005}
-          >
-            <orthographicCamera
-              attach="shadow-camera"
-              args={[-20, 20, 20, -20]}
-            />
-          </directionalLight>
-
-          {/* Легкая подсветка снизу, чтобы не было черных теней */}
+          />
           <hemisphereLight intensity={0.3} groundColor="#f8fafc" />
 
-          {/* Контрастная сетка */}
           <Grid
             position={[0, 0.01, 0]}
             args={[40, 40]}
             cellSize={1}
-            cellThickness={1} // Жирнее
-            cellColor="#94a3b8" // Более темный серый
+            cellThickness={1}
+            cellColor="#94a3b8"
             sectionSize={5}
             sectionThickness={1.5}
-            sectionColor="#475569" // Темно-серый для секций
-            fadeDistance={50} // Дальше видимость
-            fadeStrength={2} // Меньше затухания
+            sectionColor="#475569"
+            fadeDistance={50}
+            fadeStrength={2}
             infiniteGrid={true}
           />
 
-          <CarportModel config={config} />
+          <CarportModel config={config} calculation={calculation} />
 
           <ContactShadows
             resolution={1024}
             scale={60}
             blur={2.5}
-            opacity={0.6} // Чуть темнее тень
+            opacity={0.6}
             far={10}
             color="#000000"
           />
@@ -143,10 +73,10 @@ export const Scene: React.FC<SceneProps> = ({ config }) => {
             maxDistance={50}
             target={[0, config.height / 2, 0]}
             enablePan={false}
-            enableZoom={true}
             enableDamping={true}
             dampingFactor={0.05}
           />
+          <Environment preset="city" />
         </Suspense>
       </Canvas>
     </div>
