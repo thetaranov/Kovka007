@@ -31,10 +31,11 @@ export const SPECS = {
   purlinSize: 0.04,
   mauerlatHeight: 0.1,
   postSpacing: 2.5,
-  steelGrade: 245,
-  gammaC: 1.0,
+  steelGrade: 245, // MPa (C245)
+  gammaC: 1.0, // Operating condition factor
 };
 
+// Профильные трубы ГОСТ 30245-2003 / ГОСТ 8639-82
 export const PROFILES: Profile[] = [
   { name: "40x40x2", h: 40, b: 40, t: 2, A: 2.92, Ix: 6.74, Iy: 6.74, Wx: 3.37, Wy: 3.37, i_x: 1.52, i_y: 1.52, weight: 2.29 },
   { name: "50x50x3", h: 50, b: 50, t: 3, A: 5.41, Ix: 19.53, Iy: 19.53, Wx: 7.81, Wy: 7.81, i_x: 1.90, i_y: 1.90, weight: 4.25 },
@@ -79,114 +80,4 @@ export const PRICING = {
   roofTypeMultiplier: { [RoofType.SingleSlope]: 1.0, [RoofType.Triangular]: 1.05, [RoofType.Gable]: 1.2, [RoofType.Arched]: 1.25, [RoofType.SemiArched]: 1.3, },
   paintMultiplier: { [PaintType.None]: 0, [PaintType.Ral]: 400, [PaintType.Polymer]: 1200, },
   extras: { trusses: 600, gutters: 1300, sideWalls: 3200, foundation: 5000, installation: 0.25, highWork: 0.1, },
-};```
-
----
-### 4. `types.ts` (ОБНОВИТЬ)
-
-```ts
-export interface ColorOption {
-  name: string;
-  hex: string;
-  ral: string;
-}
-
-export enum RoofType {
-  SingleSlope = 'single',
-  Gable = 'gable',
-  Arched = 'arched',
-  Triangular = 'triangular',
-  SemiArched = 'semiarched',
-}
-
-export enum PillarSize {
-  Size60 = '60x60',
-  Size80 = '80x80',
-  Size100 = '100x100',
-}
-
-export enum RoofMaterial {
-  Polycarbonate = 'polycarbonate',
-  MetalTile = 'metaltile',
-  Decking = 'decking',
-}
-
-export enum PaintType {
-  None = 'none',
-  Ral = 'ral',
-  Polymer = 'polymer',
-}
-
-export type AppMode = 'visualizer' | 'calculator';
-export type EngineeringView = 'perspective' | 'front' | 'side';
-
-export interface CarportConfig {
-  width: number;
-  length: number;
-  height: number;
-  pillarSize: PillarSize;
-  roofType: RoofType;
-  roofSlope: number;
-  roofMaterial: RoofMaterial;
-  frameColor: string;
-  roofColor: string;
-  paintType: PaintType;
-  hasTrusses: boolean;
-  hasSideWalls: boolean;
-  hasGutters: boolean;
-  hasFoundation: boolean;
-  hasInstallation: boolean;
-  constructionRegionId: number;
-  snowRegion: number;
-  windRegion: number;
-}
-
-export const MIN_WIDTH = 3;
-export const MAX_WIDTH = 10;
-export const MIN_LENGTH = 3;
-export const MAX_LENGTH = 12;
-export const MIN_HEIGHT = 2;
-export const MAX_HEIGHT = 4;
-
-export interface Profile {
-  name: string; h: number; b: number; t: number; A: number; Ix: number; Iy: number; Wx: number; Wy: number; i_x: number; i_y: number; weight: number;
-}
-
-export interface TrussGeometry {
-  span: number; height: number; panelCount: number; panelLength: number;
-  nodes: Array<{x: number, y: number, z?: number}>;
-  elements: Array<{ from: number; to: number; type: 'topChord' | 'bottomChord' | 'web' | 'pillar'; length: number; }>;
-}
-
-export interface ElementSections {
-  topChord: Profile; bottomChord: Profile; web: Profile; pillar: Profile; purlin: Profile;
-}
-
-export interface LoadAnalysis {
-  snowLoad: number; windLoad: number; deadLoad: number; totalLinearLoad: number; maxMoment: number; maxShear: number; maxAxialTop: number; maxAxialBottom: number; maxAxialWeb: number;
-  utilization: { top: number; bottom: number; web: number; pillar: number; }
-}
-
-export interface BillOfMaterials {
-  items: Array<{ name: string; profile: string; length: number; quantity: number; weight: number; }>;
-  totalWeight: number; totalCost: number;
-}
-
-export interface CalculationResult {
-  success: boolean; geometry: TrussGeometry; sections: ElementSections; loads: LoadAnalysis; dxfContent: string; bom: BillOfMaterials; warnings: string[];
-}
-
-export interface TrussCalculation extends CalculationResult {}
-
-declare global {
-  interface Window {
-    Telegram?: {
-      WebApp: {
-        ready: () => void;
-        expand: () => void;
-        viewportHeight: number;
-        sendData: (data: string) => void;
-      };
-    };
-  }
-}
+};
