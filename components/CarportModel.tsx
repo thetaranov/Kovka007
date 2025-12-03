@@ -46,7 +46,7 @@ const BoxBeam: React.FC<{
   );
 });
 
-// --- VISUAL TRUSS COMPONENTS ---
+// --- TRUSS COMPONENTS (VISUALIZER MODE) ---
 
 const GableTruss: React.FC<{ width: number; angle: number; color: string }> = ({ width, angle, color }) => {
   const rad = (angle * Math.PI) / 180;
@@ -105,7 +105,7 @@ const TriangularTruss: React.FC<{ width: number; angle: number; color: string }>
       <BoxBeam start={new THREE.Vector3(-halfW, 0, 0)} end={new THREE.Vector3(halfW, rise, 0)} thickness={t} color={color} />
       <BoxBeam start={new THREE.Vector3(halfW, 0, 0)} end={new THREE.Vector3(halfW, rise, 0)} thickness={t} color={color} />
       <BoxBeam start={new THREE.Vector3(-halfW, 0, 0)} end={new THREE.Vector3(-halfW, 0.1, 0)} thickness={t} color={color} />
-
+      
       {Array.from({ length: segments }).map((_, i) => {
          if (i === segments) return null;
          const xBase = -halfW + i * segWidth;
@@ -134,7 +134,7 @@ const SingleSlopeTruss: React.FC<{ width: number; angle: number; color: string }
   const halfW = width / 2;
   const t = SPECS.trussThickness;
   const depth = 0.35; 
-
+  
   const topStart = new THREE.Vector3(-halfW, depth, 0);
   const topEnd = new THREE.Vector3(halfW, rise + depth, 0);
   const botStart = new THREE.Vector3(-halfW, 0, 0);
@@ -171,10 +171,10 @@ const SemiArchedTruss: React.FC<{ width: number; angle: number; color: string }>
   const trussDepth = 0.35;
   const rad = (angle * Math.PI) / 180;
   const rise = width * Math.tan(rad);
-
+  
   const R_bot = (Math.pow(width, 2) + Math.pow(rise, 2)) / (2 * rise);
   const R_top = R_bot + trussDepth; 
-
+  
   const Cy = rise - R_bot; 
   const Cx = width / 2;
   const startTheta = Math.atan2(0 - Cy, -width/2 - Cx);
@@ -216,17 +216,17 @@ const ArchedTruss: React.FC<{ width: number; color: string; overhang?: number }>
   const rise = width * SPECS.trussHeightArch;
   const t = SPECS.trussThickness;
   const trussDepth = 0.35; 
-
+  
   const R_top = (Math.pow(width/2, 2) + Math.pow(rise, 2)) / (2 * rise);
   const Cy = rise - R_top; 
   const R_bot = R_top - trussDepth; 
-
+  
   const totalW = width + 2 * overhang;
   const halfAngle = Math.asin((totalW/2) / R_top);
-
+  
   const startTheta = Math.PI/2 - halfAngle;
   const endTheta = Math.PI/2 + halfAngle;
-
+  
   const segments = Math.max(12, Math.ceil(totalW / 0.6));
   const topPoints: THREE.Vector3[] = [];
   const botPoints: THREE.Vector3[] = [];
@@ -293,14 +293,14 @@ const CalculatedTruss: React.FC<{
 
 
 // --- HELPER COMPONENTS ---
-const Purlins = ({ config }: { config: CarportConfig }) => {
+const Purlins: React.FC<{ config: CarportConfig }> = ({ config }) => {
     const { width, length, height, roofType, frameColor, roofSlope, pillarSize } = config;
     const count = Math.ceil(width / 0.6);
     const elements = [];
     const color = frameColor;
     const purlinThick = 0.04;
     const purlinDepth = 0.04;
-
+    
     const pSize = pillarSize === PillarSize.Size60 ? 0.06 : pillarSize === PillarSize.Size80 ? 0.08 : 0.10;
     const beamH = pSize; 
 
@@ -362,9 +362,9 @@ const Purlins = ({ config }: { config: CarportConfig }) => {
     return <group>{elements}</group>;
 };
 
-const RoofSkin = ({ config }: { config: CarportConfig }) => {
+const RoofSkin: React.FC<{ config: CarportConfig }> = ({ config }) => {
     const { width, length, height, roofType, roofColor, roofMaterial, roofSlope, pillarSize } = config;
-
+    
     const pSize = pillarSize === PillarSize.Size60 ? 0.06 : pillarSize === PillarSize.Size80 ? 0.08 : 0.10;
     const beamH = pSize;
     const overhang = 0.4;
@@ -451,7 +451,7 @@ const RoofSkin = ({ config }: { config: CarportConfig }) => {
         const anglePerMeter = 1 / R_skin;
         const tLeft = startTheta + overhang * anglePerMeter;
         const tRight = endTheta - overhang * anglePerMeter;
-
+        
         const segments = 24;
         const strips = [];
         for (let i=0; i<segments; i++) {
@@ -476,12 +476,12 @@ const RoofSkin = ({ config }: { config: CarportConfig }) => {
         const rise = width * SPECS.trussHeightArch;
         const radius = (Math.pow(width/2, 2) + Math.pow(rise, 2)) / (2 * rise);
         const centerY = -(radius - rise);
-
+        
         const purlinH = 0.04;
         const trussHalf = SPECS.trussThickness / 2;
         const skinHalf = 0.005;
         const skinRadius = radius + trussHalf + purlinH + skinHalf;
-
+        
         const totalAngle = 2 * Math.asin((totalW/2) / skinRadius);
 
         return (
@@ -615,4 +615,4 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config, calculation 
       )}
     </group>
   );
-};```
+};
