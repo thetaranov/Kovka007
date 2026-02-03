@@ -107,6 +107,8 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig }) => {
     const container = containerRef.current;
     if (!container) return;
     const preventTouch = (e: TouchEvent) => {
+      const target = e.target as Element | null;
+      if (target?.closest?.('[data-allow-touch]')) return;
       if (e.cancelable) e.preventDefault();
     };
     container.addEventListener("touchmove", preventTouch, { passive: false });
@@ -134,7 +136,7 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig }) => {
       />
 
       {/* Control stack (mobile + desktop) */}
-      <div className="absolute right-4 top-32 lg:top-28 z-20 flex flex-col items-center gap-2 pointer-events-auto">
+      <div className="absolute right-4 top-32 lg:top-28 z-20 flex flex-col items-center gap-2 pointer-events-auto" data-allow-touch>
         <button
           onClick={handleReset}
           className="p-2 bg-white/80 hover:bg-white backdrop-blur-sm rounded-lg shadow-sm border border-slate-200 text-slate-500 hover:text-indigo-600 active:scale-95 transition-all pointer-events-auto"
