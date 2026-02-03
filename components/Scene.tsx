@@ -109,10 +109,12 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig }) => {
   const handleCameraToggle = () => {
     const next = cameraTarget === "orthographic" ? "perspective" : "orthographic";
     setCameraTarget(next);
+    setCameraMode(next);
+    modeRef.current = next;
     transitionRef.current = {
-      active: true,
+      active: false,
       t: 0,
-      from: modeRef.current,
+      from: next,
       to: next,
       initialized: false,
       startFov: transitionRef.current.startFov,
@@ -447,13 +449,6 @@ const CameraTransition: React.FC<{
   controlsRef: React.RefObject<any>;
 }> = ({ cameraMode, setCameraMode, transitionRef, perspectiveRef, orthographicRef, controlsRef }) => {
   const { size } = useThree();
-  const lensRef = useRef({
-    framingHeight: 0,
-    direction: new THREE.Vector3(0, 0, 1),
-    target: new THREE.Vector3(0, 0, 0),
-  });
-  const targetFov = 45;
-
   useFrame((_, delta) => {
     const perspective = perspectiveRef.current;
     const orthographic = orthographicRef.current;
@@ -472,60 +467,9 @@ const CameraTransition: React.FC<{
       perspective.quaternion.copy(orthographic.quaternion);
     }
 
-    const transition = transitionRef.current;
-    if (!transition.active) return;
-
-    const target = controlsRef.current?.target ?? new THREE.Vector3(0, 0, 0);
-    const distance = perspective.position.distanceTo(target) || 0.0001;
-    const currentFovRad = THREE.MathUtils.degToRad(perspective.fov);
-    const currentHeight = 2 * distance * Math.tan(currentFovRad / 2);
-    const currentZoom = Math.max(0.0001, size.height / currentHeight);
-
-    if (!transition.initialized) {
-      transition.initialized = true;
-      transition.startFov = perspective.fov;
-      transition.startZoom = orthographic.zoom;
-      transition.targetFov = targetFov;
-      transition.targetZoom = currentZoom;
-      lensRef.current = {
-        framingHeight: currentHeight,
-        direction: perspective.position.clone().sub(target).normalize(),
-        target: target.clone(),
-      };
-      if (transition.to === "orthographic") {
-        transition.targetFov = 10;
-      }
-    }
-
-    transition.t = Math.min(1, transition.t + delta / 0.6);
-    const ease = transition.t * transition.t * (3 - 2 * transition.t);
-
-    const fov = THREE.MathUtils.lerp(transition.startFov, transition.targetFov, ease);
-    const framingHeight = lensRef.current.framingHeight;
-    const fovRad = THREE.MathUtils.degToRad(Math.max(1, fov));
-    const dollyDistance = Math.max(0.0001, framingHeight / (2 * Math.tan(fovRad / 2)));
-    const zoom = Math.max(0.0001, size.height / framingHeight);
-    const baseTarget = lensRef.current.target;
-    const dir = lensRef.current.direction;
-    const position = baseTarget.clone().add(dir.clone().multiplyScalar(dollyDistance));
-
-    perspective.fov = fov;
-    orthographic.zoom = zoom;
-    perspective.position.copy(position);
-    orthographic.position.copy(position);
-    perspective.lookAt(baseTarget);
-    orthographic.lookAt(baseTarget);
-    controlsRef.current?.target?.copy(baseTarget);
-
     perspective.updateProjectionMatrix();
     orthographic.updateProjectionMatrix();
     controlsRef.current?.update();
-
-    if (transition.t >= 1) {
-      transition.active = false;
-      transition.initialized = false;
-      setCameraMode(transition.to);
-    }
   });
 
   return null;
