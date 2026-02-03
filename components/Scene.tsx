@@ -109,6 +109,7 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig }) => {
     const preventTouch = (e: TouchEvent) => {
       const target = e.target as Element | null;
       if (target?.closest?.('[data-allow-touch]')) return;
+      if (!target?.closest?.('canvas')) return;
       if (e.cancelable) e.preventDefault();
     };
     container.addEventListener("touchmove", preventTouch, { passive: false });
@@ -123,7 +124,7 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig }) => {
     <div
       ref={containerRef}
       className="w-full h-full bg-slate-200 relative shadow-inner overflow-hidden"
-      style={{ touchAction: "none" }}
+      style={{ touchAction: "auto" }}
     >
       {/* Фон */}
       <div

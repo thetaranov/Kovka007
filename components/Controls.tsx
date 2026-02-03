@@ -290,7 +290,7 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
                         </div>
                         <input
                             type="range"
-                            min={0.2}
+                            min={0.15}
                             max={0.5}
                             step={0.05}
                             value={config.foundationThickness}
