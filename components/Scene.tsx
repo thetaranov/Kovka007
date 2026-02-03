@@ -459,12 +459,24 @@ const CameraTransition: React.FC<{
     orthographic.top = size.height / 2;
     orthographic.bottom = -size.height / 2;
 
+    const target = controlsRef.current?.target ?? new THREE.Vector3(0, 0, 0);
+    const distance = perspective.position.distanceTo(target) || 0.0001;
+
     if (cameraMode === "perspective") {
+      const fovRad = THREE.MathUtils.degToRad(perspective.fov);
+      const height = 2 * distance * Math.tan(fovRad / 2);
+      const zoom = Math.max(0.0001, size.height / height);
+
       orthographic.position.copy(perspective.position);
       orthographic.quaternion.copy(perspective.quaternion);
+      orthographic.zoom = zoom;
     } else {
+      const height = size.height / Math.max(0.0001, orthographic.zoom);
+      const fov = THREE.MathUtils.radToDeg(2 * Math.atan(height / (2 * distance)));
+
       perspective.position.copy(orthographic.position);
       perspective.quaternion.copy(orthographic.quaternion);
+      perspective.fov = fov;
     }
 
     perspective.updateProjectionMatrix();
