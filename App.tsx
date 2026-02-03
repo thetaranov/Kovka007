@@ -189,12 +189,32 @@ ${priceStr}`;
                     console.warn('Clipboard write failed', e);
                 }
 
-                // Открыть прямой веб-чат администратора (web.telegram.org)
-                // Пользователь может вставить (Ctrl+V) и отправить. Автопастинг заблокирован браузером.
-                const adminWebUrl = 'https://web.telegram.org/k/#5216818742';
-                window.open(adminWebUrl, '_blank');
+                // Попытки автоматически открыть Telegram с предзаполненным текстом.
+                // Браузерные ограничения не позволяют вставлять текст в чужой ввод, поэтому:
+                // 1) копируем текст в буфер обмена,
+                // 2) пробуем открыть t.me share-ссылку (предзаполнит сообщение в клиенте),
+                // 3) открываем web.telegram.org как фолбек к прямому чату администратора.
+                try {
+                    await navigator.clipboard.writeText(text);
+                    console.log('✅ Order text copied to clipboard');
+                } catch (e) {
+                    console.warn('Clipboard write failed', e);
+                }
 
-                alert('✅ Текст заказа скопирован в буфер обмена и открыт чат администратора. Вставьте текст (Ctrl+V) и нажмите отправить.');
+                // 1) Попытка использовать общий share URL — часто открывает диалог с текстом
+                const shareUrl = `https://t.me/share/url?url=&text=${encodeURIComponent(text)}`;
+                window.open(shareUrl, '_blank');
+
+                // 2) Фолбек: открыть веб-чат администратора
+                setTimeout(() => {
+                    try {
+                        window.open('https://web.telegram.org/k/#5216818742', '_blank');
+                    } catch (e) {
+                        console.warn('Failed to open web.telegram.org', e);
+                    }
+                }, 600);
+
+                alert('✅ Текст заказа скопирован в буфер обмена и открыт Telegram. Если сообщение не вставилось автоматически, вставьте его вручную (Ctrl+V) и отправьте.');
                 onClose();
             } else {
                 const txt = await res.text();
