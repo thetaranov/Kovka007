@@ -39,6 +39,7 @@ function Loader() {
 
 export const Scene: React.FC<SceneProps> = ({ config, gateConfig }) => {
   const [resetKey, setResetKey] = useState(0);
+  const [isDesktop, setIsDesktop] = useState(typeof window !== 'undefined' && window.innerWidth >= 1024);
   const containerRef = useRef<HTMLDivElement>(null);
   const controlsRef = useRef<any>(null);
   const [cameraMode, setCameraMode] = useState<"perspective" | "orthographic">("perspective");
@@ -62,6 +63,15 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig }) => {
   const modeRef = useRef<"perspective" | "orthographic">("perspective");
   const perspectiveRef = useRef<THREE.PerspectiveCamera>(null);
   const orthographicRef = useRef<THREE.OrthographicCamera>(null);
+
+  // Отслеживаем размер окна для показа Gizmo
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth >= 1024);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const isOrtho = cameraMode === "orthographic";
   const isOrthoTarget = cameraTarget === "orthographic";
@@ -285,15 +295,17 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig }) => {
             touches={{ ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN }}
             ref={controlsRef}
           />
-          <GizmoHelper alignment="top-right" margin={[70, 70]}>
-            <GizmoViewport
-              axisColors={["#ef4444", "#3b82f6", "#22c55e"]}
-              labels={["X", "Z", "Y"]}
-              labelColor="#0f172a"
-              hideNegativeAxes={false}
-              className="scale-[0.55] lg:scale-100"
-            />
-          </GizmoHelper>
+          {/* Gizmo только для десктопа, в правом нижнем углу */}
+          {isDesktop && (
+            <GizmoHelper alignment="bottom-right" margin={[80, 100]}>
+              <GizmoViewport
+                axisColors={["#ef4444", "#3b82f6", "#22c55e"]}
+                labels={["X", "Z", "Y"]}
+                labelColor="#0f172a"
+                hideNegativeAxes={false}
+              />
+            </GizmoHelper>
+          )}
           <MeasurementTool
             enabled={measureMode}
             points={measurePoints}

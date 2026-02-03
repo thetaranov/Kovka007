@@ -72,6 +72,8 @@ const INITIAL_GATE: GateConfig = {
     hasWicket: false,
     hasAutomation: false,
     frameSize: "60x40",
+    distanceFromCarport: 2.0,
+    openDirection: "left",
 };
 
 // Модальное окно для браузера
@@ -342,17 +344,27 @@ export default function App() {
     });
 
     useEffect(() => {
-        if (window.Telegram?.WebApp) {
-            window.Telegram.WebApp.ready();
+        const tg = window.Telegram?.WebApp;
+        if (tg) {
+            console.log("🔄 Initializing Telegram WebApp...");
+            console.log(`📱 Version: ${tg.version}`);
+            console.log(`📱 Platform: ${tg.platform}`);
+            console.log(`📱 initData present: ${!!tg.initData}`);
+            console.log(`📱 initData length: ${tg.initData?.length || 0}`);
+            console.log(`📱 sendData available: ${typeof tg.sendData === 'function'}`);
+            
+            tg.ready();
             try {
-                window.Telegram.WebApp.expand();
-                document.body.style.height =
-                    window.Telegram.WebApp.viewportHeight + "px";
-                window.Telegram.WebApp.setHeaderColor('#f8fafc');
-                window.Telegram.WebApp.setBackgroundColor('#f1f5f9');
+                tg.expand();
+                document.body.style.height = tg.viewportHeight + "px";
+                tg.setHeaderColor('#f8fafc');
+                tg.setBackgroundColor('#f1f5f9');
+                console.log("✅ Telegram WebApp initialized");
             } catch (e) {
-                console.warn(e);
+                console.warn("⚠️ WebApp init error:", e);
             }
+        } else {
+            console.log("⚠️ Telegram WebApp not available - browser mode");
         }
     }, []);
 
@@ -562,6 +574,9 @@ export default function App() {
         else if (config.roofType === RoofType.Arched)
             peakHeight += config.width * SPECS.trussHeightArch;
 
+        const foundationEnabled = config.hasFoundation || config.installationType === InstallationType.FoundationPour;
+        const installActive = config.hasInstallation;
+
         return {
             id: generateOrderId(),
             timestamp: new Date().toISOString(),
@@ -620,34 +635,76 @@ export default function App() {
     }, [config, gateConfig, price, gatePrice, totalPrice, loads]);
 
     const handleOrder = useCallback(() => {
+        const tg = window.Telegram?.WebApp;
         const telegramPayload = getOrderPayload({ includeCad: false });
         const dataToSend = JSON.stringify(telegramPayload);
         const payloadSize = new Blob([dataToSend]).size;
-        console.log(`📤 Payload size: ${(payloadSize / 1024).toFixed(2)}KB`);
-
-        if (window.Telegram?.WebApp?.sendData) {
-            try {
-                console.log("🚀 Sending WebApp data to Telegram...");
-                window.Telegram.WebApp.sendData(dataToSend);
-                console.log("✅ Data sent successfully");
-                setTimeout(() => {
-                    window.Telegram?.WebApp?.close?.();
-                }, 500);
-            } catch (e) {
-                console.error("❌ sendData failed:", e);
-                if (window.Telegram?.WebApp?.showAlert) {
-                    window.Telegram.WebApp.showAlert(`Ошибка: ${String(e).substring(0, 100)}`);
-                }
-                setOrderJson(JSON.stringify(getOrderPayload({ includeCad: true })));
-                setShowBrowserOrderModal(true);
-            }
-        } else {
-            console.warn("⚠️ Telegram.WebApp.sendData not available");
-            if (window.Telegram?.WebApp?.showAlert) {
-                window.Telegram.WebApp.showAlert("Приложение запущено в браузере. Сохраним данные локально.");
-            }
+        
+        console.log(`📤 Payload size: ${payloadSize} bytes (${(payloadSize / 1024).toFixed(2)}KB)`);
+        console.log(`📱 Telegram WebApp version: ${tg?.version || 'N/A'}`);
+        console.log(`📱 Platform: ${tg?.platform || 'N/A'}`);
+        console.log(`📱 initData present: ${!!tg?.initData}`);
+        console.log(`📱 initData length: ${tg?.initData?.length || 0}`);
+        
+        // Проверяем есть ли вообще Telegram WebApp
+        if (!tg) {
+            console.warn("⚠️ Telegram WebApp not found - browser mode");
             setOrderJson(JSON.stringify(getOrderPayload({ includeCad: true })));
             setShowBrowserOrderModal(true);
+            return;
+        }
+        
+        // Проверяем доступность sendData
+        if (typeof tg.sendData !== 'function') {
+            console.warn("⚠️ sendData not available - likely opened from inline button or menu");
+            tg.showAlert?.("Для отправки заказа откройте конструктор через кнопку '🏗 Открыть конструктор' в боте.");
+            setOrderJson(JSON.stringify(getOrderPayload({ includeCad: true })));
+            setShowBrowserOrderModal(true);
+            return;
+        }
+        
+        // Проверяем размер данных (лимит 4096 байт)
+        let finalData = dataToSend;
+        if (payloadSize > 4096) {
+            console.warn(`⚠️ Payload too large: ${payloadSize} bytes, reducing...`);
+            // Уменьшаем данные - убираем некритичные поля
+            const minimalPayload = {
+                id: telegramPayload.id,
+                type: telegramPayload.type,
+                length: telegramPayload.length,
+                width: telegramPayload.width,
+                height: telegramPayload.height,
+                height_peak: telegramPayload.height_peak,
+                slope: telegramPayload.slope,
+                pillar: telegramPayload.pillar,
+                area_floor: telegramPayload.area_floor,
+                material: telegramPayload.material,
+                paint: telegramPayload.paint,
+                color_frame: telegramPayload.color_frame,
+                color_roof: telegramPayload.color_roof,
+                opts: telegramPayload.opts,
+                price: telegramPayload.price,
+                price_gate: telegramPayload.price_gate,
+                price_total: telegramPayload.price_total,
+                region: telegramPayload.region,
+                gate: telegramPayload.gate,
+            };
+            finalData = JSON.stringify(minimalPayload);
+            console.log(`📦 Reduced payload: ${new Blob([finalData]).size} bytes`);
+        }
+        
+        // Отправляем данные - sendData сам закроет WebApp!
+        console.log("🚀 Calling sendData...");
+        console.log("📋 Data:", finalData.substring(0, 200) + "...");
+        
+        try {
+            tg.sendData(finalData);
+            // WebApp закроется автоматически после sendData
+            console.log("✅ sendData called successfully");
+        } catch (e) {
+            // Это не должно происходить, но на всякий случай
+            console.error("❌ sendData exception:", e);
+            tg.showAlert?.(`Ошибка: ${String(e).substring(0, 100)}`);
         }
     }, [getOrderPayload]);
 
