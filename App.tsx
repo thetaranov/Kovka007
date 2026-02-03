@@ -1,14 +1,21 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Scene } from "./components/Scene";
 import { Controls } from "./components/Controls";
+import { GateControls } from "./components/GateControls";
+import { LoadsInfoPanel } from "./components/LoadsInfoPanel";
 import {
     CarportConfig,
     RoofType,
     PillarSize,
     RoofMaterial,
     PaintType,
+    GateType,
+    GateFilling,
 } from "./types";
+import { GateConfig, calculateGatePrice } from "./types/gates";
 import { PRICING, FRAME_COLORS, ROOF_COLORS, SPECS } from "./constants";
+import { calculateLoads, CITY_REGIONS, TerrainType } from "./utils/snowWindLoad";
+import { downloadDXF, downloadBOM, downloadReport, generateDXFBase64, generateOrderId, downloadOBJ, downloadDXFProjection } from "./utils/exportUtils";
 import {
     Menu,
     X,
@@ -18,6 +25,15 @@ import {
     Send,
     Copy,
     Settings2,
+    Download,
+    Car,
+    Home,
+    Calculator,
+    MapPin,
+    AlertTriangle,
+    CheckCircle2,
+    ChevronRight,
+    Layers,
 } from "lucide-react";
 
 const INITIAL_CONFIG: CarportConfig = {
@@ -36,10 +52,27 @@ const INITIAL_CONFIG: CarportConfig = {
     hasSideWalls: false,
     hasFoundation: false,
     hasInstallation: true,
+    region: "Москва",
+    snowRegion: "IV",
+    windRegion: "III",
+    terrain: "B",
+};
+
+// Начальная конфигурация ворот
+const INITIAL_GATE: GateConfig = {
+    type: GateType.None,
+    width: 4.0,
+    height: 2.0,
+    filling: GateFilling.Solid,
+    frameColor: "#1a1a1a",
+    panelColor: "#3E2723",
+    hasWicket: false,
+    hasAutomation: false,
+    frameSize: "60x40",
 };
 
 // Модальное окно для браузера
-const BrowserOrderModal = ({ isOpen, onClose, orderData }: any) => {
+const BrowserOrderModal = ({ isOpen, onClose, orderData, price, config, gateConfig }: any) => {
     if (!isOpen) return null;
 
     const handleCopy = () => {
@@ -53,31 +86,86 @@ const BrowserOrderModal = ({ isOpen, onClose, orderData }: any) => {
         }
     };
 
+    const handleDownloadDXF = () => {
+        if (config) downloadDXF(config, gateConfig);
+    };
+
+    const handleDownloadReport = () => {
+        if (config && price) downloadReport(config, price);
+    };
+
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <div
                 className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
                 onClick={onClose}
             />
-            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-fade-in-up">
-                <div className="flex justify-between mb-4">
-                    <h3 className="text-xl font-bold">Оформить заявку</h3>
-                    <button onClick={onClose}>
-                        <X />
+            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-fade-in-up max-h-[90vh] overflow-y-auto">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-bold text-slate-900">Оформление заказа</h3>
+                    <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+                        <X size={20} />
                     </button>
                 </div>
+                
+                {/* Сводка заказа */}
+                {config && (
+                    <div className="bg-slate-50 rounded-xl p-4 mb-6">
+                        <h4 className="font-semibold text-slate-700 mb-3">Ваш проект:</h4>
+                        <div className="space-y-2 text-sm text-slate-600">
+                            <div className="flex justify-between">
+                                <span>Размеры:</span>
+                                <span className="font-medium">{config.length}×{config.width}×{config.height} м</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span>Площадь:</span>
+                                <span className="font-medium">{(config.width * config.length).toFixed(1)} м²</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span>Тип крыши:</span>
+                                <span className="font-medium">{config.roofType}</span>
+                            </div>
+                        </div>
+                        {price && (
+                            <div className="border-t border-slate-200 mt-3 pt-3">
+                                <div className="flex justify-between items-center">
+                                    <span className="font-semibold text-slate-800">Итого:</span>
+                                    <span className="text-2xl font-bold text-indigo-600">{price.toLocaleString()} ₽</span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 <div className="space-y-3">
-                    <p className="text-sm text-slate-500">
-                        Вы в браузере. Чтобы оформить заказ, скопируйте код и
-                        отправьте его боту.
-                    </p>
                     <button
                         onClick={handleCopy}
-                        className="w-full bg-[#2AABEE] text-white p-4 rounded-xl flex items-center gap-3 justify-center font-bold shadow-lg shadow-blue-200"
+                        className="w-full bg-[#2AABEE] hover:bg-[#229ED9] text-white p-4 rounded-xl flex items-center gap-3 justify-center font-bold shadow-lg transition-all active:scale-[0.98]"
                     >
                         <Send size={20} />{" "}
-                        <span>Скопировать и перейти в Telegram</span>
+                        <span>Отправить в Telegram</span>
                     </button>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                        <button
+                            onClick={handleDownloadDXF}
+                            className="bg-slate-100 hover:bg-slate-200 text-slate-700 p-3 rounded-xl flex items-center gap-2 justify-center font-medium transition-all"
+                        >
+                            <Download size={18} />
+                            <span className="text-sm">3D модель</span>
+                        </button>
+                        <button
+                            onClick={handleDownloadReport}
+                            className="bg-slate-100 hover:bg-slate-200 text-slate-700 p-3 rounded-xl flex items-center gap-2 justify-center font-medium transition-all"
+                        >
+                            <FileText size={18} />
+                            <span className="text-sm">Смета</span>
+                        </button>
+                    </div>
+                    
+                    <p className="text-xs text-slate-400 text-center mt-4">
+                        После отправки менеджер свяжется с вами для уточнения деталей
+                    </p>
                 </div>
             </div>
         </div>
@@ -88,19 +176,167 @@ const getRecommendedPillarSize = (
     width: number,
     length: number,
     height: number,
+    totalLoad: number = 300,
 ): PillarSize => {
     const area = width * length;
-    if (width > 8.0 || height > 3.5 || area > 60) return PillarSize.Size100;
+    if (width > 8.0 || height > 3.5 || area > 60 || totalLoad > 400) return PillarSize.Size120;
+    if (width > 6.0 || height > 3.0 || area > 40 || totalLoad > 300) return PillarSize.Size100;
     if (width > 5.0 || height > 2.8 || area > 30) return PillarSize.Size80;
     return PillarSize.Size60;
 };
 
+// Модальное окно экспорта
+const ExportModal = ({ isOpen, onClose, config, price, gateConfig }: any) => {
+    const [selectedDXFView, setSelectedDXFView] = useState<'top' | 'front' | 'side' | 'all'>('all');
+    
+    if (!isOpen) return null;
+    
+    const handleExportOBJ = () => {
+        downloadOBJ(config);
+        onClose();
+    };
+    
+    const handleExportBOM = () => {
+        downloadBOM(config);
+        onClose();
+    };
+    
+    const handleExportReport = () => {
+        downloadReport(config, price);
+        onClose();
+    };
+    
+    const handleExportDXF = () => {
+        downloadDXFProjection(config, selectedDXFView, gateConfig);
+        onClose();
+    };
+    
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <div
+                className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+                onClick={onClose}
+            />
+            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-fade-in-up">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-bold text-slate-900">Экспорт проекта</h3>
+                    <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+                        <X size={20} />
+                    </button>
+                </div>
+                
+                <div className="space-y-3">
+                    {/* 3D модель OBJ */}
+                    <button
+                        onClick={handleExportOBJ}
+                        className="w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 p-4 rounded-xl flex items-center gap-3 transition-all"
+                    >
+                        <div className="w-10 h-10 bg-indigo-200 rounded-lg flex items-center justify-center">
+                            <Layers size={20} />
+                        </div>
+                        <div className="text-left">
+                            <div className="font-semibold">3D модель (OBJ)</div>
+                            <div className="text-xs text-indigo-500">Открывается в Blender, AutoCAD, 3ds Max</div>
+                        </div>
+                    </button>
+                    
+                    {/* Смета CSV */}
+                    <button
+                        onClick={handleExportBOM}
+                        className="w-full bg-green-50 hover:bg-green-100 text-green-700 p-4 rounded-xl flex items-center gap-3 transition-all"
+                    >
+                        <div className="w-10 h-10 bg-green-200 rounded-lg flex items-center justify-center">
+                            <Calculator size={20} />
+                        </div>
+                        <div className="text-left">
+                            <div className="font-semibold">Спецификация (CSV)</div>
+                            <div className="text-xs text-green-500">Таблица материалов для Excel</div>
+                        </div>
+                    </button>
+                    
+                    {/* Отчет TXT */}
+                    <button
+                        onClick={handleExportReport}
+                        className="w-full bg-amber-50 hover:bg-amber-100 text-amber-700 p-4 rounded-xl flex items-center gap-3 transition-all"
+                    >
+                        <div className="w-10 h-10 bg-amber-200 rounded-lg flex items-center justify-center">
+                            <FileText size={20} />
+                        </div>
+                        <div className="text-left">
+                            <div className="font-semibold">Полный отчет (TXT)</div>
+                            <div className="text-xs text-amber-500">Смета с описанием конфигурации</div>
+                        </div>
+                    </button>
+                    
+                    {/* DXF чертежи */}
+                    <div className="bg-slate-50 p-4 rounded-xl">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="w-10 h-10 bg-slate-200 rounded-lg flex items-center justify-center">
+                                <Layers size={20} className="text-slate-600" />
+                            </div>
+                            <div className="text-left">
+                                <div className="font-semibold text-slate-700">2D чертежи (DXF)</div>
+                                <div className="text-xs text-slate-500">Проекции для AutoCAD</div>
+                            </div>
+                        </div>
+                        <div className="flex gap-2 mb-3">
+                            {[
+                                { key: 'top', label: 'Сверху' },
+                                { key: 'front', label: 'Спереди' },
+                                { key: 'side', label: 'Сбоку' },
+                                { key: 'all', label: 'Все' },
+                            ].map(({ key, label }) => (
+                                <button
+                                    key={key}
+                                    onClick={() => setSelectedDXFView(key as any)}
+                                    className={`flex-1 py-2 text-xs font-medium rounded-lg transition-all ${
+                                        selectedDXFView === key
+                                            ? 'bg-slate-700 text-white'
+                                            : 'bg-white text-slate-600 hover:bg-slate-100'
+                                    }`}
+                                >
+                                    {label}
+                                </button>
+                            ))}
+                        </div>
+                        <button
+                            onClick={handleExportDXF}
+                            className="w-full bg-slate-700 hover:bg-slate-800 text-white py-2.5 rounded-lg font-medium text-sm transition-all"
+                        >
+                            Скачать DXF
+                        </button>
+                    </div>
+                </div>
+                
+                <p className="text-xs text-slate-400 text-center mt-4">
+                    Для STEP формата обратитесь к менеджеру
+                </p>
+            </div>
+        </div>
+    );
+};
+
 export default function App() {
     const [config, setConfig] = useState<CarportConfig>(INITIAL_CONFIG);
+    const [gateConfig, setGateConfig] = useState<GateConfig>(INITIAL_GATE);
+    const [activeTab, setActiveTab] = useState<"carport" | "gate">("carport");
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [showBrowserOrderModal, setShowBrowserOrderModal] = useState(false);
+    const [showExportModal, setShowExportModal] = useState(false);
     const [price, setPrice] = useState(0);
+    const [gatePrice, setGatePrice] = useState(0);
     const [orderJson, setOrderJson] = useState("");
+    const [loads, setLoads] = useState({
+        snowLoad: 336,
+        windLoad: 304,
+        totalLoad: 361,
+        recommended: {
+            pillarSize: PillarSize.Size80 as string,
+            trussHeight: 0.35,
+            purlinStep: 1.0,
+        },
+        warnings: [] as string[],
+    });
 
     useEffect(() => {
         if (window.Telegram?.WebApp) {
@@ -109,13 +345,46 @@ export default function App() {
                 window.Telegram.WebApp.expand();
                 document.body.style.height =
                     window.Telegram.WebApp.viewportHeight + "px";
+                window.Telegram.WebApp.setHeaderColor('#f8fafc');
+                window.Telegram.WebApp.setBackgroundColor('#f1f5f9');
             } catch (e) {
                 console.warn(e);
             }
         }
     }, []);
 
-    const handleConfigChange = (newConfig: CarportConfig) => {
+    // Пересчет нагрузок при изменении конфигурации
+    useEffect(() => {
+        try {
+            const result = calculateLoads({
+                snowRegion: config.snowRegion || "IV",
+                windRegion: config.windRegion || "III",
+                terrain: (config.terrain || "B") as TerrainType,
+                buildingHeight: config.height,
+                roofAngle: config.roofSlope,
+                roofType: config.roofType,
+                roofWidth: config.width,
+                roofLength: config.length,
+            });
+            
+            setLoads({
+                snowLoad: result.snowCalculated,
+                windLoad: result.windCalculated,
+                totalLoad: result.totalVerticalLoad,
+                recommended: {
+                    pillarSize: result.recommendedPillarSize,
+                    trussHeight: result.recommendedTrussHeight,
+                    purlinStep: result.recommendedPurlinStep,
+                },
+                warnings: result.warnings,
+            });
+        } catch (e) {
+            console.error("Error calculating loads:", e);
+        }
+    }, [config.snowRegion, config.windRegion, config.terrain, config.height, config.roofSlope, config.roofType, config.width, config.length]);
+
+    const handleConfigChange = useCallback((newConfig: CarportConfig) => {
+        // Автоподбор сечения столбов при изменении размеров
         if (
             newConfig.width !== config.width ||
             newConfig.length !== config.length ||
@@ -125,16 +394,37 @@ export default function App() {
                 newConfig.width,
                 newConfig.length,
                 newConfig.height,
+                loads.totalLoad,
             );
-            if (
-                newConfig.pillarSize === PillarSize.Size60 &&
-                recommended !== PillarSize.Size60
-            ) {
+            // Увеличиваем если рекомендуемое больше текущего
+            const sizes = [PillarSize.Size60, PillarSize.Size80, PillarSize.Size100, PillarSize.Size120];
+            const currentIdx = sizes.indexOf(newConfig.pillarSize);
+            const recIdx = sizes.indexOf(recommended);
+            
+            if (recIdx > currentIdx) {
                 newConfig.pillarSize = recommended;
             }
         }
         setConfig(newConfig);
-    };
+    }, [config.width, config.length, config.height, loads.totalLoad]);
+
+    // Обработчик изменения конфигурации ворот
+    const handleGateChange = useCallback((changes: Partial<GateConfig>) => {
+        setGateConfig(prev => ({ ...prev, ...changes }));
+    }, []);
+
+    // Обработчик изменения региона
+    const handleRegionChange = useCallback((city: string) => {
+        const regions = CITY_REGIONS[city];
+        if (regions) {
+            setConfig(prev => ({
+                ...prev,
+                region: city,
+                snowRegion: regions.snow,
+                windRegion: regions.wind,
+            }));
+        }
+    }, []);
 
     // --- РАСЧЕТ СТОИМОСТИ ---
     useEffect(() => {
@@ -208,8 +498,15 @@ export default function App() {
         setPrice(Math.round(total / 100) * 100);
     }, [config]);
 
-    const oldPrice = Math.round(price * 1.2);
-    const savings = oldPrice - price;
+    // Расчет стоимости ворот
+    useEffect(() => {
+        setGatePrice(calculateGatePrice(gateConfig));
+    }, [gateConfig]);
+
+    // Общая стоимость
+    const totalPrice = price + gatePrice;
+    const oldPrice = Math.round(totalPrice * 1.2);
+    const savings = oldPrice - totalPrice;
 
     const calculateBOM = useCallback(() => {
         const pillarCount =
@@ -221,11 +518,11 @@ export default function App() {
         };
     }, [config]);
 
-    const handleDownloadReport = () => {
-        alert("Смета скачивается...");
-    };
+    const handleDownloadReport = useCallback(() => {
+        downloadReport(config, totalPrice);
+    }, [config, totalPrice]);
 
-    const getOrderPayload = () => {
+    const getOrderPayload = useCallback(() => {
         const frameColorObj = FRAME_COLORS.find(
             (c) => c.hex === config.frameColor,
         );
@@ -253,7 +550,8 @@ export default function App() {
             peakHeight += config.width * SPECS.trussHeightArch;
 
         return {
-            id: `CFG-${Date.now().toString(36).toUpperCase().slice(-5)}`,
+            id: generateOrderId(),
+            timestamp: new Date().toISOString(),
             type: config.roofType,
             width: config.width,
             length: config.length,
@@ -274,24 +572,47 @@ export default function App() {
                 found: config.hasFoundation,
                 install: config.hasInstallation,
             },
+            region: config.region,
+            snow_region: config.snowRegion,
+            wind_region: config.windRegion,
+            loads: {
+                snow: loads.snowLoad,
+                wind: loads.windLoad,
+                total: loads.totalLoad,
+            },
             price: price,
+            price_gate: gatePrice,
+            price_total: totalPrice,
+            gate: gateConfig.type !== GateType.None ? {
+                type: gateConfig.type,
+                width: gateConfig.width,
+                height: gateConfig.height,
+                filling: gateConfig.filling,
+                frameColor: gateConfig.frameColor,
+                panelColor: gateConfig.panelColor,
+                wicket: gateConfig.hasWicket,
+                automation: gateConfig.hasAutomation,
+            } : undefined,
+            cad_dxf: (() => {
+                try {
+                    return generateDXFBase64(config, gateConfig);
+                } catch (e) {
+                    console.error("Error generating DXF:", e);
+                    return undefined;
+                }
+            })(),
         };
-    };
+    }, [config, gateConfig, price, gatePrice, totalPrice, loads]);
 
-    const handleOrder = () => {
+    const handleOrder = useCallback(() => {
         const payload = getOrderPayload();
         const dataToSend = JSON.stringify(payload);
 
-        if (window.Telegram && window.Telegram.WebApp) {
-            if (typeof window.Telegram.WebApp.sendData === "function") {
-                try {
-                    window.Telegram.WebApp.sendData(dataToSend);
-                } catch (e) {
-                    console.error("sendData failed:", e);
-                    setOrderJson(dataToSend);
-                    setShowBrowserOrderModal(true);
-                }
-            } else {
+        if (window.Telegram?.WebApp?.sendData) {
+            try {
+                window.Telegram.WebApp.sendData(dataToSend);
+            } catch (e) {
+                console.error("sendData failed:", e);
                 setOrderJson(dataToSend);
                 setShowBrowserOrderModal(true);
             }
@@ -299,31 +620,41 @@ export default function App() {
             setOrderJson(dataToSend);
             setShowBrowserOrderModal(true);
         }
-    };
+    }, [getOrderPayload]);
 
     return (
         <div className="flex flex-col lg:flex-row h-[100dvh] w-screen overflow-hidden bg-slate-100 font-sans touch-none overscroll-none fixed inset-0">
             {/* HEADER */}
-            <div className="absolute top-0 left-0 right-0 z-40 p-4 pointer-events-none flex justify-center lg:justify-start lg:p-6">
-                <div className="bg-white/90 backdrop-blur-md px-6 py-2 rounded-xl shadow-sm border border-slate-200/50 text-center lg:text-left pointer-events-auto">
-                    <h1 className="font-bold text-slate-900 leading-tight">
-                        Kovka007{" "}
-                        <span className="hidden lg:inline text-slate-400">
-                            |
-                        </span>{" "}
+            <div className="absolute top-0 left-0 right-0 z-40 p-4 pointer-events-none flex justify-between items-start lg:p-6">
+                <div className="bg-white/90 backdrop-blur-md px-5 py-2.5 rounded-xl shadow-sm border border-slate-200/50 pointer-events-auto">
+                    <h1 className="font-bold text-slate-900 leading-tight flex items-center gap-2">
+                        <span className="text-indigo-600">Kovka007</span>
+                        <span className="text-slate-300">|</span>
                         <span className="text-xs font-normal text-slate-500 uppercase tracking-wider">
-                            конструктор
+                            Конструктор v2.0
                         </span>
                     </h1>
                 </div>
             </div>
 
             <div className="relative w-full flex-grow min-h-0 lg:h-full transition-all duration-300">
-                <Scene config={config} />
+                <Scene config={config} gateConfig={gateConfig} />
+
+                {/* Предупреждения о нагрузках */}
+                {loads.warnings.length > 0 && (
+                    <div className="absolute top-20 left-4 z-20 max-w-xs">
+                        {loads.warnings.map((warning, idx) => (
+                            <div key={idx} className="bg-amber-50/90 backdrop-blur border border-amber-200 text-amber-800 text-xs rounded-lg px-3 py-2 mb-2 flex items-start gap-2">
+                                <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" />
+                                <span>{warning}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
 
                 {/* ИНФО-ПЛАШКА */}
                 <div className="absolute bottom-6 left-0 right-0 flex justify-center pointer-events-none z-30 px-4">
-                    <div className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-xl shadow-lg border border-slate-200 text-slate-800 flex items-center gap-3 text-xs sm:text-sm font-medium whitespace-nowrap overflow-x-auto hide-scrollbar max-w-full">
+                    <div className="bg-white/95 backdrop-blur-md px-4 py-2.5 rounded-xl shadow-lg border border-slate-200 text-slate-800 flex items-center gap-3 text-xs sm:text-sm font-medium whitespace-nowrap overflow-x-auto hide-scrollbar max-w-full">
                         <div className="flex items-baseline gap-1">
                             <span className="font-bold text-slate-700">
                                 {config.length}×{config.width}×{config.height}м
@@ -332,50 +663,69 @@ export default function App() {
                                 (Д×Ш×В)
                             </span>
                         </div>
-                        <span className="w-px h-3 bg-slate-300 flex-shrink-0"></span>
+                        <span className="w-px h-4 bg-slate-200 flex-shrink-0"></span>
                         <span className="font-bold text-slate-700">
                             {(config.width * config.length).toFixed(1)} м²
                         </span>
-                        <span className="w-px h-3 bg-slate-300 flex-shrink-0"></span>
+                        <span className="w-px h-4 bg-slate-200 flex-shrink-0"></span>
                         <span className="text-slate-500">
-                            ~
-                            {Math.round(
-                                price / (config.width * config.length),
-                            ).toLocaleString()}{" "}
-                            ₽/м²
+                            ~{Math.round(price / (config.width * config.length)).toLocaleString()} ₽/м²
                         </span>
+                        {gateConfig.type !== GateType.None && (
+                            <>
+                                <span className="w-px h-4 bg-slate-200 flex-shrink-0"></span>
+                                <span className="text-indigo-600 flex items-center gap-1">
+                                    <Car size={12} />
+                                    Ворота
+                                </span>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>
 
             {/* MOBILE PANEL */}
-            <div className="lg:hidden flex flex-col z-30 flex-shrink-0 bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.05)] pb-safe">
-                <div className="grid grid-cols-2 gap-3 p-3 border-b border-slate-100">
+            <div className="lg:hidden flex flex-col z-30 flex-shrink-0 bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.08)] pb-safe">
+                {/* Табы */}
+                <div className="flex border-b border-slate-100">
                     <button
-                        onClick={handleDownloadReport}
-                        className="bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl border flex justify-center items-center gap-2 active:scale-95"
+                        onClick={() => setActiveTab("carport")}
+                        className={`flex-1 py-3 text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
+                            activeTab === "carport"
+                                ? "text-indigo-600 border-b-2 border-indigo-600"
+                                : "text-slate-500"
+                        }`}
                     >
-                        <FileText size={16} className="text-green-600" />
-                        <span className="text-xs">Смета</span>
+                        <Home size={16} />
+                        Навес
                     </button>
-                    <a
-                        href="https://kovka007.ru/"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-xl border flex justify-center items-center gap-2 active:scale-95"
+                    <button
+                        onClick={() => setActiveTab("gate")}
+                        className={`flex-1 py-3 text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
+                            activeTab === "gate"
+                                ? "text-indigo-600 border-b-2 border-indigo-600"
+                                : "text-slate-500"
+                        }`}
                     >
-                        <Globe size={16} className="text-indigo-600" />
-                        <span className="text-xs">Сайт</span>
-                    </a>
+                        <Car size={16} />
+                        Ворота
+                        {gateConfig.type !== GateType.None && (
+                            <span className="bg-indigo-100 text-indigo-600 text-[10px] px-1.5 py-0.5 rounded-full">
+                                +{gatePrice.toLocaleString()}
+                            </span>
+                        )}
+                    </button>
                 </div>
-
+                
+                {/* Кнопка настроек */}
                 <div className="px-4 pt-3">
                     <button
                         onClick={() => setIsMobileMenuOpen(true)}
-                        className="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors active:scale-95"
+                        className="w-full bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-medium py-3 rounded-xl flex items-center justify-center gap-2 transition-colors active:scale-[0.98]"
                     >
                         <Settings2 size={18} />
-                        <span>Настроить параметры</span>
+                        <span>Настроить {activeTab === "carport" ? "навес" : "ворота"}</span>
+                        <ChevronRight size={16} className="text-slate-400" />
                     </button>
                 </div>
 
@@ -391,84 +741,179 @@ export default function App() {
                                 </span>
                             </div>
                             {config.hasInstallation && (
-                                <div className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">
+                                <div className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
+                                    <CheckCircle2 size={12} />
                                     с монтажом
                                 </div>
                             )}
                         </div>
                         <div className="flex items-end justify-between">
-                            <p className="text-3xl font-black text-slate-900 leading-none tracking-tight">
-                                {price.toLocaleString()} ₽
-                            </p>
+                            <div>
+                                <p className="text-3xl font-black text-slate-900 leading-none tracking-tight">
+                                    {totalPrice.toLocaleString()} ₽
+                                </p>
+                                {gatePrice > 0 && (
+                                    <p className="text-xs text-slate-500 mt-1">
+                                        Навес: {price.toLocaleString()} + Ворота: {gatePrice.toLocaleString()}
+                                    </p>
+                                )}
+                            </div>
                             <div className="flex items-center gap-1 text-green-600 text-xs font-bold bg-green-50 px-2 py-1 rounded">
                                 <TrendingDown size={14} />
-                                <span>Выгода {savings.toLocaleString()} ₽</span>
+                                <span>-{savings.toLocaleString()} ₽</span>
                             </div>
                         </div>
                     </div>
                     <button
                         onClick={handleOrder}
-                        className="w-full bg-slate-900 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg flex justify-center gap-3 active:scale-[0.98]"
+                        className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 px-6 rounded-xl shadow-lg flex justify-center items-center gap-3 active:scale-[0.98] transition-all"
                     >
                         <span>Оформить заявку</span>
-                        <div className="opacity-80 ml-2">
-                            <svg
-                                width="20"
-                                height="20"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                            >
-                                <path
-                                    d="M21.9287 2.52309C22.2575 2.15556 21.9904 1.58309 21.5173 1.76459L2.09459 9.30809C1.72484 9.45034 1.72259 9.97734 2.09109 10.1236L6.59109 11.9026C6.88359 12.0181 7.21584 11.9446 7.43934 11.7143L17.7983 1.05609C17.9251 0.925587 18.0661 1.09434 17.9543 1.23534L8.71059 12.9098C8.52684 13.1416 8.52834 13.4678 8.71359 13.6981L14.7353 21.1688C15.0346 21.5398 15.6368 21.4111 15.7681 20.9491L21.9287 2.52309Z"
-                                    fill="currentColor"
-                                />
-                            </svg>
-                        </div>
+                        <Send size={18} />
                     </button>
                 </div>
             </div>
 
             {/* DESKTOP SIDEBAR */}
             <div
-                className={`fixed inset-0 z-50 lg:static lg:z-auto transform transition-transform duration-500 cubic-bezier(0.32, 0.72, 0, 1) ${isMobileMenuOpen ? "translate-y-0" : "translate-y-[100%] lg:translate-y-0"} lg:w-[450px] lg:min-w-[400px] flex-shrink-0 h-full shadow-2xl lg:shadow-none flex flex-col bg-white`}
+                className={`fixed inset-0 z-50 lg:static lg:z-auto transform transition-transform duration-500 ease-out ${isMobileMenuOpen ? "translate-y-0" : "translate-y-[100%] lg:translate-y-0"} lg:w-[460px] lg:min-w-[420px] flex-shrink-0 h-full shadow-2xl lg:shadow-none flex flex-col bg-white`}
             >
-                <div className="lg:hidden absolute top-4 right-4 z-50">
+                {/* Mobile close button */}
+                <div className="lg:hidden flex items-center justify-between p-4 border-b border-slate-100">
+                    <h2 className="font-bold text-slate-800">Настройки</h2>
                     <button
                         onClick={() => setIsMobileMenuOpen(false)}
-                        className="p-2 bg-slate-100 rounded-full"
+                        className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors"
                     >
-                        <X size={24} />
+                        <X size={20} />
                     </button>
                 </div>
-                <Controls
-                    config={config}
-                    onChange={handleConfigChange}
-                    price={price}
-                    onOrder={handleOrder}
-                />
+                
+                {/* Desktop tabs */}
+                <div className="hidden lg:flex border-b border-slate-100">
+                    <button
+                        onClick={() => setActiveTab("carport")}
+                        className={`flex-1 py-4 text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${
+                            activeTab === "carport"
+                                ? "text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/50"
+                                : "text-slate-500 hover:text-slate-700"
+                        }`}
+                    >
+                        <Home size={18} />
+                        Навес
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("gate")}
+                        className={`flex-1 py-4 text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${
+                            activeTab === "gate"
+                                ? "text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/50"
+                                : "text-slate-500 hover:text-slate-700"
+                        }`}
+                    >
+                        <Car size={18} />
+                        Ворота
+                        {gateConfig.type !== GateType.None && (
+                            <span className="bg-indigo-100 text-indigo-700 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                                +{gatePrice.toLocaleString()}
+                            </span>
+                        )}
+                    </button>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 overflow-y-auto">
+                    {activeTab === "carport" ? (
+                        <div>
+                            <Controls
+                                config={config}
+                                onChange={handleConfigChange}
+                                price={price}
+                                onOrder={handleOrder}
+                            />
+                            {/* Панель нагрузок */}
+                            <div className="px-6 pb-6">
+                                <LoadsInfoPanel
+                                    loads={loads}
+                                    region={config.region}
+                                    snowRegion={config.snowRegion}
+                                    windRegion={config.windRegion}
+                                    terrain={config.terrain}
+                                    onRegionChange={handleRegionChange}
+                                    onSnowRegionChange={(r) => setConfig(prev => ({ ...prev, snowRegion: r }))}
+                                    onWindRegionChange={(r) => setConfig(prev => ({ ...prev, windRegion: r }))}
+                                    onTerrainChange={(t) => setConfig(prev => ({ ...prev, terrain: t }))}
+                                />
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="p-6">
+                            <GateControls config={gateConfig} onChange={handleGateChange} />
+                        </div>
+                    )}
+                </div>
+
+                {/* ORDER FOOTER (always visible) */}
+                <div className="flex-shrink-0 p-6 bg-white border-t border-slate-200">
+                    <div className="mb-4">
+                        <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-2">
+                                <span className="text-lg font-medium text-slate-400 line-through decoration-slate-400/50">
+                                    {oldPrice.toLocaleString()} ₽
+                                </span>
+                                <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
+                                    -20%
+                                </span>
+                            </div>
+                            {config.hasInstallation && (
+                                <div className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
+                                    <CheckCircle2 size={12} />
+                                    с монтажом
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex items-end justify-between">
+                            <div>
+                                <p className="text-3xl font-black text-slate-900 leading-none tracking-tight">
+                                    {totalPrice.toLocaleString()} ₽
+                                </p>
+                                {gatePrice > 0 && (
+                                    <p className="text-xs text-slate-500 mt-1">
+                                        Навес: {price.toLocaleString()} + Ворота: {gatePrice.toLocaleString()}
+                                    </p>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-1 text-green-600 text-xs font-bold bg-green-50 px-2 py-1 rounded">
+                                <TrendingDown size={14} />
+                                <span>-{savings.toLocaleString()} ₽</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleOrder}
+                        className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 px-6 rounded-xl transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
+                    >
+                        <span>Оформить заявку</span>
+                        <Send size={18} />
+                    </button>
+                </div>
             </div>
 
             {/* DESKTOP BUTTONS */}
-            <div className="hidden lg:flex fixed bottom-6 left-6 z-50 gap-4 items-center">
+            <div className="hidden lg:flex fixed bottom-6 left-6 z-40 gap-3 items-center">
                 <button
-                    onClick={handleDownloadReport}
-                    className="bg-white hover:bg-slate-50 text-slate-700 font-semibold py-3 px-5 rounded-xl shadow-lg border border-slate-200 flex items-center gap-3 transition-all active:scale-95"
+                    onClick={() => setShowExportModal(true)}
+                    className="bg-white hover:bg-slate-50 text-slate-700 font-medium py-2.5 px-4 rounded-xl shadow-lg border border-slate-200 flex items-center gap-2 transition-all active:scale-95"
                 >
-                    <div className="p-1.5 bg-green-100 rounded text-green-700">
-                        <FileText size={18} />
-                    </div>
-                    <span className="text-sm">Скачать смету</span>
+                    <Download size={16} className="text-indigo-600" />
+                    <span className="text-sm">Экспорт</span>
                 </button>
                 <a
                     href="https://kovka007.ru/"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="bg-white hover:bg-slate-50 text-slate-700 font-semibold py-3 px-5 rounded-xl shadow-lg border border-slate-200 flex items-center gap-3 transition-all active:scale-95 no-underline"
+                    className="bg-white hover:bg-slate-50 text-slate-700 font-medium py-2.5 px-4 rounded-xl shadow-lg border border-slate-200 flex items-center gap-2 transition-all active:scale-95 no-underline"
                 >
-                    <div className="p-1.5 bg-indigo-100 rounded text-indigo-700">
-                        <Globe size={18} />
-                    </div>
+                    <Globe size={16} className="text-blue-600" />
                     <span className="text-sm">Сайт</span>
                 </a>
             </div>
@@ -477,6 +922,17 @@ export default function App() {
                 isOpen={showBrowserOrderModal}
                 onClose={() => setShowBrowserOrderModal(false)}
                 orderData={orderJson}
+                price={totalPrice}
+                config={config}
+                gateConfig={gateConfig}
+            />
+            
+            <ExportModal
+                isOpen={showExportModal}
+                onClose={() => setShowExportModal(false)}
+                config={config}
+                price={totalPrice}
+                gateConfig={gateConfig}
             />
         </div>
     );

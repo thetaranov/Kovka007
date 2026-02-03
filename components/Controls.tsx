@@ -189,16 +189,17 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
 
                 <div className="mt-4">
                     <label className="text-xs uppercase font-bold text-slate-500 tracking-wider block mb-2">Сечение столбов</label>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-4 gap-2">
                         {[
                             { v: PillarSize.Size60, l: '60x60' },
                             { v: PillarSize.Size80, l: '80x80' },
-                            { v: PillarSize.Size100, l: '100x100' }
+                            { v: PillarSize.Size100, l: '100x100' },
+                            { v: PillarSize.Size120, l: '120x120' }
                         ].map(opt => (
                             <button
                                 key={opt.v}
                                 onClick={() => handleChange('pillarSize', opt.v)}
-                                className={`py-2 text-sm font-medium rounded-lg border ${
+                                className={`py-2 text-xs font-medium rounded-lg border ${
                                     config.pillarSize === opt.v 
                                     ? 'border-indigo-600 bg-indigo-50 text-indigo-700' 
                                     : 'border-slate-200 text-slate-600 hover:bg-slate-50'
@@ -282,48 +283,8 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
                     ))}
                 </div>
             </section>
-         </div>
-      </div>
-
-      <div className="p-6 bg-white border-t border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-10">
-        <div className="mb-4">
-            <div className="flex items-center justify-between mb-1">
-                <div className="flex items-center gap-2">
-                    <span className="text-lg font-medium text-slate-400 line-through decoration-slate-400/50">
-                        {oldPrice.toLocaleString()} ₽
-                    </span>
-                    <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
-                        -20%
-                    </span>
-                </div>
-                {config.hasInstallation && (
-                    <div className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">
-                        с монтажом
-                    </div>
-                )}
-            </div>
-            <div className="flex items-end justify-between">
-                <p className="text-3xl font-black text-slate-900 leading-none tracking-tight">
-                    {price.toLocaleString()} ₽
-                </p>
-                <div className="flex items-center gap-1 text-green-600 text-xs font-bold bg-green-50 px-2 py-1 rounded">
-                    <TrendingDown size={14} />
-                    <span>Выгода {savings.toLocaleString()} ₽</span>
-                </div>
+                 </div>
             </div>
         </div>
-        <button
-          onClick={onOrder}
-          className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
-        >
-          <span>Оформить заявку</span>
-          <div className="opacity-80">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M21.9287 2.52309C22.2575 2.15556 21.9904 1.58309 21.5173 1.76459L2.09459 9.30809C1.72484 9.45034 1.72259 9.97734 2.09109 10.1236L6.59109 11.9026C6.88359 12.0181 7.21584 11.9446 7.43934 11.7143L17.7983 1.05609C17.9251 0.925587 18.0661 1.09434 17.9543 1.23534L8.71059 12.9098C8.52684 13.1416 8.52834 13.4678 8.71359 13.6981L14.7353 21.1688C15.0346 21.5398 15.6368 21.4111 15.7681 20.9491L21.9287 2.52309Z" fill="currentColor"/>
-              </svg>
-          </div>
-        </button>
-      </div>
-    </div>
-  );
+    );
 };

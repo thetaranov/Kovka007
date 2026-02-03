@@ -13,6 +13,8 @@ export const ROOF_COLORS: ColorOption[] = [
   { name: "Графит", hex: "#374151", ral: "RAL 7024" },
   { name: "Сигнальный синий", hex: "#1e3a8a", ral: "RAL 5005" },
   { name: "Бронза (PC)", hex: "#634832", ral: "Bronze" },
+  { name: "Терракот", hex: "#8B4513", ral: "RAL 8004" },
+  { name: "Слоновая кость", hex: "#FFFFF0", ral: "RAL 1015" },
 ];
 
 export const FRAME_COLORS: ColorOption[] = [
@@ -20,6 +22,7 @@ export const FRAME_COLORS: ColorOption[] = [
   { name: "Серый", hex: "#4b5563", ral: "RAL 7004" },
   { name: "Белый", hex: "#f3f4f6", ral: "RAL 9003" },
   { name: "Шоколад", hex: "#3E2723", ral: "RAL 8017" },
+  { name: "Антрацит", hex: "#293133", ral: "RAL 7016" },
 ];
 
 export const SPECS = {
@@ -30,9 +33,10 @@ export const SPECS = {
   purlinSize: 0.04,
   mauerlatHeight: 0.1,
   postSpacing: 2.5,
+  overhang: 0.4, // свес кровли
 };
 
-// === ЦЕНЫ ПОД РЫНОК (Target: Gable 4.5x6 ~165k) ===
+// === ЦЕНЫ (актуальные на 2025-2026) ===
 export const PRICING = {
   minPricePerSqm: 4500,
 
@@ -45,6 +49,7 @@ export const PRICING = {
     [PillarSize.Size60]: 950,
     [PillarSize.Size80]: 1500,
     [PillarSize.Size100]: 2200,
+    [PillarSize.Size120]: 3200,
   },
 
   roofMaterialPricePerSqm: {
@@ -76,3 +81,35 @@ export const PRICING = {
     highWork: 0.1,
   },
 };
+
+// === НАЗВАНИЯ ДЛЯ ОТОБРАЖЕНИЯ ===
+export const ROOF_TYPE_NAMES: Record<RoofType, string> = {
+  [RoofType.SingleSlope]: 'Односкатный',
+  [RoofType.Gable]: 'Двускатный',
+  [RoofType.Arched]: 'Арочный',
+  [RoofType.Triangular]: 'Треугольный',
+  [RoofType.SemiArched]: 'Полуарочный',
+};
+
+export const MATERIAL_NAMES: Record<RoofMaterial, string> = {
+  [RoofMaterial.Polycarbonate]: 'Поликарбонат',
+  [RoofMaterial.MetalTile]: 'Металлочерепица',
+  [RoofMaterial.Decking]: 'Профнастил',
+};
+
+export const PAINT_NAMES: Record<PaintType, string> = {
+  [PaintType.None]: 'Грунт-эмаль',
+  [PaintType.Ral]: 'Эмаль RAL',
+  [PaintType.Polymer]: 'Полимерная',
+};
+
+export const PILLAR_NAMES: Record<PillarSize, string> = {
+  [PillarSize.Size60]: '60×60 мм',
+  [PillarSize.Size80]: '80×80 мм',
+  [PillarSize.Size100]: '100×100 мм',
+  [PillarSize.Size120]: '120×120 мм',
+};
+
+// Google Sheets ID для парсинга цен (заменить на реальный)
+export const PRICE_SPREADSHEET_ID = '1TRvChfoLL5txrY9crkc9D5cpjrIWybM_SeOESV5D4vY';
+

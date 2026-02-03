@@ -16,6 +16,7 @@ export enum PillarSize {
   Size60 = '60x60',
   Size80 = '80x80',
   Size100 = '100x100',
+  Size120 = '120x120',
 }
 
 export enum RoofMaterial {
@@ -28,6 +29,23 @@ export enum PaintType {
   None = 'none',
   Ral = 'ral',
   Polymer = 'polymer',
+}
+
+// Типы ворот
+export enum GateType {
+  None = 'none',
+  Sliding = 'sliding',       // Откатные
+  Swing = 'swing',           // Распашные  
+  Hinged = 'hinged',         // Навесные
+}
+
+// Типы заполнения ворот
+export enum GateFilling {
+  Solid = 'solid',           // Сплошное (профлист)
+  Lattice = 'lattice',       // Решетка
+  Forged = 'forged',         // Кованое
+  Combined = 'combined',     // Комбинированные
+  VerticalBars = 'vertical', // Вертикальные планки
 }
 
 export interface CarportConfig {
@@ -49,45 +67,61 @@ export interface CarportConfig {
   hasGutters: boolean;
   hasFoundation: boolean;
   hasInstallation: boolean;
+  
+  // Для расчета нагрузок
+  region?: string;
+  snowRegion?: string;
+  windRegion?: string;
+  terrain?: 'A' | 'B' | 'C';
 }
 
 export const MIN_WIDTH = 3;
-export const MAX_WIDTH = 10;
+export const MAX_WIDTH = 12;
 export const MIN_LENGTH = 3;
-export const MAX_LENGTH = 12;
+export const MAX_LENGTH = 20;
 export const MIN_HEIGHT = 2;
-export const MAX_HEIGHT = 4;
+export const MAX_HEIGHT = 4.5;
 
-// Telegram WebApp Types
-declare global {
-  interface Window {
-    Telegram?: {
-      WebApp: {
-        initData: string;
-        initDataUnsafe: any;
-        version: string;
-        isVersionAtLeast: (version: string) => boolean;
-        ready: () => void;
-        expand: () => void;
-        close: () => void;
-        sendData: (data: string) => void;
-        isExpanded: boolean;
-        viewportHeight: number;
-        viewportStableHeight: number;
-        isVerticalSwipesEnabled?: boolean;
-        disableVerticalSwipes?: () => void;
-        enableVerticalSwipes?: () => void;
-        MainButton: {
-            text: string;
-            color: string;
-            textColor: string;
-            isVisible: boolean;
-            isActive: boolean;
-            show: () => void;
-            hide: () => void;
-        };
-        showAlert?: (message: string, callback?: () => void) => void;
-      }
-    }
-  }
+// Конфигурация ворот
+export interface GateConfig {
+  type: GateType;
+  width: number;
+  height: number;
+  filling: GateFilling;
+  frameColor: string;
+  panelColor: string;
+  hasWicket: boolean;
+  hasAutomation: boolean;
+  frameSize: string;
+  distanceFromCarport: number;
+  openDirection: 'left' | 'right';
 }
+
+// Информация о нагрузках
+export interface LoadsInfo {
+  snowLoad: number;
+  windLoad: number;
+  totalLoad: number;
+  recommended: {
+    pillarSize: string;
+    trussHeight: number;
+    purlinStep: number;
+  };
+  warnings: string[];
+}
+
+// Разбивка цены
+export interface PriceBreakdown {
+  materials: number;
+  metalwork: number;
+  roofing: number;
+  painting: number;
+  options: number;
+  installation: number;
+  delivery: number;
+  gate: number;
+  total: number;
+  pricePerSqm: number;
+}
+
+// Telegram WebApp Types - определение в types/index.ts

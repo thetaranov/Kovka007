@@ -48,22 +48,26 @@ const GableTruss: React.FC<{ width: number; angle: number; color: string }> = ({
   const rise = (width / 2) * Math.tan(rad);
   const t = SPECS.trussThickness;
   const halfW = width / 2;
+  const eave = Math.min(0.25, width * 0.08);
+  const innerHalfW = Math.max(halfW - eave, halfW * 0.6);
   const peak = new THREE.Vector3(0, rise, 0);
 
-  const segments = Math.max(2, Math.ceil(halfW / 0.9)); 
-  const segW = halfW / segments;
+  const segments = Math.max(2, Math.ceil(innerHalfW / 0.9)); 
+  const segW = innerHalfW / segments;
 
   return (
     <group>
       <BoxBeam start={new THREE.Vector3(-halfW, 0, 0)} end={new THREE.Vector3(halfW, 0, 0)} thickness={t} color={color} />
-      <BoxBeam start={new THREE.Vector3(-halfW, 0, 0)} end={peak} thickness={t} color={color} />
-      <BoxBeam start={new THREE.Vector3(halfW, 0, 0)} end={peak} thickness={t} color={color} />
+      <BoxBeam start={new THREE.Vector3(-halfW, 0, 0)} end={new THREE.Vector3(-innerHalfW, 0, 0)} thickness={t} color={color} />
+      <BoxBeam start={new THREE.Vector3(innerHalfW, 0, 0)} end={new THREE.Vector3(halfW, 0, 0)} thickness={t} color={color} />
+      <BoxBeam start={new THREE.Vector3(-innerHalfW, 0, 0)} end={peak} thickness={t} color={color} />
+      <BoxBeam start={new THREE.Vector3(innerHalfW, 0, 0)} end={peak} thickness={t} color={color} />
       <BoxBeam start={new THREE.Vector3(0, 0, 0)} end={peak} thickness={t} color={color} />
 
       {Array.from({ length: segments }).map((_, i) => {
-         const xBase = -halfW + i * segW;
-         const xNext = -halfW + (i + 1) * segW;
-         const yTopNext = (xNext + halfW) * Math.tan(rad);
+         const xBase = -innerHalfW + i * segW;
+         const xNext = -innerHalfW + (i + 1) * segW;
+         const yTopNext = (xNext + innerHalfW) * (rise / innerHalfW);
          return (
             <React.Fragment key={`l-${i}`}>
                <BoxBeam start={new THREE.Vector3(xNext, 0, 0)} end={new THREE.Vector3(xNext, yTopNext, 0)} thickness={t*0.6} color={color} />
@@ -72,9 +76,9 @@ const GableTruss: React.FC<{ width: number; angle: number; color: string }> = ({
          );
       })}
       {Array.from({ length: segments }).map((_, i) => {
-         const xBase = halfW - i * segW;
-         const xNext = halfW - (i + 1) * segW;
-         const yTopNext = (halfW - xNext) * Math.tan(rad);
+         const xBase = innerHalfW - i * segW;
+         const xNext = innerHalfW - (i + 1) * segW;
+         const yTopNext = (innerHalfW - xNext) * (rise / innerHalfW);
          return (
             <React.Fragment key={`r-${i}`}>
                <BoxBeam start={new THREE.Vector3(xNext, 0, 0)} end={new THREE.Vector3(xNext, yTopNext, 0)} thickness={t*0.6} color={color} />
@@ -102,7 +106,6 @@ const TriangularTruss: React.FC<{ width: number; angle: number; color: string }>
       <BoxBeam start={new THREE.Vector3(-halfW, 0, 0)} end={new THREE.Vector3(-halfW, 0.1, 0)} thickness={t} color={color} />
       
       {Array.from({ length: segments }).map((_, i) => {
-         if (i === segments) return null;
          const xBase = -halfW + i * segWidth;
          const xNext = -halfW + (i + 1) * segWidth;
          const yTopNext = (xNext + halfW) * Math.tan(rad);
@@ -201,8 +204,7 @@ const SemiArchedTruss: React.FC<{ width: number; angle: number; color: string }>
             </React.Fragment>
          );
       })}
-      <BoxBeam start={topPoints[segments]} end={botPoints[segments]} thickness={t*0.6} color={color} />
-      <BoxBeam start={topPoints[0]} end={botPoints[0]} thickness={t*0.6} color={color} />
+      {/* Убрали торцевые стойки, чтобы не было торчащих штырей */}
     </group>
   );
 };
@@ -259,22 +261,28 @@ const ArchedTruss: React.FC<{ width: number; color: string; overhang?: number }>
 export const CarportModel: React.FC<CarportModelProps> = ({ config }) => {
   const { width, length, height, roofType, frameColor, roofColor, pillarSize, roofMaterial, hasSideWalls, roofSlope = 20 } = config;
 
-  const pSize = pillarSize === PillarSize.Size60 ? 0.06 : pillarSize === PillarSize.Size80 ? 0.08 : 0.10;
-  const beamH = pSize; 
+  // Размер столба в зависимости от сечения (квадратная труба)
+  const pSize = pillarSize === PillarSize.Size60 ? 0.06 
+    : pillarSize === PillarSize.Size80 ? 0.08 
+    : pillarSize === PillarSize.Size100 ? 0.10 
+    : 0.12; // Size120
+  
+  // Размеры балок (прямоугольная труба, напр. 60x40, 80x40)
+  const beamH = pSize; // высота балки
+  const beamD = pSize * 0.67; // глубина балки (~40мм при 60мм высоте)
   const overhang = 0.4;
 
   const isAsymmetric = roofType === RoofType.SingleSlope || roofType === RoofType.SemiArched;
   const asymmetricRise = isAsymmetric ? width * Math.tan((roofSlope * Math.PI) / 180) : 0;
   
-  // Grid Calculation - Ensures intermediate pillars follow the roof curve
+  // Grid Calculation (без центральных столбов)
   const grid = useMemo(() => {
     const spacing = SPECS.postSpacing;
     const numRows = Math.ceil(length / spacing); 
     const rowSpacing = length / numRows;
-    const maxUnsupportedWidth = 6.0;
-    const numBays = Math.max(1, Math.ceil(width / maxUnsupportedWidth));
-    const numCols = numBays + 1;
-    const colSpacing = width / numBays; 
+    const numBays = 1;
+    const numCols = 2;
+    const colSpacing = width; 
 
     const posts: React.ReactNode[] = [];
     const beams: React.ReactNode[] = [];
@@ -333,13 +341,13 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config }) => {
                 start={new THREE.Vector3(x, hAtX + beamH/2, -length/2)} 
                 end={new THREE.Vector3(x, hAtX + beamH/2, length/2)} 
                 thickness={beamH} 
-                depth={pSize} 
+                depth={beamD} 
                 color={frameColor} 
             />
         );
     }
     return { posts, beams };
-  }, [length, width, height, asymmetricRise, isAsymmetric, frameColor, pSize, beamH, roofType]);
+  }, [length, width, height, asymmetricRise, isAsymmetric, frameColor, pSize, beamH, beamD, roofType]);
 
   const trussCount = Math.ceil(length / 1.5) + 1;
   const trussSpacing = length / (trussCount - 1);

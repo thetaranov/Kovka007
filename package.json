@@ -1,12 +1,16 @@
 {
-  "name": "carport-configurator",
+  "name": "kovka007-configurator",
   "private": true,
-  "version": "1.0.0",
+  "version": "2.0.0",
   "type": "module",
+  "description": "Конструктор навесов и ворот с расчетом нагрузок и генерацией CAD",
+  "author": "Kovka007",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host 0.0.0.0 --port 5000",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview --host 0.0.0.0 --port 4173",
+    "lint": "tsc --noEmit",
+    "clean": "rimraf dist node_modules/.vite"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -16,7 +20,8 @@
     "@react-three/drei": "^9.108.0",
     "three": "^0.165.0",
     "clsx": "^2.1.1",
-    "tailwind-merge": "^2.3.0"
+    "tailwind-merge": "^2.3.0",
+    "zustand": "^4.5.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",
@@ -27,6 +32,10 @@
     "vite": "^5.3.1",
     "tailwindcss": "^3.4.1",
     "postcss": "^8.4.35",
-    "autoprefixer": "^10.4.17"
+    "autoprefixer": "^10.4.17",
+    "rimraf": "^5.0.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
