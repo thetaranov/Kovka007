@@ -620,18 +620,20 @@ export default function App() {
 
     const handleOrder = useCallback(() => {
         const payload = getOrderPayload();
-        const dataToSend = JSON.stringify(payload);
+        const telegramPayload = { ...payload } as typeof payload;
+        delete (telegramPayload as any).cad_dxf;
+        const dataToSend = JSON.stringify(telegramPayload);
 
         if (window.Telegram?.WebApp?.sendData) {
             try {
                 window.Telegram.WebApp.sendData(dataToSend);
             } catch (e) {
                 console.error("sendData failed:", e);
-                setOrderJson(dataToSend);
+                setOrderJson(JSON.stringify(payload));
                 setShowBrowserOrderModal(true);
             }
         } else {
-            setOrderJson(dataToSend);
+            setOrderJson(JSON.stringify(payload));
             setShowBrowserOrderModal(true);
         }
     }, [getOrderPayload]);
