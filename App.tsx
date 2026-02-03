@@ -639,7 +639,7 @@ export default function App() {
     }, [getOrderPayload]);
 
     return (
-        <div className="flex flex-col lg:flex-row h-[100dvh] w-screen overflow-hidden bg-slate-100 font-sans touch-none overscroll-none fixed inset-0">
+        <div className="flex flex-col lg:flex-row h-[100dvh] w-screen overflow-hidden bg-slate-100 font-sans overscroll-none fixed inset-0">
             {/* HEADER */}
             <div className="absolute top-0 left-0 right-0 z-40 p-4 pointer-events-none flex justify-between items-start lg:p-6">
                 <div className="bg-white/90 backdrop-blur-md px-5 py-2.5 rounded-xl shadow-sm border border-slate-200/50 pointer-events-auto">
@@ -779,7 +779,13 @@ export default function App() {
                     </div>
                     <button
                         onClick={handleOrder}
+                        onTouchEnd={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleOrder();
+                        }}
                         className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 px-6 rounded-xl shadow-lg flex justify-center items-center gap-3 active:scale-[0.98] transition-all"
+                        style={{ touchAction: "manipulation" }}
                     >
                         <span>Оформить заявку</span>
                         <Send size={18} />
@@ -903,7 +909,13 @@ export default function App() {
                     </div>
                     <button
                         onClick={handleOrder}
+                        onTouchEnd={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleOrder();
+                        }}
                         className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 px-6 rounded-xl transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
+                        style={{ touchAction: "manipulation" }}
                     >
                         <span>Оформить заявку</span>
                         <Send size={18} />
