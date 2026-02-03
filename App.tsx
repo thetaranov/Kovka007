@@ -77,13 +77,13 @@ const INITIAL_GATE: GateConfig = {
 };
 
 // Модальное окно для браузера
-const BrowserOrderModal = ({ isOpen, onClose, orderData, price, config, gateConfig }: any) => {
+const BrowserOrderModal = ({ isOpen, onClose, orderData, price, config, gateConfig, showPrivacyPolicy, setShowPrivacyPolicy, showTermsOfUse, setShowTermsOfUse }: any) => {
     if (!isOpen) return null;
 
     const [name, setName] = useState<string>("");
     const [phone, setPhone] = useState<string>("");
     const [comment, setComment] = useState<string>("");
-    const [sending, setSending] = useState(false);
+    const [sending, setSending] = useState<boolean>(false);
 
     const handleDownloadDXF = () => {
         if (config) downloadDXF(config, gateConfig);
@@ -268,7 +268,7 @@ ${priceStr}`;
                     </p>
 
                     <p className="text-xs text-slate-500 text-center mt-2">
-                        При отправке вы соглашаетесь с <a href="#" className="text-indigo-600 hover:underline">политикой конфиденциальности</a> и <a href="#" className="text-indigo-600 hover:underline">условиями пользования</a>
+                        При отправке вы соглашаетесь с <button onClick={() => setShowPrivacyPolicy(true)} className="text-indigo-600 hover:underline cursor-pointer bg-transparent border-none p-0">политикой конфиденциальности</button> и <button onClick={() => setShowTermsOfUse(true)} className="text-indigo-600 hover:underline cursor-pointer bg-transparent border-none p-0">условиями пользования</button>
                     </p>
                 </div>
 
@@ -373,6 +373,163 @@ ${priceStr}`;
                         )}
                     </div>
                 )}
+            </div>
+        </div>
+    );
+};
+
+// Модальное окно политики конфиденциальности
+const PrivacyPolicyModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <div
+                className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
+                onClick={onClose}
+            />
+            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl p-6 animate-fade-in-up max-h-[90vh] overflow-y-auto">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-bold text-slate-900">Политика конфиденциальности</h3>
+                    <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+                        <X size={20} />
+                    </button>
+                </div>
+
+                <div className="prose prose-sm max-w-none text-slate-700 space-y-4">
+                    <p className="text-sm text-slate-600 mb-4">
+                        <strong>Последнее обновление:</strong> {new Date().toLocaleDateString('ru-RU')}
+                    </p>
+
+                    <h4 className="text-lg font-semibold text-slate-800 mt-6 mb-3">1. Общие положения</h4>
+                    <p>
+                        Настоящая политика конфиденциальности определяет порядок обработки и защиты персональных данных пользователей сервиса конфигуратора навесов Kovka007.
+                    </p>
+
+                    <h4 className="text-lg font-semibold text-slate-800 mt-6 mb-3">2. Собираемые данные</h4>
+                    <p>Мы можем собирать следующие типы информации:</p>
+                    <ul className="list-disc pl-6 space-y-1">
+                        <li>Имя и контактный телефон для связи по вопросам заказа</li>
+                        <li>Комментарии и пожелания к заказу</li>
+                        <li>Технические данные о конфигурации навеса</li>
+                        <li>Информация об устройстве и браузере для улучшения сервиса</li>
+                    </ul>
+
+                    <h4 className="text-lg font-semibold text-slate-800 mt-6 mb-3">3. Цели обработки данных</h4>
+                    <p>Персональные данные используются исключительно для:</p>
+                    <ul className="list-disc pl-6 space-y-1">
+                        <li>Обработки и выполнения заказов на изготовление навесов</li>
+                        <li>Связи с клиентами для уточнения деталей заказа</li>
+                        <li>Улучшения качества сервиса и пользовательского опыта</li>
+                        <li>Предоставления технической поддержки</li>
+                    </ul>
+
+                    <h4 className="text-lg font-semibold text-slate-800 mt-6 mb-3">4. Передача данных третьим лицам</h4>
+                    <p>
+                        Мы не передаем персональные данные третьим лицам, за исключением случаев, предусмотренных законодательством РФ или необходимых для выполнения заказа (производителям, подрядчикам).
+                    </p>
+
+                    <h4 className="text-lg font-semibold text-slate-800 mt-6 mb-3">5. Безопасность данных</h4>
+                    <p>
+                        Мы принимаем все необходимые меры для защиты ваших персональных данных от несанкционированного доступа, изменения, раскрытия или уничтожения.
+                    </p>
+
+                    <h4 className="text-lg font-semibold text-slate-800 mt-6 mb-3">6. Cookies и аналитика</h4>
+                    <p>
+                        Сервис может использовать cookies для улучшения работы приложения и анализа использования. Вы можете отключить cookies в настройках браузера.
+                    </p>
+
+                    <h4 className="text-lg font-semibold text-slate-800 mt-6 mb-3">7. Ваши права</h4>
+                    <p>Вы имеете право:</p>
+                    <ul className="list-disc pl-6 space-y-1">
+                        <li>Получать информацию о своих персональных данных</li>
+                        <li>Требовать исправления или удаления данных</li>
+                        <li>Отозвать согласие на обработку данных</li>
+                        <li>Подавать жалобу в уполномоченные органы</li>
+                    </ul>
+
+                    <h4 className="text-lg font-semibold text-slate-800 mt-6 mb-3">8. Контакты</h4>
+                    <p>
+                        По вопросам, связанным с обработкой персональных данных, обращайтесь к администратору сервиса через форму заказа или мессенджеры.
+                    </p>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// Модальное окно условий использования
+const TermsOfUseModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <div
+                className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
+                onClick={onClose}
+            />
+            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl p-6 animate-fade-in-up max-h-[90vh] overflow-y-auto">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-bold text-slate-900">Условия использования</h3>
+                    <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+                        <X size={20} />
+                    </button>
+                </div>
+
+                <div className="prose prose-sm max-w-none text-slate-700 space-y-4">
+                    <p className="text-sm text-slate-600 mb-4">
+                        <strong>Последнее обновление:</strong> {new Date().toLocaleDateString('ru-RU')}
+                    </p>
+
+                    <h4 className="text-lg font-semibold text-slate-800 mt-6 mb-3">1. Общие положения</h4>
+                    <p>
+                        Настоящие условия использования регулируют отношения между пользователем и сервисом конфигуратора навесов Kovka007.
+                    </p>
+
+                    <h4 className="text-lg font-semibold text-slate-800 mt-6 mb-3">2. Описание сервиса</h4>
+                    <p>
+                        Kovka007 предоставляет онлайн-инструмент для конфигурации и расчета стоимости навесов различных типов. Сервис позволяет подобрать оптимальные параметры конструкции и получить предварительный расчет.
+                    </p>
+
+                    <h4 className="text-lg font-semibold text-slate-800 mt-6 mb-3">3. Использование сервиса</h4>
+                    <p>Пользователь обязуется:</p>
+                    <ul className="list-disc pl-6 space-y-1">
+                        <li>Предоставлять достоверную информацию при оформлении заказа</li>
+                        <li>Не использовать сервис для незаконных целей</li>
+                        <li>Не пытаться обходить технические ограничения сервиса</li>
+                        <li>Соблюдать правила хорошего тона в коммуникации</li>
+                    </ul>
+
+                    <h4 className="text-lg font-semibold text-slate-800 mt-6 mb-3">4. Оформление заказа</h4>
+                    <p>
+                        Конфигуратор предоставляет предварительный расчет стоимости. Окончательная цена и сроки изготовления определяются после согласования всех деталей с менеджером. Все расчеты носят ориентировочный характер.
+                    </p>
+
+                    <h4 className="text-lg font-semibold text-slate-800 mt-6 mb-3">5. Ответственность</h4>
+                    <p>
+                        Сервис не несет ответственности за неточности в расчетах, вызванные некорректными входными данными. Производитель не гарантирует абсолютную точность расчетов без проведения инженерных изысканий.
+                    </p>
+
+                    <h4 className="text-lg font-semibold text-slate-800 mt-6 mb-3">6. Интеллектуальная собственность</h4>
+                    <p>
+                        Все материалы сервиса, включая дизайн, код и контент, защищены авторским правом. Копирование и использование без разрешения запрещено.
+                    </p>
+
+                    <h4 className="text-lg font-semibold text-slate-800 mt-6 mb-3">7. Изменения условий</h4>
+                    <p>
+                        Администрация сервиса оставляет за собой право вносить изменения в условия использования. Продолжение использования сервиса означает согласие с новыми условиями.
+                    </p>
+
+                    <h4 className="text-lg font-semibold text-slate-800 mt-6 mb-3">8. Прекращение использования</h4>
+                    <p>
+                        Пользователь может прекратить использование сервиса в любое время. Администрация может ограничить доступ при нарушении условий использования.
+                    </p>
+
+                    <h4 className="text-lg font-semibold text-slate-800 mt-6 mb-3">9. Контакты</h4>
+                    <p>
+                        По вопросам использования сервиса обращайтесь к администратору через форму заказа или мессенджеры.
+                    </p>
+                </div>
             </div>
         </div>
     );
@@ -529,6 +686,8 @@ export default function App() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [showBrowserOrderModal, setShowBrowserOrderModal] = useState(false);
     const [showExportModal, setShowExportModal] = useState(false);
+    const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
+    const [showTermsOfUse, setShowTermsOfUse] = useState(false);
     const [price, setPrice] = useState(0);
     const [gatePrice, setGatePrice] = useState(0);
     const [orderJson, setOrderJson] = useState("");
@@ -842,65 +1001,112 @@ export default function App() {
         console.log(`📱 Telegram WebApp version: ${tg?.version || 'N/A'}`);
         console.log(`📱 Platform: ${tg?.platform || 'N/A'}`);
 
-        // Если Telegram WebApp отсутствует ИЛИ мы в браузере (platform unknown, no initData) — открываем browser modal для ввода контактов
-        if (!tg || tg.platform === 'unknown' || !tg.initData) {
-            console.warn("⚠️ Telegram WebApp not found or running in browser - browser mode");
-            setOrderJson(JSON.stringify(getOrderPayload({ includeCad: true })));
-            setShowBrowserOrderModal(true);
+        // Если Telegram WebApp доступен — сразу копируем данные и открываем чат с админом
+        if (tg) {
+            console.log('📱 Telegram WebApp detected - direct mode');
+            // Формируем полный текст заказа для отправки админу
+            const o = telegramPayload as any;
+            const roofTypeName = (t: string) => ({ single: 'Односкатный', gable: 'Двускатный', arched: 'Арочный', triangular: 'Треугольный', semiarched: 'Полуарочный' }[t] || t);
+            const materialName = (m: string) => ({ polycarbonate: 'Сотовый поликарбонат', metaltile: 'Металлочерепица', decking: 'Профнастил' }[m] || m);
+            const paintName = (p: string) => ({ none: 'Грунт-эмаль', ral: 'Эмаль RAL', polymer: 'Полимерно-порошковая' }[p] || p);
+            const gateTypeName = (g: string) => ({ none: 'Нет', sliding: 'Откатные', swing: 'Распашные', hinged: 'Навесные' }[g] || g);
+            const gateFillName = (f: string) => ({ lattice: 'Решетка', solid: 'Сплошное', forged: 'Ковка', combined: 'Комби', vertical: 'Вертик. планки' }[f] || f);
+
+            const opts = o.opts || {};
+            const optList: string[] = [];
+            if (opts.trusses) optList.push('✅ Усил. фермы');
+            if (opts.gutters) optList.push('✅ Водостоки');
+            if (opts.walls) optList.push('✅ Зашивка');
+            if (opts.found) optList.push('✅ Фундамент');
+            if (opts.install) optList.push('✅ Монтаж');
+            const optStr = optList.length ? optList.join('\n') : 'Базовая';
+
+            const loads = o.loads || {};
+            let loadsStr = '';
+            if (loads.snow || loads.wind || loads.total) {
+                loadsStr = `➖➖➖➖➖➖➖➖➖➖\n❄️ Снеговая: ${loads.snow || 0} кг/м²\n💨 Ветровая: ${loads.wind || 0} Па\n⚖️ Общая: ${loads.total || 0} кг/м²\n📍 Регион: ${o.region || 'Не указан'}\n`;
+            }
+
+            const gate = o.gate || {};
+            let gateStr = '';
+            if (gate.type && gate.type !== 'none') {
+                gateStr = `➖➖➖➖➖➖➖➖➖➖\n🚗 ВОРОТА:\n📐 Тип: ${gateTypeName(gate.type)}\n📏 Размер: ${gate.width || 4}×${gate.height || 2} м\n🔲 Заполнение: ${gateFillName(gate.filling)}\n🎨 Цвет рамы: ${gate.frameColor || gate.frame_color || 'Не указан'}\n🎨 Цвет полотна: ${gate.panelColor || gate.panel_color || 'Не указан'}\n🚶 Калитка: ${gate.wicket ? 'Да' : 'Нет'}\n🤖 Автоматика: ${gate.automation ? 'Да' : 'Нет'}\n`;
+            }
+
+            const priceNavyes = o.price || 0;
+            const priceGate = o.price_gate || 0;
+            const priceTotal = o.price_total || priceNavyes + priceGate;
+            let priceStr = `💰 НАВЕС: ${priceNavyes.toLocaleString()} руб.`;
+            if (priceGate > 0) {
+                priceStr += `\n🚗 ВОРОТА: ${priceGate.toLocaleString()} руб.`;
+                priceStr += `\n💵 ИТОГО: ${priceTotal.toLocaleString()} руб.`;
+            }
+
+            const orderText = `Здравствуйте! Хочу оформить заявку, вот данные:
+🆔 ID: ${o.id || 'N/A'}
+🏗 Тип: ${roofTypeName(o.type)}
+📏 Длина: ${o.length || '?'} м
+📏 Ширина: ${o.width || '?'} м
+↕️ Высота (столб): ${o.height || '?'} м
+🏔 Высота (общ): ~${o.height_peak || '?'} м
+📐 Уклон: ${o.slope || '?'}°
+🧱 Сечение: ${o.pillar || '?'}
+➖➖➖➖➖➖➖➖➖➖
+🔲 S пола: ${o.area_floor || '?'} м²
+🏠 S кровли: ${o.area_roof || '?'} м²
+🏠 Материал: ${materialName(o.material)}
+🎨 Покраска: ${paintName(o.paint)}
+🖌 Цвет: ${o.color_frame || '?'} / ${o.color_roof || '?'}
+➖➖➖➖➖➖➖➖➖➖
+🛠 Опции:
+${optStr}
+${loadsStr}${gateStr}➖➖➖➖➖➖➖➖➖➖
+${priceStr}`;
+
+            // Копируем текст в буфер обмена
+            navigator.clipboard.writeText(orderText).then(() => {
+                console.log('✅ Order text copied to clipboard');
+            }).catch(err => {
+                console.warn('Clipboard write failed:', err);
+            });
+
+            // Открываем чат с админом
+            if (typeof tg.openTelegramLink === 'function') {
+                console.log('📱 Using Telegram openTelegramLink to open admin chat');
+                try {
+                    tg.openTelegramLink('tg://user?id=5216818742');
+                    setTimeout(() => {
+                        try {
+                            tg.openTelegramLink('https://web.telegram.org/k/#5216818742');
+                        } catch (e) {
+                            window.open('https://web.telegram.org/k/#5216818742', '_blank');
+                        }
+                    }, 800);
+                } catch (err) {
+                    console.warn('openTelegramLink tg:// failed, falling back to web.telegram.org', err);
+                    try {
+                        tg.openTelegramLink('https://web.telegram.org/k/#5216818742');
+                    } catch (e) {
+                        window.open('https://web.telegram.org/k/#5216818742', '_blank');
+                    }
+                }
+            }
+            
+            // Показываем уведомление
+            setTimeout(() => {
+                tg.showPopup?.({
+                    title: "✅ Заказ отправлен!",
+                    message: "Текст заказа скопирован в буфер обмена.\n\nВставьте его в чат (зажмите поле ввода → Вставить) и отправьте.",
+                    buttons: [{ type: "close", text: "Понятно" }]
+                });
+            }, 500);
             return;
         }
 
-        // Если Telegram WebApp доступен и можно использовать sendData — отправляем напрямую боту
-        const dataToSend = JSON.stringify(telegramPayload);
-        const payloadSize = new Blob([dataToSend]).size;
-        const canUseSendData = tg && typeof tg.sendData === 'function';
-        const initDataUnsafe = (tg as any)?.initDataUnsafe as any;
-        const isInlineMode = !!initDataUnsafe?.query_id;
-        console.log(`📤 Payload size: ${payloadSize} bytes (${(payloadSize / 1024).toFixed(2)}KB)`);
-        console.log(`📱 canUseSendData: ${!!canUseSendData}, isInlineMode: ${isInlineMode}`);
-
-        if (canUseSendData && !isInlineMode) {
-            // Ограничение sendData — 4096 байт
-            let finalData = dataToSend;
-            if (payloadSize > 4096) {
-                console.warn(`⚠️ Payload too large: ${payloadSize} bytes, reducing...`);
-                const minimalPayload: any = {
-                    id: telegramPayload.id,
-                    type: telegramPayload.type,
-                    length: telegramPayload.length,
-                    width: telegramPayload.width,
-                    height: telegramPayload.height,
-                    height_peak: telegramPayload.height_peak,
-                    slope: telegramPayload.slope,
-                    pillar: telegramPayload.pillar,
-                    area_floor: telegramPayload.area_floor,
-                    material: telegramPayload.material,
-                    paint: telegramPayload.paint,
-                    color_frame: telegramPayload.color_frame,
-                    color_roof: telegramPayload.color_roof,
-                    opts: telegramPayload.opts,
-                    price: telegramPayload.price,
-                    price_gate: telegramPayload.price_gate,
-                    price_total: telegramPayload.price_total,
-                    region: telegramPayload.region,
-                    gate: telegramPayload.gate,
-                };
-                finalData = JSON.stringify(minimalPayload);
-                console.log(`📦 Reduced payload: ${new Blob([finalData]).size} bytes`);
-            }
-
-            try {
-                console.log('🚀 Calling sendData...');
-                tg.sendData(finalData);
-                console.log('✅ sendData called successfully');
-                return; // sendData will close WebApp; stop further processing
-            } catch (e) {
-                console.error('❌ sendData exception:', e);
-                // fall through to clipboard/open behavior
-            }
-        }
-
-        // Формируем полный текст заказа для отправки админу (clipboard/open-chat fallback)
+        // Если Telegram WebApp отсутствует — открываем browser modal для ввода контактов
+        console.warn("⚠️ Telegram WebApp not found - browser mode");
+        setOrderJson(JSON.stringify(getOrderPayload({ includeCad: true })));
+        setShowBrowserOrderModal(true);
         const o = telegramPayload as any;
         const roofTypeName = (t: string) => ({ single: 'Односкатный', gable: 'Двускатный', arched: 'Арочный', triangular: 'Треугольный', semiarched: 'Полуарочный' }[t] || t);
         const materialName = (m: string) => ({ polycarbonate: 'Сотовый поликарбонат', metaltile: 'Металлочерепица', decking: 'Профнастил' }[m] || m);
@@ -1317,6 +1523,20 @@ ${priceStr}`;
                 price={totalPrice}
                 config={config}
                 gateConfig={gateConfig}
+                showPrivacyPolicy={showPrivacyPolicy}
+                setShowPrivacyPolicy={setShowPrivacyPolicy}
+                showTermsOfUse={showTermsOfUse}
+                setShowTermsOfUse={setShowTermsOfUse}
+            />
+
+            <PrivacyPolicyModal
+                isOpen={showPrivacyPolicy}
+                onClose={() => setShowPrivacyPolicy(false)}
+            />
+
+            <TermsOfUseModal
+                isOpen={showTermsOfUse}
+                onClose={() => setShowTermsOfUse(false)}
             />
             
             <ExportModal
