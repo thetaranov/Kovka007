@@ -812,32 +812,6 @@ export default function App() {
                 console.log(`📦 Reduced payload: ${new Blob([finalData]).size} bytes`);
             }
 
-            // Сформируем текст заказа заранее, чтобы открыть чат и скопировать текст
-            const oPreview: any = telegramPayload as any;
-            const previewText = `Здравствуйте! Хочу оформить заявку, вот данные:\nID: ${oPreview.id || 'N/A'}\nТип: ${oPreview.type || '?'}\nРазмеры: ${oPreview.length || '?'}×${oPreview.width || '?'} м\nИтого: ${oPreview.price_total || oPreview.price || '?'} руб.`;
-
-            // Попытка скопировать текст в буфер и открыть чат админа перед отправкой sendData
-            try {
-                await navigator.clipboard.writeText(previewText);
-                console.log('✅ Preview text copied to clipboard before sendData');
-            } catch (e) {
-                console.warn('Clipboard write failed before sendData', e);
-            }
-
-            try {
-                if (typeof tg.openTelegramLink === 'function') {
-                    // Открываем чат с админом (tg://) — это попытается открыть нативный клиент
-                    try {
-                        tg.openTelegramLink('tg://user?id=5216818742');
-                    } catch (err) {
-                        console.warn('tg:// open failed, attempting web.t.me', err);
-                        try { tg.openTelegramLink('https://t.me/5216818742'); } catch { window.open('https://web.telegram.org/k/#5216818742', '_blank'); }
-                    }
-                }
-            } catch (e) {
-                console.warn('openTelegramLink failed', e);
-            }
-
             try {
                 console.log('🚀 Calling sendData...');
                 tg.sendData(finalData);
