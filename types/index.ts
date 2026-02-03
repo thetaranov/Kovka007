@@ -43,6 +43,13 @@ export enum PaintType {
   Polymer = 'polymer',   // Полимерно-порошковая
 }
 
+export enum InstallationType {
+  FoundationPour = 'foundation_pour',  // Заливка фундамента
+  OnPosts = 'on_posts',                // Установка на залитые столбы
+  OnEmbedded = 'on_embedded',          // Установка на закладные
+  None = 'none',                       // Без монтажа
+}
+
 // ========================
 // КОНФИГУРАЦИЯ НАВЕСА
 // ========================
@@ -70,6 +77,8 @@ export interface CarportConfig {
   hasGutters: boolean;       // водостоки
   hasFoundation: boolean;    // бетонный фундамент
   hasInstallation: boolean;  // монтаж под ключ
+  foundationThickness: number; // толщина фундамента (м)
+  installationType: InstallationType; // тип монтажа
   
   // Расположение (для расчета нагрузок)
   region?: string;           // город/регион
@@ -101,7 +110,8 @@ export interface GateConfig {
   width: number;
   height: number;
   filling: GateFilling;
-  color: string;
+  frameColor: string;
+  panelColor: string;
   hasWicket: boolean;
   hasAutomation: boolean;
   frameSize: string;

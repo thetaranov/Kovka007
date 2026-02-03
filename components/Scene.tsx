@@ -12,7 +12,7 @@ import {
   GizmoViewport,
   Line,
 } from "@react-three/drei";
-import { CarportConfig, GateConfig, GateType } from "../types";
+import { CarportConfig, GateConfig, GateType, InstallationType } from "../types";
 import { SPECS } from "../constants";
 import { CarportModel } from "./CarportModel";
 import { GateModel } from "./GateModel";
@@ -133,31 +133,30 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig }) => {
         }}
       />
 
-      <button
-        onClick={handleReset}
-        className="absolute top-20 right-4 lg:top-4 lg:right-4 z-20 p-2 bg-white/80 hover:bg-white backdrop-blur-sm rounded-lg shadow-sm border border-slate-200 text-slate-500 hover:text-indigo-600 active:scale-95 transition-all"
-      >
-        <RefreshCw size={20} />
-      </button>
-
-      {/* CAD-style view controls */}
-      <div className="absolute bottom-4 right-4 z-20 flex items-center gap-2">
+      {/* Control stack (mobile + desktop) */}
+      <div className="absolute right-4 top-24 lg:top-20 z-20 flex flex-col items-center gap-2">
+        <button
+          onClick={handleReset}
+          className="p-2 bg-white/80 hover:bg-white backdrop-blur-sm rounded-lg shadow-sm border border-slate-200 text-slate-500 hover:text-indigo-600 active:scale-95 transition-all"
+        >
+          <RefreshCw size={18} />
+        </button>
         <button
           onClick={() => {
             setMeasureMode((v) => !v);
             setMeasurePoints([]);
           }}
-          className={`px-3 py-1.5 text-xs font-semibold bg-white/80 backdrop-blur-sm border border-slate-200 rounded-lg transition-colors ${
+          className={`p-2 bg-white/80 backdrop-blur-sm border border-slate-200 rounded-lg transition-colors ${
             measureMode ? "text-indigo-700 border-indigo-300" : "text-slate-700 hover:bg-slate-100"
           }`}
         >
-          <Ruler size={16} />
+          <Ruler size={18} />
         </button>
         <button
           onClick={handleCameraToggle}
-          className="px-3 py-1.5 text-xs font-semibold bg-white/80 backdrop-blur-sm border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-100 transition-colors"
+          className="p-2 bg-white/80 backdrop-blur-sm border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-100 transition-colors"
         >
-          <Camera size={16} className={isOrthoTarget ? "text-indigo-700" : "text-slate-700"} />
+          <Camera size={18} className={isOrthoTarget ? "text-indigo-700" : "text-slate-700"} />
         </button>
       </div>
 
@@ -261,12 +260,13 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig }) => {
             mouseButtons={{ LEFT: THREE.MOUSE.PAN, RIGHT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY }}
             ref={controlsRef}
           />
-          <GizmoHelper alignment="bottom-right" margin={[70, 110]}>
+          <GizmoHelper alignment="top-right" margin={[70, 120]}>
             <GizmoViewport
-                axisColors={["#ef4444", "#3b82f6", "#22c55e"]}
-                labels={["X", "Z", "Y"]}
+              axisColors={["#ef4444", "#3b82f6", "#22c55e"]}
+              labels={["X", "Z", "Y"]}
               labelColor="#0f172a"
               hideNegativeAxes={false}
+              className="scale-[0.8] lg:scale-100"
             />
           </GizmoHelper>
           <MeasurementTool
@@ -517,7 +517,9 @@ const Foundation: React.FC<{
     xPositions.forEach((x) => anchorPositions.push([x, 0.02, z]));
   }
 
-  const foundationDepth = 0.3;
+  const foundationDepth = (config.hasFoundation || config.installationType === InstallationType.FoundationPour)
+    ? (config.foundationThickness ?? 0.3)
+    : 0.15;
 
   return (
     <group position={[0, 0, 0]}>

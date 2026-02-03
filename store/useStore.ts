@@ -15,6 +15,7 @@ import {
   GateFilling,
   PriceBreakdown,
   LoadsInfo,
+  InstallationType,
 } from '../types';
 import { GateConfig, calculateGatePrice } from '../types/gates';
 import { FRAME_COLORS, ROOF_COLORS, PRICING } from '../constants';
@@ -37,6 +38,8 @@ const INITIAL_CARPORT: CarportConfig = {
   hasSideWalls: false,
   hasFoundation: false,
   hasInstallation: true,
+  foundationThickness: 0.3,
+  installationType: InstallationType.OnEmbedded,
   region: 'Москва',
   snowRegion: 'IV',
   windRegion: 'III',
@@ -49,7 +52,8 @@ const INITIAL_GATE: GateConfig = {
   width: 4.0,
   height: 2.0,
   filling: GateFilling.Solid,
-  color: '#1a1a1a',
+  frameColor: '#1a1a1a',
+  panelColor: '#3E2723',
   hasWicket: false,
   hasAutomation: false,
   frameSize: '60x40',
@@ -159,14 +163,16 @@ function calculateCarportPrice(config: CarportConfig): number {
     const wallArea = config.length * config.height + config.width * config.height;
     materialCost += wallArea * PRICING.extras.sideWalls;
   }
-  if (config.hasFoundation) {
+  const foundationEnabled = config.hasFoundation || config.installationType === InstallationType.FoundationPour;
+  if (foundationEnabled) {
     materialCost += pillarCount * 4000;
   }
 
   let total = materialCost;
   
   // Монтаж
-  if (config.hasInstallation) {
+  const installActive = config.installationType !== InstallationType.None;
+  if (installActive) {
     let installPercent = PRICING.extras.installation;
     if (materialCost > 300000) installPercent = 0.22;
     if (materialCost > 600000) installPercent = 0.2;
@@ -330,7 +336,7 @@ export const useStore = create<AppState>()(
             roofing: Math.round(carportPrice * 0.15),
             painting: Math.round(carportPrice * 0.05),
             options: Math.round(carportPrice * 0.05),
-            installation: carport.hasInstallation ? Math.round(carportPrice * 0.2) : 0,
+            installation: carport.installationType !== InstallationType.None ? Math.round(carportPrice * 0.2) : 0,
             delivery,
             gate: gatePrice,
             total,

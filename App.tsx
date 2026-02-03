@@ -11,6 +11,7 @@ import {
     PaintType,
     GateType,
     GateFilling,
+    InstallationType,
 } from "./types";
 import { GateConfig, calculateGatePrice } from "./types/gates";
 import { PRICING, FRAME_COLORS, ROOF_COLORS, SPECS } from "./constants";
@@ -52,6 +53,8 @@ const INITIAL_CONFIG: CarportConfig = {
     hasSideWalls: false,
     hasFoundation: false,
     hasInstallation: true,
+    foundationThickness: 0.3,
+    installationType: InstallationType.OnEmbedded,
     region: "Москва",
     snowRegion: "IV",
     windRegion: "III",
@@ -476,12 +479,14 @@ export default function App() {
                 config.length * config.height + config.width * config.height;
             materialCost += wallArea * PRICING.extras.sideWalls;
         }
-        if (config.hasFoundation) {
+        const foundationEnabled = config.hasFoundation || config.installationType === InstallationType.FoundationPour;
+        if (foundationEnabled) {
             materialCost += pillarCount * 4000;
         }
 
         let total = materialCost;
-        if (config.hasInstallation) {
+        const installActive = config.installationType !== InstallationType.None;
+        if (installActive) {
             let installPercent = PRICING.extras.installation;
             if (materialCost > 300000) installPercent = 0.22;
             if (materialCost > 600000) installPercent = 0.2;
@@ -507,11 +512,15 @@ export default function App() {
     const totalPrice = price + gatePrice;
     const oldPrice = Math.round(totalPrice * 1.2);
     const savings = oldPrice - totalPrice;
+    const installActive = config.installationType !== InstallationType.None;
 
     const calculateBOM = useCallback(() => {
         const pillarCount =
             (Math.ceil(config.width / 6.0) + 1) *
             (Math.ceil(config.length / 3.0) + 1);
+        const foundationEnabled = config.hasFoundation || config.installationType === InstallationType.FoundationPour;
+        const installActive = config.installationType !== InstallationType.None;
+
         return {
             pillarCount,
             roofArea: (config.width * config.length * 1.2).toFixed(1),
@@ -569,9 +578,11 @@ export default function App() {
                 trusses: config.hasTrusses,
                 gutters: config.hasGutters,
                 walls: config.hasSideWalls,
-                found: config.hasFoundation,
-                install: config.hasInstallation,
+                found: foundationEnabled,
+                install: installActive,
             },
+            foundation_thickness: config.foundationThickness,
+            installation_type: config.installationType,
             region: config.region,
             snow_region: config.snowRegion,
             wind_region: config.windRegion,
@@ -654,7 +665,7 @@ export default function App() {
 
                 {/* ИНФО-ПЛАШКА */}
                 <div className="absolute bottom-6 left-0 right-0 flex justify-center pointer-events-none z-30 px-4">
-                    <div className="bg-white/95 backdrop-blur-md px-4 py-2.5 rounded-xl shadow-lg border border-slate-200 text-slate-800 flex items-center gap-3 text-xs sm:text-sm font-medium whitespace-nowrap overflow-x-auto hide-scrollbar max-w-full">
+                    <div className="bg-white/95 backdrop-blur-md px-3 py-2 rounded-xl shadow-lg border border-slate-200 text-slate-800 flex flex-wrap items-center gap-2 text-[11px] sm:text-sm font-medium max-w-full">
                         <div className="flex items-baseline gap-1">
                             <span className="font-bold text-slate-700">
                                 {config.length}×{config.width}×{config.height}м
@@ -663,17 +674,14 @@ export default function App() {
                                 (Д×Ш×В)
                             </span>
                         </div>
-                        <span className="w-px h-4 bg-slate-200 flex-shrink-0"></span>
-                        <span className="font-bold text-slate-700">
+                        <span className="text-slate-500">
                             {(config.width * config.length).toFixed(1)} м²
                         </span>
-                        <span className="w-px h-4 bg-slate-200 flex-shrink-0"></span>
                         <span className="text-slate-500">
                             ~{Math.round(price / (config.width * config.length)).toLocaleString()} ₽/м²
                         </span>
                         {gateConfig.type !== GateType.None && (
                             <>
-                                <span className="w-px h-4 bg-slate-200 flex-shrink-0"></span>
                                 <span className="text-indigo-600 flex items-center gap-1">
                                     <Car size={12} />
                                     Ворота
@@ -740,7 +748,7 @@ export default function App() {
                                     -20%
                                 </span>
                             </div>
-                            {config.hasInstallation && (
+                            {installActive && (
                                 <div className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
                                     <CheckCircle2 size={12} />
                                     с монтажом
@@ -864,7 +872,7 @@ export default function App() {
                                     -20%
                                 </span>
                             </div>
-                            {config.hasInstallation && (
+                            {installActive && (
                                 <div className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
                                     <CheckCircle2 size={12} />
                                     с монтажом

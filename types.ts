@@ -31,6 +31,13 @@ export enum PaintType {
   Polymer = 'polymer',
 }
 
+export enum InstallationType {
+  FoundationPour = 'foundation_pour',
+  OnPosts = 'on_posts',
+  OnEmbedded = 'on_embedded',
+  None = 'none',
+}
+
 // Типы ворот
 export enum GateType {
   None = 'none',
@@ -67,6 +74,8 @@ export interface CarportConfig {
   hasGutters: boolean;
   hasFoundation: boolean;
   hasInstallation: boolean;
+  foundationThickness: number;
+  installationType: InstallationType;
   
   // Для расчета нагрузок
   region?: string;

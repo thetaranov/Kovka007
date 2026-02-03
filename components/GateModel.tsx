@@ -406,7 +406,7 @@ const SlidingGate: FC<GateComponentProps> = ({ config }) => {
 const SwingGate: React.FC<{
   config: GateConfig;
 }> = ({ config }) => {
-  const { width, height, filling, hasWicket } = config;
+  const { width, height, filling, hasWicket, openDirection } = config;
   const frameColor = config.frameColor ?? '#1a1a1a';
   const panelColor = config.panelColor ?? '#3E2723';
   const frameSize = config.frameSize === '80x40' ? 0.08 : 0.06;
@@ -580,15 +580,18 @@ const SwingGate: React.FC<{
     </group>
   );
   
+  const openSign = (openDirection ?? 'left') === 'left' ? 1 : -1;
+  const openAngle = THREE.MathUtils.degToRad(12) * openSign;
+
   return (
     <group>
       {posts}
       {/* Левая створка */}
-      <group position={[-halfWidth, 0, 0]}>
+      <group position={[-halfWidth, 0, 0]} rotation={[0, openAngle, 0]}>
         {createLeaf(leafWidth, 0, 'left')}
       </group>
       {/* Правая створка */}
-      <group position={[halfWidth, 0, 0]} scale={[-1, 1, 1]}>
+      <group position={[halfWidth, 0, 0]} rotation={[0, -openAngle, 0]} scale={[-1, 1, 1]}>
         {createLeaf(leafWidth, 0, 'right', true)}
       </group>
     </group>

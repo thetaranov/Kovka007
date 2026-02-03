@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { CarportConfig, RoofType, PillarSize, RoofMaterial, PaintType, MIN_WIDTH, MAX_WIDTH, MIN_LENGTH, MAX_LENGTH, MIN_HEIGHT, MAX_HEIGHT } from '../types';
+import { CarportConfig, RoofType, PillarSize, RoofMaterial, PaintType, InstallationType, MIN_WIDTH, MAX_WIDTH, MIN_LENGTH, MAX_LENGTH, MIN_HEIGHT, MAX_HEIGHT } from '../types';
 import { ROOF_COLORS, FRAME_COLORS } from '../constants';
 import { Check, Ruler, Maximize2, TrendingDown } from 'lucide-react';
 
@@ -268,8 +268,7 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
                         { k: 'hasTrusses', l: 'Усиленные фермы' },
                         { k: 'hasSideWalls', l: 'Боковая зашивка' },
                         { k: 'hasGutters', l: 'Водостоки' },
-                        { k: 'hasFoundation', l: 'Бетонный фундамент' },
-                        { k: 'hasInstallation', l: 'Монтаж под ключ' }
+                        { k: 'hasFoundation', l: 'Заливка фундамента' }
                     ].map((item) => (
                         <label key={item.k} className="flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors">
                             <span className="text-sm font-medium text-slate-700">{item.l}</span>
@@ -281,6 +280,48 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
                             <input type="checkbox" className="hidden" checked={config[item.k as keyof CarportConfig] as boolean} onChange={(e) => handleChange(item.k as keyof CarportConfig, e.target.checked)} />
                         </label>
                     ))}
+                </div>
+
+                {(config.hasFoundation || config.installationType === InstallationType.FoundationPour) && (
+                    <div className="mt-4">
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Толщина фундамента</label>
+                        <div className="flex justify-between items-center mb-2">
+                            <span className="text-xs text-slate-500">{(config.foundationThickness * 100).toFixed(0)} см</span>
+                        </div>
+                        <input
+                            type="range"
+                            min={0.2}
+                            max={0.5}
+                            step={0.05}
+                            value={config.foundationThickness}
+                            onChange={(e) => handleChange('foundationThickness', parseFloat(e.target.value))}
+                            className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                        />
+                    </div>
+                )}
+
+                <div className="mt-4">
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Тип монтажа</label>
+                    <select
+                        value={config.installationType}
+                        onChange={(e) => {
+                            const value = e.target.value as InstallationType;
+                            const installActive = value !== InstallationType.None;
+                            const foundationActive = value === InstallationType.FoundationPour ? true : config.hasFoundation;
+                            onChange({
+                                ...config,
+                                installationType: value,
+                                hasInstallation: installActive,
+                                hasFoundation: foundationActive,
+                            });
+                        }}
+                        className="w-full bg-slate-50 border border-slate-200 text-slate-700 py-2.5 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                        <option value={InstallationType.FoundationPour}>Заливка фундамента</option>
+                        <option value={InstallationType.OnPosts}>Установка на залитые столбы</option>
+                        <option value={InstallationType.OnEmbedded}>Установка на закладные</option>
+                        <option value={InstallationType.None}>Без монтажа</option>
+                    </select>
                 </div>
             </section>
                  </div>

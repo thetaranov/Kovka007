@@ -468,8 +468,8 @@ KOVKA007 - Конструктор навесов
 ${config.hasTrusses ? '✓' : '✗'} Усиленные фермы
 ${config.hasGutters ? '✓' : '✗'} Водостоки
 ${config.hasSideWalls ? '✓' : '✗'} Боковая зашивка
-${config.hasFoundation ? '✓' : '✗'} Бетонный фундамент
-${config.hasInstallation ? '✓' : '✗'} Монтаж под ключ
+${config.hasFoundation || config.installationType === 'foundation_pour' ? '✓' : '✗'} Заливка фундамента
+${config.installationType !== 'none' ? '✓' : '✗'} Монтаж: ${config.installationType}
 
 ${reportText}
 
