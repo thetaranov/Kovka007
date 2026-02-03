@@ -761,96 +761,95 @@ export default function App() {
     const handleOrder = useCallback(() => {
         const tg = window.Telegram?.WebApp;
         const telegramPayload = getOrderPayload({ includeCad: false });
-        const dataToSend = JSON.stringify(telegramPayload);
-        const payloadSize = new Blob([dataToSend]).size;
         
-        console.log(`📤 Payload size: ${payloadSize} bytes (${(payloadSize / 1024).toFixed(2)}KB)`);
         console.log(`📱 Telegram WebApp version: ${tg?.version || 'N/A'}`);
         console.log(`📱 Platform: ${tg?.platform || 'N/A'}`);
-        console.log(`📱 initData present: ${!!tg?.initData}`);
-        console.log(`📱 initDataUnsafe:`, tg?.initDataUnsafe);
         
-        // Проверяем есть ли вообще Telegram WebApp
-        if (!tg) {
-            console.warn("⚠️ Telegram WebApp not found - browser mode");
-            setOrderJson(JSON.stringify(getOrderPayload({ includeCad: true })));
-            setShowBrowserOrderModal(true);
-            return;
+        // Формируем полный текст заказа для отправки админу
+        const o = telegramPayload as any;
+        const roofTypeName = (t: string) => ({ single: 'Односкатный', gable: 'Двускатный', arched: 'Арочный', triangular: 'Треугольный', semiarched: 'Полуарочный' }[t] || t);
+        const materialName = (m: string) => ({ polycarbonate: 'Сотовый поликарбонат', metaltile: 'Металлочерепица', decking: 'Профнастил' }[m] || m);
+        const paintName = (p: string) => ({ none: 'Грунт-эмаль', ral: 'Эмаль RAL', polymer: 'Полимерно-порошковая' }[p] || p);
+        const gateTypeName = (g: string) => ({ none: 'Нет', sliding: 'Откатные', swing: 'Распашные', hinged: 'Навесные' }[g] || g);
+        const gateFillName = (f: string) => ({ lattice: 'Решетка', solid: 'Сплошное', forged: 'Ковка', combined: 'Комби', vertical: 'Вертик. планки' }[f] || f);
+
+        const opts = o.opts || {};
+        const optList: string[] = [];
+        if (opts.trusses) optList.push('✅ Усил. фермы');
+        if (opts.gutters) optList.push('✅ Водостоки');
+        if (opts.walls) optList.push('✅ Зашивка');
+        if (opts.found) optList.push('✅ Фундамент');
+        if (opts.install) optList.push('✅ Монтаж');
+        const optStr = optList.length ? optList.join('\n') : 'Базовая';
+
+        const loads = o.loads || {};
+        let loadsStr = '';
+        if (loads.snow || loads.wind || loads.total) {
+            loadsStr = `➖➖➖➖➖➖➖➖➖➖\n❄️ Снеговая: ${loads.snow || 0} кг/м²\n💨 Ветровая: ${loads.wind || 0} Па\n⚖️ Общая: ${loads.total || 0} кг/м²\n📍 Регион: ${o.region || 'Не указан'}\n`;
         }
-        
-        // Проверяем доступность sendData и был ли запуск через keyboard button
-        // sendData работает ТОЛЬКО при запуске через KeyboardButton с web_app
-        const canUseSendData = typeof tg.sendData === 'function';
-        // Если есть query_id - это inline/menu button, sendData не сработает
-        const initDataUnsafe = tg.initDataUnsafe as any;
-        const isInlineMode = !!initDataUnsafe?.query_id;
-        
-        console.log(`📱 canUseSendData: ${canUseSendData}, isInlineMode: ${isInlineMode}`);
-        
-        if (!canUseSendData || isInlineMode) {
-            console.warn("⚠️ sendData not available in this mode");
-            // Сохраняем в CloudStorage если доступно
-            const cloudStorage = (tg as any).CloudStorage;
-            if (cloudStorage) {
-                cloudStorage.setItem('pending_order', dataToSend, (err: any) => {
-                    if (err) {
-                        console.error("CloudStorage error:", err);
-                    } else {
-                        console.log("✅ Order saved to CloudStorage");
-                    }
+
+        const gate = o.gate || {};
+        let gateStr = '';
+        if (gate.type && gate.type !== 'none') {
+            gateStr = `➖➖➖➖➖➖➖➖➖➖\n🚗 ВОРОТА:\n📐 Тип: ${gateTypeName(gate.type)}\n📏 Размер: ${gate.width || 4}×${gate.height || 2} м\n🔲 Заполнение: ${gateFillName(gate.filling)}\n🎨 Цвет рамы: ${gate.frameColor || gate.frame_color || 'Не указан'}\n🎨 Цвет полотна: ${gate.panelColor || gate.panel_color || 'Не указан'}\n🚶 Калитка: ${gate.wicket ? 'Да' : 'Нет'}\n🤖 Автоматика: ${gate.automation ? 'Да' : 'Нет'}\n`;
+        }
+
+        const priceNavyes = o.price || 0;
+        const priceGate = o.price_gate || 0;
+        const priceTotal = o.price_total || priceNavyes + priceGate;
+        let priceStr = `💰 НАВЕС: ${priceNavyes.toLocaleString()} руб.`;
+        if (priceGate > 0) {
+            priceStr += `\n🚗 ВОРОТА: ${priceGate.toLocaleString()} руб.`;
+            priceStr += `\n💵 ИТОГО: ${priceTotal.toLocaleString()} руб.`;
+        }
+
+        const orderText = `Здравствуйте! Хочу оформить заявку, вот данные:
+🆔 ID: ${o.id || 'N/A'}
+🏗 Тип: ${roofTypeName(o.type)}
+📏 Длина: ${o.length || '?'} м
+📏 Ширина: ${o.width || '?'} м
+↕️ Высота (столб): ${o.height || '?'} м
+🏔 Высота (общ): ~${o.height_peak || '?'} м
+📐 Уклон: ${o.slope || '?'}°
+🧱 Сечение: ${o.pillar || '?'}
+➖➖➖➖➖➖➖➖➖➖
+🔲 S пола: ${o.area_floor || '?'} м²
+🏠 S кровли: ${o.area_roof || '?'} м²
+🏠 Материал: ${materialName(o.material)}
+🎨 Покраска: ${paintName(o.paint)}
+🖌 Цвет: ${o.color_frame || '?'} / ${o.color_roof || '?'}
+➖➖➖➖➖➖➖➖➖➖
+🛠 Опции:
+${optStr}
+${loadsStr}${gateStr}➖➖➖➖➖➖➖➖➖➖
+${priceStr}`;
+
+        // Копируем текст в буфер обмена
+        navigator.clipboard.writeText(orderText).then(() => {
+            console.log('✅ Order text copied to clipboard');
+        }).catch(err => {
+            console.warn('Clipboard write failed:', err);
+        });
+
+        // Если есть Telegram WebApp - используем openTelegramLink для открытия чата с админом
+        if (tg && typeof tg.openTelegramLink === 'function') {
+            console.log('📱 Using Telegram openTelegramLink to open admin chat');
+            // Открываем чат с админом через tg:// ссылку
+            // user_id 5216818742 = @имя_админа
+            tg.openTelegramLink('https://t.me/taranov_official');
+            // Показываем уведомление
+            setTimeout(() => {
+                tg.showPopup?.({
+                    title: "✅ Текст скопирован",
+                    message: "Текст заказа скопирован в буфер обмена.\n\nВставьте его в чат (зажмите поле ввода → Вставить) и отправьте.",
+                    buttons: [{ type: "close", text: "Понятно" }]
                 });
-            }
-            // Показываем инструкцию
-            tg.showPopup?.({
-                title: "Как оформить заказ",
-                message: "Для оформления заказа:\n\n1. Закройте это окно\n2. Нажмите кнопку '🏗 Открыть конструктор' в чате с ботом\n3. Нажмите 'Оформить заказ'\n\nВаш проект сохранён!",
-                buttons: [{ type: "close", text: "Понятно" }]
-            });
-            return;
-        }
-        
-        // Проверяем размер данных (лимит 4096 байт)
-        let finalData = dataToSend;
-        if (payloadSize > 4096) {
-            console.warn(`⚠️ Payload too large: ${payloadSize} bytes, reducing...`);
-            // Уменьшаем данные - убираем некритичные поля
-            const minimalPayload = {
-                id: telegramPayload.id,
-                type: telegramPayload.type,
-                length: telegramPayload.length,
-                width: telegramPayload.width,
-                height: telegramPayload.height,
-                height_peak: telegramPayload.height_peak,
-                slope: telegramPayload.slope,
-                pillar: telegramPayload.pillar,
-                area_floor: telegramPayload.area_floor,
-                material: telegramPayload.material,
-                paint: telegramPayload.paint,
-                color_frame: telegramPayload.color_frame,
-                color_roof: telegramPayload.color_roof,
-                opts: telegramPayload.opts,
-                price: telegramPayload.price,
-                price_gate: telegramPayload.price_gate,
-                price_total: telegramPayload.price_total,
-                region: telegramPayload.region,
-                gate: telegramPayload.gate,
-            };
-            finalData = JSON.stringify(minimalPayload);
-            console.log(`📦 Reduced payload: ${new Blob([finalData]).size} bytes`);
-        }
-        
-        // Отправляем данные - sendData сам закроет WebApp!
-        console.log("🚀 Calling sendData...");
-        console.log("📋 Data:", finalData.substring(0, 200) + "...");
-        
-        try {
-            tg.sendData(finalData);
-            // WebApp закроется автоматически после sendData
-            console.log("✅ sendData called successfully");
-        } catch (e) {
-            // Это не должно происходить, но на всякий случай
-            console.error("❌ sendData exception:", e);
-            tg.showAlert?.(`Ошибка: ${String(e).substring(0, 100)}`);
+            }, 500);
+        } else {
+            // Браузер без Telegram - открываем web.telegram.org
+            console.log('🌐 Browser mode - opening web.telegram.org');
+            window.open('https://web.telegram.org/k/#5216818742', '_blank');
+            alert('✅ Текст заказа скопирован в буфер обмена.\n\nВставьте его в чат (Ctrl+V) и отправьте.');
         }
     }, [getOrderPayload]);
 
