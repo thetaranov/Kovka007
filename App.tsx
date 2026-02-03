@@ -235,7 +235,7 @@ ${priceStr}`;
                 className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
                 onClick={onClose}
             />
-            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-fade-in-up max-h-[90vh] overflow-y-auto">
+            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6 animate-fade-in-up max-h-[90vh] overflow-y-auto">
                 <div className="flex justify-between items-center mb-6">
                     <h3 className="text-xl font-bold text-slate-900">Оформление заказа</h3>
                     <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
@@ -243,29 +243,102 @@ ${priceStr}`;
                     </button>
                 </div>
 
-                {/* Сводка заказа */}
-                {config && (
-                    <div className="bg-slate-50 rounded-xl p-4 mb-4">
-                        <h4 className="font-semibold text-slate-700 mb-3">Ваш проект:</h4>
-                        <div className="space-y-2 text-sm text-slate-600">
-                            <div className="flex justify-between">
-                                <span>Размеры:</span>
-                                <span className="font-medium">{config.length}×{config.width}×{config.height} м</span>
+                {/* Подробная сводка заказа */}
+                {parsedOrder && config && (
+                    <div className="bg-slate-50 rounded-xl p-4 mb-6 space-y-4">
+                        <h4 className="font-semibold text-slate-700 mb-3">📋 Детали заказа:</h4>
+
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <span className="text-slate-500">🏗 Тип крыши:</span>
+                                <p className="font-medium text-slate-800">{(() => {
+                                    const types = { single: 'Односкатный', gable: 'Двускатный', arched: 'Арочный', triangular: 'Треугольный', semiarched: 'Полуарочный' };
+                                    return types[parsedOrder.type as keyof typeof types] || parsedOrder.type;
+                                })()}</p>
                             </div>
-                            <div className="flex justify-between">
-                                <span>Площадь:</span>
-                                <span className="font-medium">{(config.width * config.length).toFixed(1)} м²</span>
+                            <div>
+                                <span className="text-slate-500">📏 Размеры:</span>
+                                <p className="font-medium text-slate-800">{parsedOrder.length}×{parsedOrder.width}×{parsedOrder.height} м</p>
                             </div>
-                            <div className="flex justify-between">
-                                <span>Тип крыши:</span>
-                                <span className="font-medium">{config.roofType}</span>
+                            <div>
+                                <span className="text-slate-500">🏔 Высота (общ):</span>
+                                <p className="font-medium text-slate-800">~{parsedOrder.height_peak} м</p>
+                            </div>
+                            <div>
+                                <span className="text-slate-500">📐 Уклон:</span>
+                                <p className="font-medium text-slate-800">{parsedOrder.slope}°</p>
+                            </div>
+                            <div>
+                                <span className="text-slate-500">🧱 Сечение:</span>
+                                <p className="font-medium text-slate-800">{parsedOrder.pillar}</p>
+                            </div>
+                            <div>
+                                <span className="text-slate-500">🏠 Материал:</span>
+                                <p className="font-medium text-slate-800">{(() => {
+                                    const mats = { polycarbonate: 'Сотовый поликарбонат', metaltile: 'Металлочерепица', decking: 'Профнастил' };
+                                    return mats[parsedOrder.material as keyof typeof mats] || parsedOrder.material;
+                                })()}</p>
                             </div>
                         </div>
+
+                        <div className="border-t border-slate-200 pt-4">
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <span className="text-slate-500">🔲 S пола:</span>
+                                    <p className="font-medium text-slate-800">{parsedOrder.area_floor} м²</p>
+                                </div>
+                                <div>
+                                    <span className="text-slate-500">🏠 S кровли:</span>
+                                    <p className="font-medium text-slate-800">{parsedOrder.area_roof} м²</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {parsedOrder.opts && Object.values(parsedOrder.opts).some(v => v) && (
+                            <div className="border-t border-slate-200 pt-4">
+                                <span className="text-slate-500 text-sm">🛠 Опции:</span>
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                    {parsedOrder.opts.trusses && <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Усил. фермы</span>}
+                                    {parsedOrder.opts.gutters && <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Водостоки</span>}
+                                    {parsedOrder.opts.walls && <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Зашивка</span>}
+                                    {parsedOrder.opts.found && <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Фундамент</span>}
+                                    {parsedOrder.opts.install && <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Монтаж</span>}
+                                </div>
+                            </div>
+                        )}
+
+                        {parsedOrder.gate && parsedOrder.gate.type && parsedOrder.gate.type !== 'none' && (
+                            <div className="border-t border-slate-200 pt-4">
+                                <span className="text-slate-500 text-sm">🚗 Ворота:</span>
+                                <div className="mt-2 text-sm space-y-1">
+                                    <p><span className="text-slate-600">Тип:</span> {(() => {
+                                        const gates = { sliding: 'Откатные', swing: 'Распашные', hinged: 'Навесные' };
+                                        return gates[parsedOrder.gate.type as keyof typeof gates] || parsedOrder.gate.type;
+                                    })()}</p>
+                                    <p><span className="text-slate-600">Размер:</span> {parsedOrder.gate.width}×{parsedOrder.gate.height} м</p>
+                                    <p><span className="text-slate-600">Заполнение:</span> {(() => {
+                                        const fills = { lattice: 'Решетка', solid: 'Сплошное', forged: 'Ковка', combined: 'Комби', vertical: 'Вертик. планки' };
+                                        return fills[parsedOrder.gate.filling as keyof typeof fills] || parsedOrder.gate.filling;
+                                    })()}</p>
+                                </div>
+                            </div>
+                        )}
+
                         {price && (
-                            <div className="border-t border-slate-200 mt-3 pt-3">
+                            <div className="border-t border-slate-200 pt-4">
                                 <div className="flex justify-between items-center">
-                                    <span className="font-semibold text-slate-800">Итого:</span>
-                                    <span className="text-2xl font-bold text-indigo-600">{price.toLocaleString()} ₽</span>
+                                    <span className="font-semibold text-slate-800">💰 Навес:</span>
+                                    <span className="font-bold text-indigo-600">{parsedOrder.price?.toLocaleString()} ₽</span>
+                                </div>
+                                {parsedOrder.price_gate > 0 && (
+                                    <div className="flex justify-between items-center mt-1">
+                                        <span className="font-semibold text-slate-800">🚗 Ворота:</span>
+                                        <span className="font-bold text-indigo-600">{parsedOrder.price_gate?.toLocaleString()} ₽</span>
+                                    </div>
+                                )}
+                                <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-300">
+                                    <span className="font-bold text-slate-900">💵 Итого:</span>
+                                    <span className="text-xl font-bold text-indigo-600">{(parsedOrder.price_total || parsedOrder.price)?.toLocaleString()} ₽</span>
                                 </div>
                             </div>
                         )}
@@ -295,25 +368,12 @@ ${priceStr}`;
                         <span>{sending ? 'Отправка...' : 'Отправить менеджеру'}</span>
                     </button>
 
-                    <div className="grid grid-cols-2 gap-3">
-                        <button
-                            onClick={handleDownloadDXF}
-                            className="bg-slate-100 hover:bg-slate-200 text-slate-700 p-3 rounded-xl flex items-center gap-2 justify-center font-medium transition-all"
-                        >
-                            <Download size={18} />
-                            <span className="text-sm">3D модель</span>
-                        </button>
-                        <button
-                            onClick={handleDownloadReport}
-                            className="bg-slate-100 hover:bg-slate-200 text-slate-700 p-3 rounded-xl flex items-center gap-2 justify-center font-medium transition-all"
-                        >
-                            <FileText size={18} />
-                            <span className="text-sm">Смета</span>
-                        </button>
-                    </div>
-
                     <p className="text-xs text-slate-400 text-center mt-4">
                         После отправки менеджер свяжется с вами для уточнения деталей
+                    </p>
+
+                    <p className="text-xs text-slate-500 text-center mt-2">
+                        При отправке вы соглашаетесь с <a href="#" className="text-indigo-600 hover:underline">политикой конфиденциальности</a> и <a href="#" className="text-indigo-600 hover:underline">условиями пользования</a>
                     </p>
                 </div>
             </div>
