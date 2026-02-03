@@ -113,11 +113,18 @@ const BrowserOrderModal = ({ isOpen, onClose, orderData, price, config, gateConf
             };
 
             const endpoint = (window as any).KOVKA_BOT_ENDPOINT || (import.meta as any).env?.VITE_BOT_API || 'https://kovka007bot.onrender.com';
+            console.log('📡 Sending order to:', endpoint);
+            console.log('📦 Payload:', payload);
+
             const res = await fetch(`${endpoint.replace(/\/$/, '')}/submit_order`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
             });
+
+            console.log('📡 Response status:', res.status);
+            console.log('📡 Response ok:', res.ok);
+
             if (res.ok) {
                 // Сформируем полный текст заказа для Telegram
                 const o = parsedOrder || {} as any;
@@ -192,8 +199,7 @@ ${priceStr}`;
                 // Попытки автоматически открыть Telegram с предзаполненным текстом.
                 // Браузерные ограничения не позволяют вставлять текст в чужой ввод, поэтому:
                 // 1) копируем текст в буфер обмена,
-                // 2) пробуем открыть t.me share-ссылку (предзаполнит сообщение в клиенте),
-                // 3) открываем web.telegram.org как фолбек к прямому чату администратора.
+                // 2) открываем веб-чат администратора.
                 try {
                     await navigator.clipboard.writeText(text);
                     console.log('✅ Order text copied to clipboard');
@@ -201,20 +207,11 @@ ${priceStr}`;
                     console.warn('Clipboard write failed', e);
                 }
 
-                // 1) Попытка использовать общий share URL — часто открывает диалог с текстом
-                const shareUrl = `https://t.me/share/url?url=&text=${encodeURIComponent(text)}`;
-                window.open(shareUrl, '_blank');
+                // Открываем веб-чат администратора
+                const adminChatUrl = 'https://web.telegram.org/k/#5216818742';
+                window.open(adminChatUrl, '_blank');
 
-                // 2) Фолбек: открыть веб-чат администратора
-                setTimeout(() => {
-                    try {
-                        window.open('https://web.telegram.org/k/#5216818742', '_blank');
-                    } catch (e) {
-                        console.warn('Failed to open web.telegram.org', e);
-                    }
-                }, 600);
-
-                alert('✅ Текст заказа скопирован в буфер обмена и открыт Telegram. Если сообщение не вставилось автоматически, вставьте его вручную (Ctrl+V) и отправьте.');
+                alert('✅ Заказ отправлен менеджеру!\n\nТекст заказа скопирован в буфер обмена.\nОткройте чат с менеджером и вставьте текст (Ctrl+V).');
                 onClose();
             } else {
                 const txt = await res.text();
