@@ -838,10 +838,21 @@ ${priceStr}`;
             // user_id 5216818742
             try {
                 tg.openTelegramLink('tg://user?id=5216818742');
+                // Если нативный клиент не открылся, через небольшой таймаут открываем web.telegram.org
+                setTimeout(() => {
+                    try {
+                        tg.openTelegramLink('https://web.telegram.org/k/#5216818742');
+                    } catch (e) {
+                        window.open('https://web.telegram.org/k/#5216818742', '_blank');
+                    }
+                }, 800);
             } catch (err) {
-                // Фоллбек на https если tg:// не сработает
-                console.warn('openTelegramLink tg:// failed, falling back to https', err);
-                tg.openTelegramLink('https://t.me/5216818742');
+                console.warn('openTelegramLink tg:// failed, falling back to web.telegram.org', err);
+                try {
+                    tg.openTelegramLink('https://web.telegram.org/k/#5216818742');
+                } catch (e) {
+                    window.open('https://web.telegram.org/k/#5216818742', '_blank');
+                }
             }
             // Показываем уведомление
             setTimeout(() => {
