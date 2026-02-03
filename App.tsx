@@ -240,9 +240,41 @@ ${priceStr}`;
                     </button>
                 </div>
 
+                <div className="space-y-3">
+                    <div className="space-y-2">
+                        <label className="text-sm text-slate-600">Ваше имя</label>
+                        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Иван Иванов" className="w-full border border-slate-200 rounded-xl px-3 py-2" />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm text-slate-600">Телефон</label>
+                        <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+7 (___) ___-__-__" className="w-full border border-slate-200 rounded-xl px-3 py-2" />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm text-slate-600">Комментарий менеджеру</label>
+                        <textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Дополнительные пожелания" className="w-full border border-slate-200 rounded-xl px-3 py-2 h-24 resize-none" />
+                    </div>
+
+                    <button
+                        onClick={handleSend}
+                        disabled={sending}
+                        className="w-full bg-slate-900 hover:bg-slate-800 text-white p-4 rounded-xl flex items-center gap-3 justify-center font-bold shadow-lg transition-all active:scale-[0.98] disabled:opacity-50"
+                    >
+                        <Send size={20} />{" "}
+                        <span>{sending ? 'Отправка...' : 'Отправить менеджеру'}</span>
+                    </button>
+
+                    <p className="text-xs text-slate-400 text-center mt-4">
+                        После отправки менеджер свяжется с вами для уточнения деталей
+                    </p>
+
+                    <p className="text-xs text-slate-500 text-center mt-2">
+                        При отправке вы соглашаетесь с <a href="#" className="text-indigo-600 hover:underline">политикой конфиденциальности</a> и <a href="#" className="text-indigo-600 hover:underline">условиями пользования</a>
+                    </p>
+                </div>
+
                 {/* Подробная сводка заказа */}
                 {parsedOrder && config && (
-                    <div className="bg-slate-50 rounded-xl p-4 mb-6 space-y-4">
+                    <div className="bg-slate-50 rounded-xl p-4 mt-6 space-y-4">
                         <h4 className="font-semibold text-slate-700 mb-3">📋 Детали заказа:</h4>
 
                         <div className="grid grid-cols-2 gap-4 text-sm">
@@ -295,11 +327,11 @@ ${priceStr}`;
                             <div className="border-t border-slate-200 pt-4">
                                 <span className="text-slate-500 text-sm">🛠 Опции:</span>
                                 <div className="flex flex-wrap gap-2 mt-2">
-                                    {parsedOrder.opts.trusses && <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Усил. фермы</span>}
-                                    {parsedOrder.opts.gutters && <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Водостоки</span>}
-                                    {parsedOrder.opts.walls && <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Зашивка</span>}
-                                    {parsedOrder.opts.found && <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Фундамент</span>}
-                                    {parsedOrder.opts.install && <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Монтаж</span>}
+                                    {parsedOrder.opts.trusses && <span className="bg-slate-200 text-slate-700 text-xs px-2 py-1 rounded">Усил. фермы</span>}
+                                    {parsedOrder.opts.gutters && <span className="bg-slate-200 text-slate-700 text-xs px-2 py-1 rounded">Водостоки</span>}
+                                    {parsedOrder.opts.walls && <span className="bg-slate-200 text-slate-700 text-xs px-2 py-1 rounded">Зашивка</span>}
+                                    {parsedOrder.opts.found && <span className="bg-slate-200 text-slate-700 text-xs px-2 py-1 rounded">Фундамент</span>}
+                                    {parsedOrder.opts.install && <span className="bg-slate-200 text-slate-700 text-xs px-2 py-1 rounded">Монтаж</span>}
                                 </div>
                             </div>
                         )}
@@ -325,54 +357,22 @@ ${priceStr}`;
                             <div className="border-t border-slate-200 pt-4">
                                 <div className="flex justify-between items-center">
                                     <span className="font-semibold text-slate-800">💰 Навес:</span>
-                                    <span className="font-bold text-indigo-600">{parsedOrder.price?.toLocaleString()} ₽</span>
+                                    <span className="font-bold text-slate-900">{parsedOrder.price?.toLocaleString()} ₽</span>
                                 </div>
                                 {parsedOrder.price_gate > 0 && (
                                     <div className="flex justify-between items-center mt-1">
                                         <span className="font-semibold text-slate-800">🚗 Ворота:</span>
-                                        <span className="font-bold text-indigo-600">{parsedOrder.price_gate?.toLocaleString()} ₽</span>
+                                        <span className="font-bold text-slate-900">{parsedOrder.price_gate?.toLocaleString()} ₽</span>
                                     </div>
                                 )}
                                 <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-300">
                                     <span className="font-bold text-slate-900">💵 Итого:</span>
-                                    <span className="text-xl font-bold text-indigo-600">{(parsedOrder.price_total || parsedOrder.price)?.toLocaleString()} ₽</span>
+                                    <span className="text-xl font-bold text-slate-900">{(parsedOrder.price_total || parsedOrder.price)?.toLocaleString()} ₽</span>
                                 </div>
                             </div>
                         )}
                     </div>
                 )}
-
-                <div className="space-y-3">
-                    <div className="space-y-2">
-                        <label className="text-sm text-slate-600">Ваше имя</label>
-                        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Иван Иванов" className="w-full border border-slate-200 rounded-xl px-3 py-2" />
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-sm text-slate-600">Телефон</label>
-                        <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+7 (___) ___-__-__" className="w-full border border-slate-200 rounded-xl px-3 py-2" />
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-sm text-slate-600">Комментарий менеджеру</label>
-                        <textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Дополнительные пожелания" className="w-full border border-slate-200 rounded-xl px-3 py-2 h-24 resize-none" />
-                    </div>
-
-                    <button
-                        onClick={handleSend}
-                        disabled={sending}
-                        className="w-full bg-[#2AABEE] hover:bg-[#229ED9] text-white p-4 rounded-xl flex items-center gap-3 justify-center font-bold shadow-lg transition-all active:scale-[0.98] disabled:opacity-50"
-                    >
-                        <Send size={20} />{" "}
-                        <span>{sending ? 'Отправка...' : 'Отправить менеджеру'}</span>
-                    </button>
-
-                    <p className="text-xs text-slate-400 text-center mt-4">
-                        После отправки менеджер свяжется с вами для уточнения деталей
-                    </p>
-
-                    <p className="text-xs text-slate-500 text-center mt-2">
-                        При отправке вы соглашаетесь с <a href="#" className="text-indigo-600 hover:underline">политикой конфиденциальности</a> и <a href="#" className="text-indigo-600 hover:underline">условиями пользования</a>
-                    </p>
-                </div>
             </div>
         </div>
     );
