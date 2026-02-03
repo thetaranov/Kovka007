@@ -834,9 +834,15 @@ ${priceStr}`;
         // Если есть Telegram WebApp - используем openTelegramLink для открытия чата с админом
         if (tg && typeof tg.openTelegramLink === 'function') {
             console.log('📱 Using Telegram openTelegramLink to open admin chat');
-            // Открываем чат с админом через tg:// ссылку
-            // user_id 5216818742 = @имя_админа
-            tg.openTelegramLink('https://t.me/taranov_official');
+            // Открываем чат с админом по user_id (numeric)
+            // user_id 5216818742
+            try {
+                tg.openTelegramLink('tg://user?id=5216818742');
+            } catch (err) {
+                // Фоллбек на https если tg:// не сработает
+                console.warn('openTelegramLink tg:// failed, falling back to https', err);
+                tg.openTelegramLink('https://t.me/5216818742');
+            }
             // Показываем уведомление
             setTimeout(() => {
                 tg.showPopup?.({
