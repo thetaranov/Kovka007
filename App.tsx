@@ -644,7 +644,7 @@ export default function App() {
         console.log(`📱 Telegram WebApp version: ${tg?.version || 'N/A'}`);
         console.log(`📱 Platform: ${tg?.platform || 'N/A'}`);
         console.log(`📱 initData present: ${!!tg?.initData}`);
-        console.log(`📱 initData length: ${tg?.initData?.length || 0}`);
+        console.log(`📱 initDataUnsafe:`, tg?.initDataUnsafe);
         
         // Проверяем есть ли вообще Telegram WebApp
         if (!tg) {
@@ -654,12 +654,34 @@ export default function App() {
             return;
         }
         
-        // Проверяем доступность sendData
-        if (typeof tg.sendData !== 'function') {
-            console.warn("⚠️ sendData not available - likely opened from inline button or menu");
-            tg.showAlert?.("Для отправки заказа откройте конструктор через кнопку '🏗 Открыть конструктор' в боте.");
-            setOrderJson(JSON.stringify(getOrderPayload({ includeCad: true })));
-            setShowBrowserOrderModal(true);
+        // Проверяем доступность sendData и был ли запуск через keyboard button
+        // sendData работает ТОЛЬКО при запуске через KeyboardButton с web_app
+        const canUseSendData = typeof tg.sendData === 'function';
+        // Если есть query_id - это inline/menu button, sendData не сработает
+        const initDataUnsafe = tg.initDataUnsafe as any;
+        const isInlineMode = !!initDataUnsafe?.query_id;
+        
+        console.log(`📱 canUseSendData: ${canUseSendData}, isInlineMode: ${isInlineMode}`);
+        
+        if (!canUseSendData || isInlineMode) {
+            console.warn("⚠️ sendData not available in this mode");
+            // Сохраняем в CloudStorage если доступно
+            const cloudStorage = (tg as any).CloudStorage;
+            if (cloudStorage) {
+                cloudStorage.setItem('pending_order', dataToSend, (err: any) => {
+                    if (err) {
+                        console.error("CloudStorage error:", err);
+                    } else {
+                        console.log("✅ Order saved to CloudStorage");
+                    }
+                });
+            }
+            // Показываем инструкцию
+            tg.showPopup?.({
+                title: "Как оформить заказ",
+                message: "Для оформления заказа:\n\n1. Закройте это окно\n2. Нажмите кнопку '🏗 Открыть конструктор' в чате с ботом\n3. Нажмите 'Оформить заказ'\n\nВаш проект сохранён!",
+                buttons: [{ type: "close", text: "Понятно" }]
+            });
             return;
         }
         

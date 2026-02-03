@@ -39,7 +39,7 @@ function Loader() {
 
 export const Scene: React.FC<SceneProps> = ({ config, gateConfig }) => {
   const [resetKey, setResetKey] = useState(0);
-  const [isDesktop, setIsDesktop] = useState(typeof window !== 'undefined' && window.innerWidth >= 1024);
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 640);
   const containerRef = useRef<HTMLDivElement>(null);
   const controlsRef = useRef<any>(null);
   const [cameraMode, setCameraMode] = useState<"perspective" | "orthographic">("perspective");
@@ -67,7 +67,7 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig }) => {
   // Отслеживаем размер окна для показа Gizmo
   useEffect(() => {
     const handleResize = () => {
-      setIsDesktop(window.innerWidth >= 1024);
+      setIsMobile(window.innerWidth < 640);
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -295,8 +295,8 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig }) => {
             touches={{ ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN }}
             ref={controlsRef}
           />
-          {/* Gizmo только для десктопа, в правом нижнем углу */}
-          {isDesktop && (
+          {/* Gizmo - скрываем на маленьких мобильных, на десктопе в правом нижнем углу */}
+          {!isMobile && (
             <GizmoHelper alignment="bottom-right" margin={[80, 100]}>
               <GizmoViewport
                 axisColors={["#ef4444", "#3b82f6", "#22c55e"]}
