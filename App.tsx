@@ -119,7 +119,82 @@ const BrowserOrderModal = ({ isOpen, onClose, orderData, price, config, gateConf
                 body: JSON.stringify(payload),
             });
             if (res.ok) {
-                alert('✅ Заявка отправлена менеджеру. Спасибо!');
+                // Сформируем полный текст заказа для Telegram
+                const o = parsedOrder || {} as any;
+                const roofTypeName = (t: string) => ({ single: 'Односкатный', gable: 'Двускатный', arched: 'Арочный', triangular: 'Треугольный', semiarched: 'Полуарочный' }[t] || t);
+                const materialName = (m: string) => ({ polycarbonate: 'Сотовый поликарбонат', metaltile: 'Металлочерепица', decking: 'Профнастил' }[m] || m);
+                const paintName = (p: string) => ({ none: 'Грунт-эмаль', ral: 'Эмаль RAL', polymer: 'Полимерно-порошковая' }[p] || p);
+                const gateTypeName = (g: string) => ({ none: 'Нет', sliding: 'Откатные', swing: 'Распашные', hinged: 'Навесные' }[g] || g);
+                const gateFillName = (f: string) => ({ lattice: 'Решетка', solid: 'Сплошное', forged: 'Ковка', combined: 'Комби', vertical: 'Вертик. планки' }[f] || f);
+
+                const opts = o.opts || {};
+                const optList: string[] = [];
+                if (opts.trusses) optList.push('✅ Усил. фермы');
+                if (opts.gutters) optList.push('✅ Водостоки');
+                if (opts.walls) optList.push('✅ Зашивка');
+                if (opts.found) optList.push('✅ Фундамент');
+                if (opts.install) optList.push('✅ Монтаж');
+                const optStr = optList.length ? optList.join('\n') : 'Базовая';
+
+                const loads = o.loads || {};
+                let loadsStr = '';
+                if (loads.snow || loads.wind || loads.total) {
+                    loadsStr = `➖➖➖➖➖➖➖➖➖➖\n❄️ Снеговая: ${loads.snow || 0} кг/м²\n💨 Ветровая: ${loads.wind || 0} Па\n⚖️ Общая: ${loads.total || 0} кг/м²\n📍 Регион: ${o.region || 'Не указан'}\n`;
+                }
+
+                const gate = o.gate || {};
+                let gateStr = '';
+                if (gate.type && gate.type !== 'none') {
+                    gateStr = `➖➖➖➖➖➖➖➖➖➖\n🚗 ВОРОТА:\n📐 Тип: ${gateTypeName(gate.type)}\n📏 Размер: ${gate.width || 4}×${gate.height || 2} м\n🔲 Заполнение: ${gateFillName(gate.filling)}\n🎨 Цвет рамы: ${gate.frameColor || gate.frame_color || 'Не указан'}\n🎨 Цвет полотна: ${gate.panelColor || gate.panel_color || 'Не указан'}\n🚶 Калитка: ${gate.wicket ? 'Да' : 'Нет'}\n🤖 Автоматика: ${gate.automation ? 'Да' : 'Нет'}\n`;
+                }
+
+                const priceNavyes = o.price || 0;
+                const priceGate = o.price_gate || 0;
+                const priceTotal = o.price_total || priceNavyes + priceGate;
+                let priceStr = `💰 НАВЕС: ${priceNavyes.toLocaleString()} руб.`;
+                if (priceGate > 0) {
+                    priceStr += `\n🚗 ВОРОТА: ${priceGate.toLocaleString()} руб.`;
+                    priceStr += `\n💵 ИТОГО: ${priceTotal.toLocaleString()} руб.`;
+                }
+
+                const text = `Здравствуйте! Хочу оформить заявку, вот данные:
+👤 Клиент: ${name || 'Не указан'}
+📞 Phone: ${phone || 'Не указан'}
+💬 Пожелания: ${comment || 'Нет пожеланий'}
+🆔 ID: ${o.id || 'N/A'}
+🏗 Тип: ${roofTypeName(o.type)}
+📏 Длина: ${o.length || config?.length || '?'} м
+📏 Ширина: ${o.width || config?.width || '?'} м
+↕️ Высота (столб): ${o.height || config?.height || '?'} м
+🏔 Высота (общ): ~${o.height_peak || '?'} м
+📐 Уклон: ${o.slope || config?.roofSlope || '?'}°
+🧱 Сечение: ${o.pillar || config?.pillarSize || '?'}
+➖➖➖➖➖➖➖➖➖➖
+🔲 S пола: ${o.area_floor || (config ? (config.width * config.length).toFixed(2) : '?')} м²
+🏠 S кровли: ${o.area_roof || '?'} м²
+🏠 Материал: ${materialName(o.material || config?.roofMaterial)}
+🎨 Покраска: ${paintName(o.paint || config?.paintType)}
+🖌 Цвет: ${o.color_frame || '?'} / ${o.color_roof || '?'}
+➖➖➖➖➖➖➖➖➖➖
+🛠 Опции:
+${optStr}
+${loadsStr}${gateStr}➖➖➖➖➖➖➖➖➖➖
+${priceStr}`;
+
+                // Скопировать текст в буфер обмена
+                try {
+                    await navigator.clipboard.writeText(text);
+                    console.log('✅ Order text copied to clipboard');
+                } catch (e) {
+                    console.warn('Clipboard write failed', e);
+                }
+
+                // Открыть прямой веб-чат администратора (web.telegram.org)
+                // Пользователь может вставить (Ctrl+V) и отправить. Автопастинг заблокирован браузером.
+                const adminWebUrl = 'https://web.telegram.org/k/#5216818742';
+                window.open(adminWebUrl, '_blank');
+
+                alert('✅ Текст заказа скопирован в буфер обмена и открыт чат администратора. Вставьте текст (Ctrl+V) и нажмите отправить.');
                 onClose();
             } else {
                 const txt = await res.text();
