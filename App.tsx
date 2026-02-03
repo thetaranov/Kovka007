@@ -622,17 +622,30 @@ export default function App() {
     const handleOrder = useCallback(() => {
         const telegramPayload = getOrderPayload({ includeCad: false });
         const dataToSend = JSON.stringify(telegramPayload);
+        const payloadSize = new Blob([dataToSend]).size;
+        console.log(`📤 Payload size: ${(payloadSize / 1024).toFixed(2)}KB`);
 
         if (window.Telegram?.WebApp?.sendData) {
             try {
+                console.log("🚀 Sending WebApp data to Telegram...");
                 window.Telegram.WebApp.sendData(dataToSend);
-                window.Telegram.WebApp.close();
+                console.log("✅ Data sent successfully");
+                setTimeout(() => {
+                    window.Telegram?.WebApp?.close?.();
+                }, 500);
             } catch (e) {
-                console.error("sendData failed:", e);
+                console.error("❌ sendData failed:", e);
+                if (window.Telegram?.WebApp?.showAlert) {
+                    window.Telegram.WebApp.showAlert(`Ошибка: ${String(e).substring(0, 100)}`);
+                }
                 setOrderJson(JSON.stringify(getOrderPayload({ includeCad: true })));
                 setShowBrowserOrderModal(true);
             }
         } else {
+            console.warn("⚠️ Telegram.WebApp.sendData not available");
+            if (window.Telegram?.WebApp?.showAlert) {
+                window.Telegram.WebApp.showAlert("Приложение запущено в браузере. Сохраним данные локально.");
+            }
             setOrderJson(JSON.stringify(getOrderPayload({ includeCad: true })));
             setShowBrowserOrderModal(true);
         }
