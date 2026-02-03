@@ -295,8 +295,18 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig }) => {
             touches={{ ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN }}
             ref={controlsRef}
           />
-          {/* Gizmo - скрываем на маленьких мобильных, на десктопе в правом нижнем углу */}
-          {!isMobile && (
+          {/* Gizmo: показываем на всех устройствах; на маленьких мобильных (isMobile) — компактный в правом верхнем углу, на больших — правый нижний */}
+          {isMobile ? (
+            <GizmoHelper alignment="top-right" margin={[12, 12]}>
+              <GizmoViewport
+                axisColors={["#ef4444", "#3b82f6", "#22c55e"]}
+                labels={["X", "Z", "Y"]}
+                labelColor="#0f172a"
+                hideNegativeAxes={false}
+                className="scale-50"
+              />
+            </GizmoHelper>
+          ) : (
             <GizmoHelper alignment="bottom-right" margin={[80, 100]}>
               <GizmoViewport
                 axisColors={["#ef4444", "#3b82f6", "#22c55e"]}
