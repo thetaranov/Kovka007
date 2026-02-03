@@ -80,16 +80,10 @@ const INITIAL_GATE: GateConfig = {
 const BrowserOrderModal = ({ isOpen, onClose, orderData, price, config, gateConfig }: any) => {
     if (!isOpen) return null;
 
-    const handleCopy = () => {
-        if (navigator.clipboard) {
-            navigator.clipboard.writeText(orderData).then(() => {
-                alert("Скопировано! Отправьте этот код боту.");
-                window.open("https://t.me/Kovka007bot", "_blank");
-            });
-        } else {
-            prompt("Скопируйте код:", orderData);
-        }
-    };
+    const [name, setName] = useState<string>("");
+    const [phone, setPhone] = useState<string>("");
+    const [comment, setComment] = useState<string>("");
+    const [sending, setSending] = useState(false);
 
     const handleDownloadDXF = () => {
         if (config) downloadDXF(config, gateConfig);
@@ -97,6 +91,47 @@ const BrowserOrderModal = ({ isOpen, onClose, orderData, price, config, gateConf
 
     const handleDownloadReport = () => {
         if (config && price) downloadReport(config, price);
+    };
+
+    const parsedOrder = (() => {
+        try {
+            return orderData ? JSON.parse(orderData) : null;
+        } catch (e) {
+            return null;
+        }
+    })();
+
+    const handleSend = async () => {
+        if (sending) return;
+        setSending(true);
+        try {
+            const payload = {
+                ...(parsedOrder || {}),
+                name,
+                phone,
+                comment,
+            };
+
+            const endpoint = (window as any).KOVKA_BOT_ENDPOINT || (import.meta as any).env?.VITE_BOT_API || 'https://kovka007bot.onrender.com';
+            const res = await fetch(`${endpoint.replace(/\/$/, '')}/submit_order`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            if (res.ok) {
+                alert('✅ Заявка отправлена менеджеру. Спасибо!');
+                onClose();
+            } else {
+                const txt = await res.text();
+                console.error('Order submit failed', txt);
+                alert('Ошибка отправки. Пожалуйста, скопируйте данные и отправьте вручную.');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Ошибка соединения. Попробуйте позже.');
+        } finally {
+            setSending(false);
+        }
     };
 
     return (
@@ -112,10 +147,10 @@ const BrowserOrderModal = ({ isOpen, onClose, orderData, price, config, gateConf
                         <X size={20} />
                     </button>
                 </div>
-                
+
                 {/* Сводка заказа */}
                 {config && (
-                    <div className="bg-slate-50 rounded-xl p-4 mb-6">
+                    <div className="bg-slate-50 rounded-xl p-4 mb-4">
                         <h4 className="font-semibold text-slate-700 mb-3">Ваш проект:</h4>
                         <div className="space-y-2 text-sm text-slate-600">
                             <div className="flex justify-between">
@@ -143,14 +178,28 @@ const BrowserOrderModal = ({ isOpen, onClose, orderData, price, config, gateConf
                 )}
 
                 <div className="space-y-3">
+                    <div className="space-y-2">
+                        <label className="text-sm text-slate-600">Ваше имя</label>
+                        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Иван Иванов" className="w-full border border-slate-200 rounded-xl px-3 py-2" />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm text-slate-600">Телефон</label>
+                        <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+7 (___) ___-__-__" className="w-full border border-slate-200 rounded-xl px-3 py-2" />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm text-slate-600">Комментарий менеджеру</label>
+                        <textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Дополнительные пожелания" className="w-full border border-slate-200 rounded-xl px-3 py-2 h-24 resize-none" />
+                    </div>
+
                     <button
-                        onClick={handleCopy}
-                        className="w-full bg-[#2AABEE] hover:bg-[#229ED9] text-white p-4 rounded-xl flex items-center gap-3 justify-center font-bold shadow-lg transition-all active:scale-[0.98]"
+                        onClick={handleSend}
+                        disabled={sending}
+                        className="w-full bg-[#2AABEE] hover:bg-[#229ED9] text-white p-4 rounded-xl flex items-center gap-3 justify-center font-bold shadow-lg transition-all active:scale-[0.98] disabled:opacity-50"
                     >
                         <Send size={20} />{" "}
-                        <span>Отправить в Telegram</span>
+                        <span>{sending ? 'Отправка...' : 'Отправить менеджеру'}</span>
                     </button>
-                    
+
                     <div className="grid grid-cols-2 gap-3">
                         <button
                             onClick={handleDownloadDXF}
@@ -167,7 +216,7 @@ const BrowserOrderModal = ({ isOpen, onClose, orderData, price, config, gateConf
                             <span className="text-sm">Смета</span>
                         </button>
                     </div>
-                    
+
                     <p className="text-xs text-slate-400 text-center mt-4">
                         После отправки менеджер свяжется с вами для уточнения деталей
                     </p>
