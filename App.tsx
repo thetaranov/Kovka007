@@ -18,24 +18,71 @@ import { PRICING, FRAME_COLORS, ROOF_COLORS, SPECS } from "./constants";
 import { calculateLoads, CITY_REGIONS, TerrainType } from "./utils/snowWindLoad";
 import { downloadDXF, downloadBOM, downloadReport, generateDXFBase64, generateOrderId, downloadOBJ, downloadDXFProjection } from "./utils/exportUtils";
 import {
-    Menu,
     X,
     FileText,
     Globe,
     TrendingDown,
     Send,
-    Copy,
     Settings2,
     Download,
     Car,
     Home,
     Calculator,
-    MapPin,
     AlertTriangle,
     CheckCircle2,
     ChevronRight,
     Layers,
+    Shield,
 } from "lucide-react";
+
+// ==================== SECURITY UTILITIES ====================
+
+const sanitizeInput = (input: string): string => {
+    if (!input || typeof input !== 'string') return '';
+    return input
+        .replace(/[<>]/g, '')
+        .replace(/javascript:/gi, '')
+        .replace(/on\w+=/gi, '')
+        .replace(/[\x00-\x1f\x7f]/g, '')
+        .trim()
+        .slice(0, 500);
+};
+
+const validatePhone = (phone: string): boolean => {
+    const cleaned = phone.replace(/[\s\-\(\)]/g, '');
+    return /^(\+7|8)?[0-9]{10}$/.test(cleaned);
+};
+
+const validateName = (name: string): boolean => {
+    return /^[a-zA-Zа-яА-ЯёЁ\s\-]{2,100}$/.test(name);
+};
+
+const generateCSRFToken = (): string => {
+    const array = new Uint8Array(32);
+    crypto.getRandomValues(array);
+    return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+};
+
+const rateLimitState = { lastSubmit: 0, submitCount: 0, resetTime: 0 };
+const checkRateLimit = (): boolean => {
+    const now = Date.now();
+    if (now > rateLimitState.resetTime) {
+        rateLimitState.submitCount = 0;
+        rateLimitState.resetTime = now + 60000;
+    }
+    if (rateLimitState.submitCount >= 3) return false;
+    if (now - rateLimitState.lastSubmit < 5000) return false;
+    rateLimitState.lastSubmit = now;
+    rateLimitState.submitCount++;
+    return true;
+};
+
+// ==================== ENVIRONMENT DETECTION ====================
+
+const isTelegramWebApp = (): boolean => {
+    const tg = window.Telegram?.WebApp;
+    return !!(tg && tg.initData && tg.initData.length > 0);
+};
 
 const INITIAL_CONFIG: CarportConfig = {
     width: 4.5,
@@ -76,301 +123,199 @@ const INITIAL_GATE: GateConfig = {
     openDirection: "left",
 };
 
-// Модальное окно для браузера
-const BrowserOrderModal = ({ isOpen, onClose, orderData, price, config, gateConfig }: any) => {
+// ==================== POLICY PAGES ====================
+
+const PrivacyPolicyPage: React.FC<{ onClose: () => void }> = ({ onClose }) => (
+    <div className="fixed inset-0 z-[200] bg-slate-900 overflow-y-auto">
+        <div className="max-w-3xl mx-auto px-6 py-8">
+            <button onClick={onClose} className="mb-6 text-slate-400 hover:text-white flex items-center gap-2">
+                <ChevronRight className="rotate-180" size={20} />Назад
+            </button>
+            <h1 className="text-3xl font-bold text-white mb-6">Политика конфиденциальности</h1>
+            <div className="prose prose-invert max-w-none text-slate-300 space-y-6">
+                <p className="text-slate-400">Последнее обновление: {new Date().toLocaleDateString('ru-RU')}</p>
+                <section><h2 className="text-xl font-semibold text-white mt-8 mb-4">1. Общие положения</h2><p>Настоящая политика конфиденциальности определяет порядок обработки и защиты персональных данных пользователей сервиса конфигуратора навесов Kovka007.</p></section>
+                <section><h2 className="text-xl font-semibold text-white mt-8 mb-4">2. Собираемые данные</h2><ul className="list-disc pl-6 space-y-2"><li>Имя и контактный телефон для связи</li><li>Комментарии и пожелания к заказу</li><li>Технические данные о конфигурации навеса</li></ul></section>
+                <section><h2 className="text-xl font-semibold text-white mt-8 mb-4">3. Цели обработки</h2><ul className="list-disc pl-6 space-y-2"><li>Обработка и выполнение заказов</li><li>Связь для уточнения деталей</li><li>Улучшение качества сервиса</li></ul></section>
+                <section><h2 className="text-xl font-semibold text-white mt-8 mb-4">4. Безопасность</h2><p>Мы принимаем все необходимые меры для защиты ваших данных. Передача осуществляется по защищенному протоколу HTTPS.</p></section>
+                <section><h2 className="text-xl font-semibold text-white mt-8 mb-4">5. Ваши права</h2><ul className="list-disc pl-6 space-y-2"><li>Получать информацию о своих данных</li><li>Требовать исправления или удаления</li><li>Отозвать согласие на обработку</li></ul></section>
+            </div>
+        </div>
+    </div>
+);
+
+const TermsOfUsePage: React.FC<{ onClose: () => void }> = ({ onClose }) => (
+    <div className="fixed inset-0 z-[200] bg-slate-900 overflow-y-auto">
+        <div className="max-w-3xl mx-auto px-6 py-8">
+            <button onClick={onClose} className="mb-6 text-slate-400 hover:text-white flex items-center gap-2">
+                <ChevronRight className="rotate-180" size={20} />Назад
+            </button>
+            <h1 className="text-3xl font-bold text-white mb-6">Условия использования</h1>
+            <div className="prose prose-invert max-w-none text-slate-300 space-y-6">
+                <p className="text-slate-400">Последнее обновление: {new Date().toLocaleDateString('ru-RU')}</p>
+                <section><h2 className="text-xl font-semibold text-white mt-8 mb-4">1. Описание сервиса</h2><p>Kovka007 предоставляет онлайн-инструмент для конфигурации и расчета стоимости навесов. Все расчеты носят ориентировочный характер.</p></section>
+                <section><h2 className="text-xl font-semibold text-white mt-8 mb-4">2. Использование</h2><ul className="list-disc pl-6 space-y-2"><li>Предоставлять достоверную информацию</li><li>Не использовать сервис для незаконных целей</li><li>Соблюдать правила хорошего тона</li></ul></section>
+                <section><h2 className="text-xl font-semibold text-white mt-8 mb-4">3. Оформление заказа</h2><p>Окончательная цена и сроки определяются после согласования с менеджером.</p></section>
+                <section><h2 className="text-xl font-semibold text-white mt-8 mb-4">4. Ответственность</h2><p>Сервис не несет ответственности за неточности, вызванные некорректными входными данными.</p></section>
+            </div>
+        </div>
+    </div>
+);
+
+// ==================== SUCCESS SCREEN ====================
+
+const OrderSuccessScreen: React.FC<{ onClose: () => void; orderId: string }> = ({ onClose, orderId }) => (
+    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div className="bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md p-8 text-center border border-slate-700">
+            <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <CheckCircle2 size={48} className="text-green-500" />
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-3">Заявка отправлена!</h2>
+            <p className="text-slate-400 mb-2">Номер заявки: <span className="text-white font-mono">{orderId}</span></p>
+            <p className="text-slate-400 mb-6">Наш менеджер свяжется с вами в ближайшее время.</p>
+            <div className="bg-slate-700/50 rounded-xl p-4 mb-6">
+                <p className="text-sm text-slate-300">📞 Обычно отвечаем в течение 30 минут в рабочее время</p>
+            </div>
+            <button onClick={onClose} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl transition-colors">Понятно</button>
+        </div>
+    </div>
+);
+
+// ==================== BROWSER ORDER MODAL (SECURE) ====================
+
+interface BrowserOrderModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    orderData: string;
+    price: number;
+    config: CarportConfig;
+    gateConfig: GateConfig;
+    onSuccess: (orderId: string) => void;
+    onShowPrivacy: () => void;
+    onShowTerms: () => void;
+}
+
+const BrowserOrderModal: React.FC<BrowserOrderModalProps> = ({
+    isOpen, onClose, orderData, config, onSuccess, onShowPrivacy, onShowTerms
+}) => {
+    const [name, setName] = useState("");
+    const [phone, setPhone] = useState("");
+    const [comment, setComment] = useState("");
+    const [sending, setSending] = useState(false);
+    const [errors, setErrors] = useState<{ name?: string; phone?: string }>({});
+    const [csrfToken] = useState(() => generateCSRFToken());
+
     if (!isOpen) return null;
 
-    const [name, setName] = useState<string>("");
-    const [phone, setPhone] = useState<string>("");
-    const [comment, setComment] = useState<string>("");
-    const [sending, setSending] = useState<boolean>(false);
+    const parsedOrder = useMemo(() => {
+        try { return orderData ? JSON.parse(orderData) : null; }
+        catch { return null; }
+    }, [orderData]);
 
-    const handleDownloadDXF = () => {
-        if (config) downloadDXF(config, gateConfig);
+    const validateForm = (): boolean => {
+        const newErrors: { name?: string; phone?: string } = {};
+        const sanitizedName = sanitizeInput(name);
+        if (!sanitizedName) newErrors.name = "Введите имя";
+        else if (!validateName(sanitizedName)) newErrors.name = "Некорректное имя";
+        const sanitizedPhone = sanitizeInput(phone);
+        if (!sanitizedPhone) newErrors.phone = "Введите телефон";
+        else if (!validatePhone(sanitizedPhone)) newErrors.phone = "Некорректный формат";
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
     };
-
-    const handleDownloadReport = () => {
-        if (config && price) downloadReport(config, price);
-    };
-
-    const parsedOrder = (() => {
-        try {
-            return orderData ? JSON.parse(orderData) : null;
-        } catch (e) {
-            return null;
-        }
-    })();
 
     const handleSend = async () => {
         if (sending) return;
+        if (!validateForm()) return;
+        if (!checkRateLimit()) { alert('Слишком много запросов. Подождите.'); return; }
+
         setSending(true);
         try {
             const payload = {
                 ...(parsedOrder || {}),
-                name,
-                phone,
-                comment,
+                name: sanitizeInput(name),
+                phone: sanitizeInput(phone),
+                comment: sanitizeInput(comment),
+                csrf_token: csrfToken,
+                timestamp: Date.now(),
+                source: 'browser'
             };
 
             const endpoint = (window as any).KOVKA_BOT_ENDPOINT || (import.meta as any).env?.VITE_BOT_API || 'https://kovka007bot.onrender.com';
-            console.log('📡 Sending order to:', endpoint);
-            console.log('📦 Payload:', payload);
-
             const res = await fetch(`${endpoint.replace(/\/$/, '')}/submit_order`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
                 body: JSON.stringify(payload),
             });
 
-            console.log('📡 Response status:', res.status);
-            console.log('📡 Response ok:', res.ok);
-
             if (res.ok) {
-                // Сформируем полный текст заказа для Telegram
-                const o = parsedOrder || {} as any;
-                const roofTypeName = (t: string) => ({ single: 'Односкатный', gable: 'Двускатный', arched: 'Арочный', triangular: 'Треугольный', semiarched: 'Полуарочный' }[t] || t);
-                const materialName = (m: string) => ({ polycarbonate: 'Сотовый поликарбонат', metaltile: 'Металлочерепица', decking: 'Профнастил' }[m] || m);
-                const paintName = (p: string) => ({ none: 'Грунт-эмаль', ral: 'Эмаль RAL', polymer: 'Полимерно-порошковая' }[p] || p);
-                const gateTypeName = (g: string) => ({ none: 'Нет', sliding: 'Откатные', swing: 'Распашные', hinged: 'Навесные' }[g] || g);
-                const gateFillName = (f: string) => ({ lattice: 'Решетка', solid: 'Сплошное', forged: 'Ковка', combined: 'Комби', vertical: 'Вертик. планки' }[f] || f);
-
-                const opts = o.opts || {};
-                const optList: string[] = [];
-                if (opts.trusses) optList.push('✅ Усил. фермы');
-                if (opts.gutters) optList.push('✅ Водостоки');
-                if (opts.walls) optList.push('✅ Зашивка');
-                if (opts.found) optList.push('✅ Фундамент');
-                if (opts.install) optList.push('✅ Монтаж');
-                const optStr = optList.length ? optList.join('\n') : 'Базовая';
-
-                const loads = o.loads || {};
-                let loadsStr = '';
-                if (loads.snow || loads.wind || loads.total) {
-                    loadsStr = `➖➖➖➖➖➖➖➖➖➖\n❄️ Снеговая: ${loads.snow || 0} кг/м²\n💨 Ветровая: ${loads.wind || 0} Па\n⚖️ Общая: ${loads.total || 0} кг/м²\n📍 Регион: ${o.region || 'Не указан'}\n`;
-                }
-
-                const gate = o.gate || {};
-                let gateStr = '';
-                if (gate.type && gate.type !== 'none') {
-                    gateStr = `➖➖➖➖➖➖➖➖➖➖\n🚗 ВОРОТА:\n📐 Тип: ${gateTypeName(gate.type)}\n📏 Размер: ${gate.width || 4}×${gate.height || 2} м\n🔲 Заполнение: ${gateFillName(gate.filling)}\n🎨 Цвет рамы: ${gate.frameColor || gate.frame_color || 'Не указан'}\n🎨 Цвет полотна: ${gate.panelColor || gate.panel_color || 'Не указан'}\n🚶 Калитка: ${gate.wicket ? 'Да' : 'Нет'}\n🤖 Автоматика: ${gate.automation ? 'Да' : 'Нет'}\n`;
-                }
-
-                const priceNavyes = o.price || 0;
-                const priceGate = o.price_gate || 0;
-                const priceTotal = o.price_total || priceNavyes + priceGate;
-                let priceStr = `💰 НАВЕС: ${priceNavyes.toLocaleString()} руб.`;
-                if (priceGate > 0) {
-                    priceStr += `\n🚗 ВОРОТА: ${priceGate.toLocaleString()} руб.`;
-                    priceStr += `\n💵 ИТОГО: ${priceTotal.toLocaleString()} руб.`;
-                }
-
-                const text = `Здравствуйте! Хочу оформить заявку, вот данные:
-👤 Клиент: ${name || 'Не указан'}
-📞 Phone: ${phone || 'Не указан'}
-💬 Пожелания: ${comment || 'Нет пожеланий'}
-🆔 ID: ${o.id || 'N/A'}
-🏗 Тип: ${roofTypeName(o.type)}
-📏 Длина: ${o.length || config?.length || '?'} м
-📏 Ширина: ${o.width || config?.width || '?'} м
-↕️ Высота (столб): ${o.height || config?.height || '?'} м
-🏔 Высота (общ): ~${o.height_peak || '?'} м
-📐 Уклон: ${o.slope || config?.roofSlope || '?'}°
-🧱 Сечение: ${o.pillar || config?.pillarSize || '?'}
-➖➖➖➖➖➖➖➖➖➖
-🔲 S пола: ${o.area_floor || (config ? (config.width * config.length).toFixed(2) : '?')} м²
-🏠 S кровли: ${o.area_roof || '?'} м²
-🏠 Материал: ${materialName(o.material || config?.roofMaterial)}
-🎨 Покраска: ${paintName(o.paint || config?.paintType)}
-🖌 Цвет: ${o.color_frame || '?'} / ${o.color_roof || '?'}
-➖➖➖➖➖➖➖➖➖➖
-🛠 Опции:
-${optStr}
-${loadsStr}${gateStr}➖➖➖➖➖➖➖➖➖➖
-${priceStr}`;
-
-                // Скопировать текст в буфер обмена
-                try {
-                    await navigator.clipboard.writeText(text);
-                    console.log('✅ Order text copied to clipboard');
-                } catch (e) {
-                    console.warn('Clipboard write failed', e);
-                }
-
-                // Попытки автоматически открыть Telegram с предзаполненным текстом.
-                // Браузерные ограничения не позволяют вставлять текст в чужой ввод, поэтому:
-                // 1) копируем текст в буфер обмена,
-                // 2) открываем веб-чат администратора.
-                try {
-                    await navigator.clipboard.writeText(text);
-                    console.log('✅ Order text copied to clipboard');
-                } catch (e) {
-                    console.warn('Clipboard write failed', e);
-                }
-
-                // Открываем веб-чат администратора
-                const adminChatUrl = 'https://web.telegram.org/k/#5216818742';
-                window.open(adminChatUrl, '_blank');
-
-                alert('✅ Заказ отправлен менеджеру!\n\nТекст заказа скопирован в буфер обмена.\nОткройте чат с менеджером и вставьте текст (Ctrl+V).');
-                onClose();
+                onSuccess(parsedOrder?.id || 'N/A');
             } else {
-                const txt = await res.text();
-                console.error('Order submit failed', txt);
-                alert('Ошибка отправки. Пожалуйста, скопируйте данные и отправьте вручную.');
+                alert('Ошибка отправки. Попробуйте позже.');
             }
-        } catch (e) {
-            console.error(e);
+        } catch {
             alert('Ошибка соединения. Попробуйте позже.');
         } finally {
             setSending(false);
         }
     };
 
+    const roofTypeName = (t: string) => ({ single: 'Односкатный', gable: 'Двускатный', arched: 'Арочный', triangular: 'Треугольный', semiarched: 'Полуарочный' }[t] || t);
+    const materialName = (m: string) => ({ polycarbonate: 'Поликарбонат', metaltile: 'Металлочерепица', decking: 'Профнастил' }[m] || m);
+
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <div
-                className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
-                onClick={onClose}
-            />
-            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6 animate-fade-in-up max-h-[90vh] overflow-y-auto">
+            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+            <div className="relative bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto border border-slate-700">
                 <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-xl font-bold text-slate-900">Оформление заказа</h3>
-                    <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
-                        <X size={20} />
-                    </button>
+                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                        <Shield size={20} className="text-green-500" />Оформление заказа
+                    </h3>
+                    <button onClick={onClose} className="p-2 hover:bg-slate-700 rounded-lg text-slate-400"><X size={20} /></button>
                 </div>
 
-                <div className="space-y-3">
-                    <div className="space-y-2">
-                        <label className="text-sm text-slate-600">Ваше имя</label>
-                        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Иван Иванов" className="w-full border border-slate-200 rounded-xl px-3 py-2" />
+                <div className="space-y-4">
+                    <div>
+                        <label className="text-sm text-slate-400">Ваше имя *</label>
+                        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Иван Иванов" maxLength={100} autoComplete="name"
+                            className={`w-full mt-1 bg-slate-700 border ${errors.name ? 'border-red-500' : 'border-slate-600'} rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none`} />
+                        {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name}</p>}
                     </div>
-                    <div className="space-y-2">
-                        <label className="text-sm text-slate-600">Телефон</label>
-                        <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+7 (___) ___-__-__" className="w-full border border-slate-200 rounded-xl px-3 py-2" />
+                    <div>
+                        <label className="text-sm text-slate-400">Телефон *</label>
+                        <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+7 (___) ___-__-__" maxLength={20} autoComplete="tel" type="tel"
+                            className={`w-full mt-1 bg-slate-700 border ${errors.phone ? 'border-red-500' : 'border-slate-600'} rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none`} />
+                        {errors.phone && <p className="text-red-400 text-xs mt-1">{errors.phone}</p>}
                     </div>
-                    <div className="space-y-2">
-                        <label className="text-sm text-slate-600">Комментарий менеджеру</label>
-                        <textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Дополнительные пожелания" className="w-full border border-slate-200 rounded-xl px-3 py-2 h-24 resize-none" />
+                    <div>
+                        <label className="text-sm text-slate-400">Комментарий</label>
+                        <textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Дополнительные пожелания" maxLength={500}
+                            className="w-full mt-1 bg-slate-700 border border-slate-600 rounded-xl px-4 py-3 h-20 resize-none text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none" />
                     </div>
 
-                    <button
-                        onClick={handleSend}
-                        disabled={sending}
-                        className="w-full bg-slate-900 hover:bg-slate-800 text-white p-4 rounded-xl flex items-center gap-3 justify-center font-bold shadow-lg transition-all active:scale-[0.98] disabled:opacity-50"
-                    >
-                        <Send size={20} />{" "}
-                        <span>{sending ? 'Отправка...' : 'Отправить менеджеру'}</span>
+                    <button onClick={handleSend} disabled={sending}
+                        className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-600 text-white p-4 rounded-xl flex items-center gap-3 justify-center font-bold transition-all active:scale-[0.98]">
+                        <Send size={20} /><span>{sending ? 'Отправка...' : 'Отправить менеджеру'}</span>
                     </button>
 
-                    <p className="text-xs text-slate-400 text-center mt-4">
-                        После отправки менеджер свяжется с вами для уточнения деталей
-                    </p>
-
-                    <p className="text-xs text-slate-500 text-center mt-2">
-                        При отправке вы соглашаетесь с <a href="#" onClick={(e) => { e.preventDefault(); window.open('', '_blank')?.document.write(getPrivacyPolicyText()); }} className="text-indigo-600 hover:underline">политикой конфиденциальности</a> и <a href="#" onClick={(e) => { e.preventDefault(); window.open('', '_blank')?.document.write(getTermsOfUseText()); }} className="text-indigo-600 hover:underline">условиями пользования</a>
+                    <p className="text-xs text-slate-500 text-center">
+                        При отправке вы соглашаетесь с <button onClick={onShowPrivacy} className="text-indigo-400 hover:underline">политикой конфиденциальности</button> и <button onClick={onShowTerms} className="text-indigo-400 hover:underline">условиями пользования</button>
                     </p>
                 </div>
 
-                {/* Подробная сводка заказа */}
-                {parsedOrder && config && (
-                    <div className="bg-slate-50 rounded-xl p-4 mt-6 space-y-4">
-                        <h4 className="font-semibold text-slate-700 mb-3">📋 Детали заказа:</h4>
-
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                                <span className="text-slate-500">🏗 Тип крыши:</span>
-                                <p className="font-medium text-slate-800">{(() => {
-                                    const types = { single: 'Односкатный', gable: 'Двускатный', arched: 'Арочный', triangular: 'Треугольный', semiarched: 'Полуарочный' };
-                                    return types[parsedOrder.type as keyof typeof types] || parsedOrder.type;
-                                })()}</p>
-                            </div>
-                            <div>
-                                <span className="text-slate-500">📏 Размеры:</span>
-                                <p className="font-medium text-slate-800">{parsedOrder.length}×{parsedOrder.width}×{parsedOrder.height} м</p>
-                            </div>
-                            <div>
-                                <span className="text-slate-500">🏔 Высота (общ):</span>
-                                <p className="font-medium text-slate-800">~{parsedOrder.height_peak} м</p>
-                            </div>
-                            <div>
-                                <span className="text-slate-500">📐 Уклон:</span>
-                                <p className="font-medium text-slate-800">{parsedOrder.slope}°</p>
-                            </div>
-                            <div>
-                                <span className="text-slate-500">🧱 Сечение:</span>
-                                <p className="font-medium text-slate-800">{parsedOrder.pillar}</p>
-                            </div>
-                            <div>
-                                <span className="text-slate-500">🏠 Материал:</span>
-                                <p className="font-medium text-slate-800">{(() => {
-                                    const mats = { polycarbonate: 'Сотовый поликарбонат', metaltile: 'Металлочерепица', decking: 'Профнастил' };
-                                    return mats[parsedOrder.material as keyof typeof mats] || parsedOrder.material;
-                                })()}</p>
-                            </div>
+                {parsedOrder && (
+                    <div className="bg-slate-700/50 rounded-xl p-4 mt-6 space-y-3">
+                        <h4 className="font-semibold text-slate-300">📋 Детали заказа:</h4>
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                            <div><span className="text-slate-500">Тип:</span><p className="text-slate-200">{roofTypeName(parsedOrder.type)}</p></div>
+                            <div><span className="text-slate-500">Размеры:</span><p className="text-slate-200">{parsedOrder.length}×{parsedOrder.width}×{parsedOrder.height} м</p></div>
+                            <div><span className="text-slate-500">Материал:</span><p className="text-slate-200">{materialName(parsedOrder.material)}</p></div>
+                            <div><span className="text-slate-500">Площадь:</span><p className="text-slate-200">{parsedOrder.area_floor} м²</p></div>
                         </div>
-
-                        <div className="border-t border-slate-200 pt-4">
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                                <div>
-                                    <span className="text-slate-500">🔲 S пола:</span>
-                                    <p className="font-medium text-slate-800">{parsedOrder.area_floor} м²</p>
-                                </div>
-                                <div>
-                                    <span className="text-slate-500">🏠 S кровли:</span>
-                                    <p className="font-medium text-slate-800">{parsedOrder.area_roof} м²</p>
-                                </div>
-                            </div>
+                        <div className="border-t border-slate-600 pt-3 flex justify-between items-center">
+                            <span className="font-bold text-white">💵 Итого:</span>
+                            <span className="text-xl font-bold text-white">{(parsedOrder.price_total || parsedOrder.price)?.toLocaleString()} ₽</span>
                         </div>
-
-                        {parsedOrder.opts && Object.values(parsedOrder.opts).some(v => v) && (
-                            <div className="border-t border-slate-200 pt-4">
-                                <span className="text-slate-500 text-sm">🛠 Опции:</span>
-                                <div className="flex flex-wrap gap-2 mt-2">
-                                    {parsedOrder.opts.trusses && <span className="bg-slate-200 text-slate-700 text-xs px-2 py-1 rounded">Усил. фермы</span>}
-                                    {parsedOrder.opts.gutters && <span className="bg-slate-200 text-slate-700 text-xs px-2 py-1 rounded">Водостоки</span>}
-                                    {parsedOrder.opts.walls && <span className="bg-slate-200 text-slate-700 text-xs px-2 py-1 rounded">Зашивка</span>}
-                                    {parsedOrder.opts.found && <span className="bg-slate-200 text-slate-700 text-xs px-2 py-1 rounded">Фундамент</span>}
-                                    {parsedOrder.opts.install && <span className="bg-slate-200 text-slate-700 text-xs px-2 py-1 rounded">Монтаж</span>}
-                                </div>
-                            </div>
-                        )}
-
-                        {parsedOrder.gate && parsedOrder.gate.type && parsedOrder.gate.type !== 'none' && (
-                            <div className="border-t border-slate-200 pt-4">
-                                <span className="text-slate-500 text-sm">🚗 Ворота:</span>
-                                <div className="mt-2 text-sm space-y-1">
-                                    <p><span className="text-slate-600">Тип:</span> {(() => {
-                                        const gates = { sliding: 'Откатные', swing: 'Распашные', hinged: 'Навесные' };
-                                        return gates[parsedOrder.gate.type as keyof typeof gates] || parsedOrder.gate.type;
-                                    })()}</p>
-                                    <p><span className="text-slate-600">Размер:</span> {parsedOrder.gate.width}×{parsedOrder.gate.height} м</p>
-                                    <p><span className="text-slate-600">Заполнение:</span> {(() => {
-                                        const fills = { lattice: 'Решетка', solid: 'Сплошное', forged: 'Ковка', combined: 'Комби', vertical: 'Вертик. планки' };
-                                        return fills[parsedOrder.gate.filling as keyof typeof fills] || parsedOrder.gate.filling;
-                                    })()}</p>
-                                </div>
-                            </div>
-                        )}
-
-                        {price && (
-                            <div className="border-t border-slate-200 pt-4">
-                                <div className="flex justify-between items-center">
-                                    <span className="font-semibold text-slate-800">💰 Навес:</span>
-                                    <span className="font-bold text-slate-900">{parsedOrder.price?.toLocaleString()} ₽</span>
-                                </div>
-                                {parsedOrder.price_gate > 0 && (
-                                    <div className="flex justify-between items-center mt-1">
-                                        <span className="font-semibold text-slate-800">🚗 Ворота:</span>
-                                        <span className="font-bold text-slate-900">{parsedOrder.price_gate?.toLocaleString()} ₽</span>
-                                    </div>
-                                )}
-                                <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-300">
-                                    <span className="font-bold text-slate-900">💵 Итого:</span>
-                                    <span className="text-xl font-bold text-slate-900">{(parsedOrder.price_total || parsedOrder.price)?.toLocaleString()} ₽</span>
-                                </div>
-                            </div>
-                        )}
                     </div>
                 )}
             </div>
@@ -378,126 +323,7 @@ ${priceStr}`;
     );
 };
 
-// Функции для получения текста политик
-const getPrivacyPolicyText = () => `
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Политика конфиденциальности</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
-        h1, h4 { color: #333; }
-        h4 { margin-top: 30px; }
-        ul { margin-left: 20px; }
-    </style>
-</head>
-<body>
-    <h1>Политика конфиденциальности</h1>
-    <p><strong>Последнее обновление:</strong> ${new Date().toLocaleDateString('ru-RU')}</p>
-
-    <h4>1. Общие положения</h4>
-    <p>Настоящая политика конфиденциальности определяет порядок обработки и защиты персональных данных пользователей сервиса конфигуратора навесов Kovka007.</p>
-
-    <h4>2. Собираемые данные</h4>
-    <p>Мы можем собирать следующие типы информации:</p>
-    <ul>
-        <li>Имя и контактный телефон для связи по вопросам заказа</li>
-        <li>Комментарии и пожелания к заказу</li>
-        <li>Технические данные о конфигурации навеса</li>
-        <li>Информация об устройстве и браузере для улучшения сервиса</li>
-    </ul>
-
-    <h4>3. Цели обработки данных</h4>
-    <p>Персональные данные используются исключительно для:</p>
-    <ul>
-        <li>Обработки и выполнения заказов на изготовление навесов</li>
-        <li>Связи с клиентами для уточнения деталей заказа</li>
-        <li>Улучшения качества сервиса и пользовательского опыта</li>
-        <li>Предоставления технической поддержки</li>
-    </ul>
-
-    <h4>4. Передача данных третьим лицам</h4>
-    <p>Мы не передаем персональные данные третьим лицам, за исключением случаев, предусмотренных законодательством РФ или необходимых для выполнения заказа (производителям, подрядчикам).</p>
-
-    <h4>5. Безопасность данных</h4>
-    <p>Мы принимаем все необходимые меры для защиты ваших персональных данных от несанкционированного доступа, изменения, раскрытия или уничтожения.</p>
-
-    <h4>6. Cookies и аналитика</h4>
-    <p>Сервис может использовать cookies для улучшения работы приложения и анализа использования. Вы можете отключить cookies в настройках браузера.</p>
-
-    <h4>7. Ваши права</h4>
-    <p>Вы имеете право:</p>
-    <ul>
-        <li>Получать информацию о своих персональных данных</li>
-        <li>Требовать исправления или удаления данных</li>
-        <li>Отозвать согласие на обработку данных</li>
-        <li>Подавать жалобу в уполномоченные органы</li>
-    </ul>
-
-    <h4>8. Контакты</h4>
-    <p>По вопросам, связанным с обработкой персональных данных, обращайтесь к администратору сервиса через форму заказа или мессенджеры.</p>
-</body>
-</html>
-`;
-
-const getTermsOfUseText = () => `
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Условия использования</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
-        h1, h4 { color: #333; }
-        h4 { margin-top: 30px; }
-        ul { margin-left: 20px; }
-    </style>
-</head>
-<body>
-    <h1>Условия использования</h1>
-    <p><strong>Последнее обновление:</strong> ${new Date().toLocaleDateString('ru-RU')}</p>
-
-    <h4>1. Общие положения</h4>
-    <p>Настоящие условия использования регулируют отношения между пользователем и сервисом конфигуратора навесов Kovka007.</p>
-
-    <h4>2. Описание сервиса</h4>
-    <p>Kovka007 предоставляет онлайн-инструмент для конфигурации и расчета стоимости навесов различных типов. Сервис позволяет подобрать оптимальные параметры конструкции и получить предварительный расчет.</p>
-
-    <h4>3. Использование сервиса</h4>
-    <p>Пользователь обязуется:</p>
-    <ul>
-        <li>Предоставлять достоверную информацию при оформлении заказа</li>
-        <li>Не использовать сервис для незаконных целей</li>
-        <li>Не пытаться обходить технические ограничения сервиса</li>
-        <li>Соблюдать правила хорошего тона в коммуникации</li>
-    </ul>
-
-    <h4>4. Оформление заказа</h4>
-    <p>Конфигуратор предоставляет предварительный расчет стоимости. Окончательная цена и сроки изготовления определяются после согласования всех деталей с менеджером. Все расчеты носят ориентировочный характер.</p>
-
-    <h4>5. Ответственность</h4>
-    <p>Сервис не несет ответственности за неточности в расчетах, вызванные некорректными входными данными. Производитель не гарантирует абсолютную точность расчетов без проведения инженерных изысканий.</p>
-
-    <h4>6. Интеллектуальная собственность</h4>
-    <p>Все материалы сервиса, включая дизайн, код и контент, защищены авторским правом. Копирование и использование без разрешения запрещено.</p>
-
-    <h4>7. Изменения условий</h4>
-    <p>Администрация сервиса оставляет за собой право вносить изменения в условия использования. Продолжение использования сервиса означает согласие с новыми условиями.</p>
-
-    <h4>8. Прекращение использования</h4>
-    <p>Пользователь может прекратить использование сервиса в любое время. Администрация может ограничить доступ при нарушении условий использования.</p>
-
-    <h4>9. Контакты</h4>
-    <p>По вопросам использования сервиса обращайтесь к администратору через форму заказа или мессенджеры.</p>
-</body>
-</html>
-`;
-
-const getRecommendedPillarSize = (
-    width: number,
-    length: number,
-    height: number,
-    totalLoad: number = 300,
-): PillarSize => {
+const getRecommendedPillarSize = (width: number, length: number, height: number, totalLoad: number = 300): PillarSize => {
     const area = width * length;
     if (width > 8.0 || height > 3.5 || area > 60 || totalLoad > 400) return PillarSize.Size120;
     if (width > 6.0 || height > 3.0 || area > 40 || totalLoad > 300) return PillarSize.Size100;
@@ -505,126 +331,56 @@ const getRecommendedPillarSize = (
     return PillarSize.Size60;
 };
 
-// Модальное окно экспорта
-const ExportModal = ({ isOpen, onClose, config, price, gateConfig }: any) => {
+// ==================== EXPORT MODAL ====================
+
+const ExportModal: React.FC<{ isOpen: boolean; onClose: () => void; config: CarportConfig; price: number; gateConfig: GateConfig }> = ({ isOpen, onClose, config, price, gateConfig }) => {
     const [selectedDXFView, setSelectedDXFView] = useState<'top' | 'front' | 'side' | 'all'>('all');
     
     if (!isOpen) return null;
     
-    const handleExportOBJ = () => {
-        downloadOBJ(config);
-        onClose();
-    };
-    
-    const handleExportBOM = () => {
-        downloadBOM(config);
-        onClose();
-    };
-    
-    const handleExportReport = () => {
-        downloadReport(config, price);
-        onClose();
-    };
-    
-    const handleExportDXF = () => {
-        downloadDXFProjection(config, selectedDXFView, gateConfig);
-        onClose();
-    };
-    
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <div
-                className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
-                onClick={onClose}
-            />
-            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-fade-in-up">
+            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+            <div className="relative bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md p-6 border border-slate-700">
                 <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-xl font-bold text-slate-900">Экспорт проекта</h3>
-                    <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
-                        <X size={20} />
-                    </button>
+                    <h3 className="text-xl font-bold text-white">Экспорт проекта</h3>
+                    <button onClick={onClose} className="p-2 hover:bg-slate-700 rounded-lg transition-colors text-slate-400"><X size={20} /></button>
                 </div>
                 
                 <div className="space-y-3">
-                    {/* 3D модель OBJ */}
-                    <button
-                        onClick={handleExportOBJ}
-                        className="w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 p-4 rounded-xl flex items-center gap-3 transition-all"
-                    >
-                        <div className="w-10 h-10 bg-indigo-200 rounded-lg flex items-center justify-center">
-                            <Layers size={20} />
-                        </div>
-                        <div className="text-left">
-                            <div className="font-semibold">3D модель (OBJ)</div>
-                            <div className="text-xs text-indigo-500">Открывается в Blender, AutoCAD, 3ds Max</div>
-                        </div>
+                    <button onClick={() => { downloadOBJ(config); onClose(); }}
+                        className="w-full bg-slate-700 hover:bg-slate-600 text-white p-4 rounded-xl flex items-center gap-3 transition-all">
+                        <div className="w-10 h-10 bg-indigo-500/20 rounded-lg flex items-center justify-center"><Layers size={20} className="text-indigo-400" /></div>
+                        <div className="text-left"><div className="font-semibold">3D модель (OBJ)</div><div className="text-xs text-slate-400">Blender, AutoCAD, 3ds Max</div></div>
                     </button>
                     
-                    {/* Смета CSV */}
-                    <button
-                        onClick={handleExportBOM}
-                        className="w-full bg-green-50 hover:bg-green-100 text-green-700 p-4 rounded-xl flex items-center gap-3 transition-all"
-                    >
-                        <div className="w-10 h-10 bg-green-200 rounded-lg flex items-center justify-center">
-                            <Calculator size={20} />
-                        </div>
-                        <div className="text-left">
-                            <div className="font-semibold">Спецификация (CSV)</div>
-                            <div className="text-xs text-green-500">Таблица материалов для Excel</div>
-                        </div>
+                    <button onClick={() => { downloadBOM(config); onClose(); }}
+                        className="w-full bg-slate-700 hover:bg-slate-600 text-white p-4 rounded-xl flex items-center gap-3 transition-all">
+                        <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center"><Calculator size={20} className="text-green-400" /></div>
+                        <div className="text-left"><div className="font-semibold">Спецификация (CSV)</div><div className="text-xs text-slate-400">Таблица материалов</div></div>
                     </button>
                     
-                    {/* Отчет TXT */}
-                    <button
-                        onClick={handleExportReport}
-                        className="w-full bg-amber-50 hover:bg-amber-100 text-amber-700 p-4 rounded-xl flex items-center gap-3 transition-all"
-                    >
-                        <div className="w-10 h-10 bg-amber-200 rounded-lg flex items-center justify-center">
-                            <FileText size={20} />
-                        </div>
-                        <div className="text-left">
-                            <div className="font-semibold">Полный отчет (TXT)</div>
-                            <div className="text-xs text-amber-500">Смета с описанием конфигурации</div>
-                        </div>
+                    <button onClick={() => { downloadReport(config, price); onClose(); }}
+                        className="w-full bg-slate-700 hover:bg-slate-600 text-white p-4 rounded-xl flex items-center gap-3 transition-all">
+                        <div className="w-10 h-10 bg-amber-500/20 rounded-lg flex items-center justify-center"><FileText size={20} className="text-amber-400" /></div>
+                        <div className="text-left"><div className="font-semibold">Полный отчет (TXT)</div><div className="text-xs text-slate-400">Смета с описанием</div></div>
                     </button>
                     
-                    {/* DXF чертежи */}
-                    <div className="bg-slate-50 p-4 rounded-xl">
+                    <div className="bg-slate-700/50 p-4 rounded-xl">
                         <div className="flex items-center gap-3 mb-3">
-                            <div className="w-10 h-10 bg-slate-200 rounded-lg flex items-center justify-center">
-                                <Layers size={20} className="text-slate-600" />
-                            </div>
-                            <div className="text-left">
-                                <div className="font-semibold text-slate-700">2D чертежи (DXF)</div>
-                                <div className="text-xs text-slate-500">Проекции для AutoCAD</div>
-                            </div>
+                            <div className="w-10 h-10 bg-slate-600 rounded-lg flex items-center justify-center"><Layers size={20} className="text-slate-300" /></div>
+                            <div className="text-left"><div className="font-semibold text-white">2D чертежи (DXF)</div><div className="text-xs text-slate-400">Проекции для AutoCAD</div></div>
                         </div>
                         <div className="flex gap-2 mb-3">
-                            {[
-                                { key: 'top', label: 'Сверху' },
-                                { key: 'front', label: 'Спереди' },
-                                { key: 'side', label: 'Сбоку' },
-                                { key: 'all', label: 'Все' },
-                            ].map(({ key, label }) => (
-                                <button
-                                    key={key}
-                                    onClick={() => setSelectedDXFView(key as any)}
-                                    className={`flex-1 py-2 text-xs font-medium rounded-lg transition-all ${
-                                        selectedDXFView === key
-                                            ? 'bg-slate-700 text-white'
-                                            : 'bg-white text-slate-600 hover:bg-slate-100'
-                                    }`}
-                                >
-                                    {label}
+                            {(['top', 'front', 'side', 'all'] as const).map((key) => (
+                                <button key={key} onClick={() => setSelectedDXFView(key)}
+                                    className={`flex-1 py-2 text-xs font-medium rounded-lg transition-all ${selectedDXFView === key ? 'bg-indigo-600 text-white' : 'bg-slate-600 text-slate-300 hover:bg-slate-500'}`}>
+                                    {{ top: 'Сверху', front: 'Спереди', side: 'Сбоку', all: 'Все' }[key]}
                                 </button>
                             ))}
                         </div>
-                        <button
-                            onClick={handleExportDXF}
-                            className="w-full bg-slate-700 hover:bg-slate-800 text-white py-2.5 rounded-lg font-medium text-sm transition-all"
-                        >
-                            Скачать DXF
-                        </button>
+                        <button onClick={() => { downloadDXFProjection(config, selectedDXFView, gateConfig); onClose(); }}
+                            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-lg font-medium text-sm transition-all">Скачать DXF</button>
                     </div>
                 </div>
                 
@@ -643,6 +399,10 @@ export default function App() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [showBrowserOrderModal, setShowBrowserOrderModal] = useState(false);
     const [showExportModal, setShowExportModal] = useState(false);
+    const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
+    const [showTermsOfUse, setShowTermsOfUse] = useState(false);
+    const [showOrderSuccess, setShowOrderSuccess] = useState(false);
+    const [successOrderId, setSuccessOrderId] = useState("");
     const [price, setPrice] = useState(0);
     const [gatePrice, setGatePrice] = useState(0);
     const [orderJson, setOrderJson] = useState("");
@@ -658,32 +418,25 @@ export default function App() {
         warnings: [] as string[],
     });
 
+    // Initialize Telegram WebApp with dark theme
     useEffect(() => {
         const tg = window.Telegram?.WebApp;
         if (tg) {
             console.log("🔄 Initializing Telegram WebApp...");
-            console.log(`📱 Version: ${tg.version}`);
-            console.log(`📱 Platform: ${tg.platform}`);
-            console.log(`📱 initData present: ${!!tg.initData}`);
-            console.log(`📱 initData length: ${tg.initData?.length || 0}`);
-            console.log(`📱 sendData available: ${typeof tg.sendData === 'function'}`);
-            
             tg.ready();
             try {
                 tg.expand();
                 document.body.style.height = tg.viewportHeight + "px";
-                tg.setHeaderColor('#f8fafc');
-                tg.setBackgroundColor('#f1f5f9');
+                tg.setHeaderColor('#0f172a');
+                tg.setBackgroundColor('#1e293b');
                 console.log("✅ Telegram WebApp initialized");
             } catch (e) {
                 console.warn("⚠️ WebApp init error:", e);
             }
-        } else {
-            console.log("⚠️ Telegram WebApp not available - browser mode");
         }
     }, []);
 
-    // Пересчет нагрузок при изменении конфигурации
+    // Recalculate loads
     useEffect(() => {
         try {
             const result = calculateLoads({
@@ -953,41 +706,27 @@ export default function App() {
         const tg = window.Telegram?.WebApp;
         const telegramPayload = getOrderPayload({ includeCad: false });
 
-        console.log(`📱 Telegram WebApp version: ${tg?.version || 'N/A'}`);
-        console.log(`📱 Platform: ${tg?.platform || 'N/A'}`);
-
-        // Если Telegram WebApp доступен — сразу копируем данные и открываем чат с админом
-        // Если Telegram WebApp доступен — отправляем данные напрямую боту
-        if (tg) {
-            console.log('📱 Telegram WebApp detected');
+        // Check if running in Telegram WebApp with valid initData
+        if (isTelegramWebApp() && tg) {
+            console.log('📱 Telegram WebApp mode - using sendData');
             const dataToSend = JSON.stringify(telegramPayload);
             const payloadSize = new Blob([dataToSend]).size;
-            const canUseSendData = typeof (tg as any).sendData === 'function';
-            const initDataUnsafe = (tg as any)?.initDataUnsafe as any;
-            const isInlineMode = !!initDataUnsafe?.query_id;
+            const canUseSendData = typeof tg.sendData === 'function';
 
-            console.log(`📤 Payload size: ${payloadSize} bytes (${(payloadSize / 1024).toFixed(2)}KB)`);
-            console.log(`📱 canUseSendData: ${!!canUseSendData}, isInlineMode: ${isInlineMode}`);
-
-            if (canUseSendData && !isInlineMode) {
-                // Ограничение sendData — 4096 байт
+            if (canUseSendData) {
                 let finalData = dataToSend;
                 if (payloadSize > 4096) {
-                    console.warn(`⚠️ Payload too large: ${payloadSize} bytes, reducing...`);
-                    const minimalPayload: any = {
+                    const minimalPayload = {
                         id: telegramPayload.id,
                         type: telegramPayload.type,
                         length: telegramPayload.length,
                         width: telegramPayload.width,
                         height: telegramPayload.height,
-                        height_peak: telegramPayload.height_peak,
                         slope: telegramPayload.slope,
                         pillar: telegramPayload.pillar,
                         area_floor: telegramPayload.area_floor,
                         material: telegramPayload.material,
                         paint: telegramPayload.paint,
-                        color_frame: telegramPayload.color_frame,
-                        color_roof: telegramPayload.color_roof,
                         opts: telegramPayload.opts,
                         price: telegramPayload.price,
                         price_gate: telegramPayload.price_gate,
@@ -996,238 +735,38 @@ export default function App() {
                         gate: telegramPayload.gate,
                     };
                     finalData = JSON.stringify(minimalPayload);
-                    console.log(`📦 Reduced payload: ${new Blob([finalData]).size} bytes`);
                 }
 
                 try {
-                    console.log('🚀 Calling sendData...');
-                    (tg as any).sendData(finalData);
-                    console.log('✅ sendData called successfully');
-                    return; // sendData will close WebApp; stop further processing
+                    tg.sendData(finalData);
+                    return; // sendData closes WebApp
                 } catch (e) {
-                    console.error('❌ sendData exception:', e);
-                    // fall through to clipboard/open behavior
+                    console.error('sendData failed:', e);
                 }
             }
-
-            // Формируем полный текст заказа для отправки админу (clipboard/open-chat fallback)
-            const o = telegramPayload as any;
-            const roofTypeName = (t: string) => ({ single: 'Односкатный', gable: 'Двускатный', arched: 'Арочный', triangular: 'Треугольный', semiarched: 'Полуарочный' }[t] || t);
-            const materialName = (m: string) => ({ polycarbonate: 'Сотовый поликарбонат', metaltile: 'Металлочерепица', decking: 'Профнастил' }[m] || m);
-            const paintName = (p: string) => ({ none: 'Грунт-эмаль', ral: 'Эмаль RAL', polymer: 'Полимерно-порошковая' }[p] || p);
-            const gateTypeName = (g: string) => ({ none: 'Нет', sliding: 'Откатные', swing: 'Распашные', hinged: 'Навесные' }[g] || g);
-            const gateFillName = (f: string) => ({ lattice: 'Решетка', solid: 'Сплошное', forged: 'Ковка', combined: 'Комби', vertical: 'Вертик. планки' }[f] || f);
-
-            const opts = o.opts || {};
-            const optList: string[] = [];
-            if (opts.trusses) optList.push('✅ Усил. фермы');
-            if (opts.gutters) optList.push('✅ Водостоки');
-            if (opts.walls) optList.push('✅ Зашивка');
-            if (opts.found) optList.push('✅ Фундамент');
-            if (opts.install) optList.push('✅ Монтаж');
-            const optStr = optList.length ? optList.join('\n') : 'Базовая';
-
-            const loads = o.loads || {};
-            let loadsStr = '';
-            if (loads.snow || loads.wind || loads.total) {
-                loadsStr = `➖➖➖➖➖➖➖➖➖➖\n❄️ Снеговая: ${loads.snow || 0} кг/м²\n💨 Ветровая: ${loads.wind || 0} Па\n⚖️ Общая: ${loads.total || 0} кг/м²\n📍 Регион: ${o.region || 'Не указан'}\n`;
-            }
-
-            const gate = o.gate || {};
-            let gateStr = '';
-            if (gate.type && gate.type !== 'none') {
-                gateStr = `➖➖➖➖➖➖➖➖➖➖\n🚗 ВОРОТА:\n📐 Тип: ${gateTypeName(gate.type)}\n📏 Размер: ${gate.width || 4}×${gate.height || 2} м\n🔲 Заполнение: ${gateFillName(gate.filling)}\n🎨 Цвет рамы: ${gate.frameColor || gate.frame_color || 'Не указан'}\n🎨 Цвет полотна: ${gate.panelColor || gate.panel_color || 'Не указан'}\n🚶 Калитка: ${gate.wicket ? 'Да' : 'Нет'}\n🤖 Автоматика: ${gate.automation ? 'Да' : 'Нет'}\n`;
-            }
-
-            const priceNavyes = o.price || 0;
-            const priceGate = o.price_gate || 0;
-            const priceTotal = o.price_total || priceNavyes + priceGate;
-            let priceStr = `💰 НАВЕС: ${priceNavyes.toLocaleString()} руб.`;
-            if (priceGate > 0) {
-                priceStr += `\n🚗 ВОРОТА: ${priceGate.toLocaleString()} руб.`;
-                priceStr += `\n💵 ИТОГО: ${priceTotal.toLocaleString()} руб.`;
-            }
-
-            const orderText = `Здравствуйте! Хочу оформить заявку, вот данные:
-🆔 ID: ${o.id || 'N/A'}
-🏗 Тип: ${roofTypeName(o.type)}
-📏 Длина: ${o.length || '?'} м
-📏 Ширина: ${o.width || '?'} м
-↕️ Высота (столб): ${o.height || '?'} м
-🏔 Высота (общ): ~${o.height_peak || '?'} м
-📐 Уклон: ${o.slope || '?'}°
-🧱 Сечение: ${o.pillar || '?'}
-➖➖➖➖➖➖➖➖➖➖
-🔲 S пола: ${o.area_floor || '?'} м²
-🏠 S кровли: ${o.area_roof || '?'} м²
-🏠 Материал: ${materialName(o.material)}
-🎨 Покраска: ${paintName(o.paint)}
-🖌 Цвет: ${o.color_frame || '?'} / ${o.color_roof || '?'}
-➖➖➖➖➖➖➖➖➖➖
-🛠 Опции:
-${optStr}
-${loadsStr}${gateStr}➖➖➖➖➖➖➖➖➖➖
-${priceStr}`;
-
-            // Копируем текст в буфер обмена
-            navigator.clipboard.writeText(orderText).then(() => {
-                console.log('✅ Order text copied to clipboard');
-            }).catch(err => {
-                console.warn('Clipboard write failed:', err);
-            });
-
-            // Открываем чат с админом
-            if (typeof (tg as any).openTelegramLink === 'function') {
-                console.log('📱 Using Telegram openTelegramLink to open admin chat');
-                try {
-                    (tg as any).openTelegramLink('tg://user?id=5216818742');
-                    setTimeout(() => {
-                        try {
-                            (tg as any).openTelegramLink('https://web.telegram.org/k/#5216818742');
-                        } catch (e) {
-                            window.open('https://web.telegram.org/k/#5216818742', '_blank');
-                        }
-                    }, 800);
-                } catch (err) {
-                    console.warn('openTelegramLink tg:// failed, falling back to web.telegram.org', err);
-                    try {
-                        (tg as any).openTelegramLink('https://web.telegram.org/k/#5216818742');
-                    } catch (e) {
-                        window.open('https://web.telegram.org/k/#5216818742', '_blank');
-                    }
-                }
-            }
-            
-            // Показываем уведомление
-            setTimeout(() => {
-                (tg as any).showPopup?.({
-                    title: "✅ Заказ отправлен!",
-                    message: "Текст заказа скопирован в буфер обмена.\n\nВставьте его в чат (зажмите поле ввода → Вставить) и отправьте.",
-                    buttons: [{ type: "close", text: "Понятно" }]
-                });
-            }, 500);
-            return;
         }
 
-        // Если Telegram WebApp отсутствует — открываем browser modal для ввода контактов
-        console.warn("⚠️ Telegram WebApp not found - browser mode");
+        // Browser mode - show modal
+        console.log('🌐 Browser mode - showing order modal');
         setOrderJson(JSON.stringify(getOrderPayload({ includeCad: true })));
         setShowBrowserOrderModal(true);
-        const o = telegramPayload as any;
-        const roofTypeName = (t: string) => ({ single: 'Односкатный', gable: 'Двускатный', arched: 'Арочный', triangular: 'Треугольный', semiarched: 'Полуарочный' }[t] || t);
-        const materialName = (m: string) => ({ polycarbonate: 'Сотовый поликарбонат', metaltile: 'Металлочерепица', decking: 'Профнастил' }[m] || m);
-        const paintName = (p: string) => ({ none: 'Грунт-эмаль', ral: 'Эмаль RAL', polymer: 'Полимерно-порошковая' }[p] || p);
-        const gateTypeName = (g: string) => ({ none: 'Нет', sliding: 'Откатные', swing: 'Распашные', hinged: 'Навесные' }[g] || g);
-        const gateFillName = (f: string) => ({ lattice: 'Решетка', solid: 'Сплошное', forged: 'Ковка', combined: 'Комби', vertical: 'Вертик. планки' }[f] || f);
-
-        const opts = o.opts || {};
-        const optList: string[] = [];
-        if (opts.trusses) optList.push('✅ Усил. фермы');
-        if (opts.gutters) optList.push('✅ Водостоки');
-        if (opts.walls) optList.push('✅ Зашивка');
-        if (opts.found) optList.push('✅ Фундамент');
-        if (opts.install) optList.push('✅ Монтаж');
-        const optStr = optList.length ? optList.join('\n') : 'Базовая';
-
-        const loads = o.loads || {};
-        let loadsStr = '';
-        if (loads.snow || loads.wind || loads.total) {
-            loadsStr = `➖➖➖➖➖➖➖➖➖➖\n❄️ Снеговая: ${loads.snow || 0} кг/м²\n💨 Ветровая: ${loads.wind || 0} Па\n⚖️ Общая: ${loads.total || 0} кг/м²\n📍 Регион: ${o.region || 'Не указан'}\n`;
-        }
-
-        const gate = o.gate || {};
-        let gateStr = '';
-        if (gate.type && gate.type !== 'none') {
-            gateStr = `➖➖➖➖➖➖➖➖➖➖\n🚗 ВОРОТА:\n📐 Тип: ${gateTypeName(gate.type)}\n📏 Размер: ${gate.width || 4}×${gate.height || 2} м\n🔲 Заполнение: ${gateFillName(gate.filling)}\n🎨 Цвет рамы: ${gate.frameColor || gate.frame_color || 'Не указан'}\n🎨 Цвет полотна: ${gate.panelColor || gate.panel_color || 'Не указан'}\n🚶 Калитка: ${gate.wicket ? 'Да' : 'Нет'}\n🤖 Автоматика: ${gate.automation ? 'Да' : 'Нет'}\n`;
-        }
-
-        const priceNavyes = o.price || 0;
-        const priceGate = o.price_gate || 0;
-        const priceTotal = o.price_total || priceNavyes + priceGate;
-        let priceStr = `💰 НАВЕС: ${priceNavyes.toLocaleString()} руб.`;
-        if (priceGate > 0) {
-            priceStr += `\n🚗 ВОРОТА: ${priceGate.toLocaleString()} руб.`;
-            priceStr += `\n💵 ИТОГО: ${priceTotal.toLocaleString()} руб.`;
-        }
-
-        const orderText = `Здравствуйте! Хочу оформить заявку, вот данные:
-🆔 ID: ${o.id || 'N/A'}
-🏗 Тип: ${roofTypeName(o.type)}
-📏 Длина: ${o.length || '?'} м
-📏 Ширина: ${o.width || '?'} м
-↕️ Высота (столб): ${o.height || '?'} м
-🏔 Высота (общ): ~${o.height_peak || '?'} м
-📐 Уклон: ${o.slope || '?'}°
-🧱 Сечение: ${o.pillar || '?'}
-➖➖➖➖➖➖➖➖➖➖
-🔲 S пола: ${o.area_floor || '?'} м²
-🏠 S кровли: ${o.area_roof || '?'} м²
-🏠 Материал: ${materialName(o.material)}
-🎨 Покраска: ${paintName(o.paint)}
-🖌 Цвет: ${o.color_frame || '?'} / ${o.color_roof || '?'}
-➖➖➖➖➖➖➖➖➖➖
-🛠 Опции:
-${optStr}
-${loadsStr}${gateStr}➖➖➖➖➖➖➖➖➖➖
-${priceStr}`;
-
-        // Копируем текст в буфер обмена
-        navigator.clipboard.writeText(orderText).then(() => {
-            console.log('✅ Order text copied to clipboard');
-        }).catch(err => {
-            console.warn('Clipboard write failed:', err);
-        });
-
-        // Если есть Telegram WebApp - используем openTelegramLink для открытия чата с админом
-        if (tg && typeof (tg as any).openTelegramLink === 'function') {
-            console.log('📱 Using Telegram openTelegramLink to open admin chat');
-            // Открываем чат с админом по user_id (numeric)
-            // user_id 5216818742
-            try {
-                (tg as any).openTelegramLink('tg://user?id=5216818742');
-                // Если нативный клиент не открылся, через небольшой таймаут открываем web.telegram.org
-                setTimeout(() => {
-                    try {
-                        (tg as any).openTelegramLink('https://web.telegram.org/k/#5216818742');
-                    } catch (e) {
-                        window.open('https://web.telegram.org/k/#5216818742', '_blank');
-                    }
-                }, 800);
-            } catch (err) {
-                console.warn('openTelegramLink tg:// failed, falling back to web.telegram.org', err);
-                try {
-                    (tg as any).openTelegramLink('https://web.telegram.org/k/#5216818742');
-                } catch (e) {
-                    window.open('https://web.telegram.org/k/#5216818742', '_blank');
-                }
-            }
-            // Показываем уведомление
-            setTimeout(() => {
-                (tg as any).showPopup?.({
-                    title: "✅ Текст скопирован",
-                    message: "Текст заказа скопирован в буфер обмена.\n\nВставьте его в чат (зажмите поле ввода → Вставить) и отправьте.",
-                    buttons: [{ type: "close", text: "Понятно" }]
-                });
-            }, 500);
-        } else {
-            // Браузер без Telegram - открываем web.telegram.org
-            console.log('🌐 Browser mode - opening web.telegram.org');
-            window.open('https://web.telegram.org/k/#5216818742', '_blank');
-            alert('✅ Текст заказа скопирован в буфер обмена.\n\nВставьте его в чат (Ctrl+V) и отправьте.');
-        }
     }, [getOrderPayload]);
 
+    const handleOrderSuccess = useCallback((orderId: string) => {
+        setShowBrowserOrderModal(false);
+        setSuccessOrderId(orderId);
+        setShowOrderSuccess(true);
+    }, []);
+
     return (
-        <div className="flex flex-col lg:flex-row h-[100dvh] w-screen overflow-hidden bg-slate-100 font-sans overscroll-none fixed inset-0">
-            {/* HEADER */}
-            <div className="absolute top-0 left-0 right-0 z-40 p-4 pointer-events-none flex justify-between items-start lg:p-6">
-                <div className="bg-white/90 backdrop-blur-md px-5 py-2.5 rounded-xl shadow-sm border border-slate-200/50 pointer-events-auto">
-                    <h1 className="font-bold text-slate-900 leading-tight flex items-center gap-2">
-                        <span className="text-indigo-600">Kovka007</span>
-                        <span className="text-slate-300">|</span>
-                        <span className="text-xs font-normal text-slate-500 uppercase tracking-wider">
-                            Конструктор v2.0
-                        </span>
+        <div className="flex flex-col lg:flex-row h-[100dvh] w-screen overflow-hidden bg-slate-900 font-sans overscroll-none fixed inset-0">
+            {/* HEADER - Compact Dark */}
+            <div className="absolute top-0 left-0 right-0 z-40 p-3 pointer-events-none flex justify-between items-start lg:p-4">
+                <div className="bg-slate-800/90 backdrop-blur-md px-3 py-1.5 rounded-lg shadow-lg border border-slate-700/50 pointer-events-auto">
+                    <h1 className="font-bold text-white leading-tight flex items-center gap-1.5 text-sm">
+                        <span className="text-indigo-400">Kovka007</span>
+                        <span className="text-slate-600">|</span>
+                        <span className="text-[10px] font-normal text-slate-500 uppercase tracking-wider">v2.0</span>
                     </h1>
                 </div>
             </div>
@@ -1235,11 +774,11 @@ ${priceStr}`;
             <div className="relative w-full flex-grow min-h-0 lg:h-full transition-all duration-300">
                 <Scene config={config} gateConfig={gateConfig} />
 
-                {/* Предупреждения о нагрузках */}
+                {/* Warnings */}
                 {loads.warnings.length > 0 && (
-                    <div className="absolute top-20 left-4 z-20 max-w-xs">
+                    <div className="absolute top-14 left-4 z-20 max-w-xs">
                         {loads.warnings.map((warning, idx) => (
-                            <div key={idx} className="bg-amber-50/90 backdrop-blur border border-amber-200 text-amber-800 text-xs rounded-lg px-3 py-2 mb-2 flex items-start gap-2">
+                            <div key={idx} className="bg-amber-900/90 backdrop-blur border border-amber-700 text-amber-200 text-xs rounded-lg px-3 py-2 mb-2 flex items-start gap-2">
                                 <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" />
                                 <span>{warning}</span>
                             </div>
@@ -1277,15 +816,15 @@ ${priceStr}`;
             </div>
 
             {/* MOBILE PANEL */}
-            <div className="lg:hidden flex flex-col z-30 flex-shrink-0 bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.08)] pb-safe">
+            <div className="lg:hidden flex flex-col z-30 flex-shrink-0 bg-slate-800 shadow-[0_-4px_20px_rgba(0,0,0,0.3)] pb-safe">
                 {/* Табы */}
-                <div className="flex border-b border-slate-100">
+                <div className="flex border-b border-slate-700">
                     <button
                         onClick={() => setActiveTab("carport")}
                         className={`flex-1 py-3 text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
                             activeTab === "carport"
-                                ? "text-indigo-600 border-b-2 border-indigo-600"
-                                : "text-slate-500"
+                                ? "text-indigo-400 border-b-2 border-indigo-400"
+                                : "text-slate-400"
                         }`}
                     >
                         <Home size={16} />
@@ -1295,14 +834,14 @@ ${priceStr}`;
                         onClick={() => setActiveTab("gate")}
                         className={`flex-1 py-3 text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
                             activeTab === "gate"
-                                ? "text-indigo-600 border-b-2 border-indigo-600"
-                                : "text-slate-500"
+                                ? "text-indigo-400 border-b-2 border-indigo-400"
+                                : "text-slate-400"
                         }`}
                     >
                         <Car size={16} />
                         Ворота
                         {gateConfig.type !== GateType.None && (
-                            <span className="bg-indigo-100 text-indigo-600 text-[10px] px-1.5 py-0.5 rounded-full">
+                            <span className="bg-indigo-900/50 text-indigo-300 text-[10px] px-1.5 py-0.5 rounded-full">
                                 +{gatePrice.toLocaleString()}
                             </span>
                         )}
@@ -1313,7 +852,7 @@ ${priceStr}`;
                 <div className="px-4 pt-3">
                     <button
                         onClick={() => setIsMobileMenuOpen(true)}
-                        className="w-full bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-medium py-3 rounded-xl flex items-center justify-center gap-2 transition-colors active:scale-[0.98]"
+                        className="w-full bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-200 font-medium py-3 rounded-xl flex items-center justify-center gap-2 transition-colors active:scale-[0.98]"
                     >
                         <Settings2 size={18} />
                         <span>Настроить {activeTab === "carport" ? "навес" : "ворота"}</span>
@@ -1325,7 +864,7 @@ ${priceStr}`;
                     <div className="mb-4">
                         <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center gap-2">
-                                <span className="text-lg font-medium text-slate-400 line-through decoration-slate-400/50">
+                                <span className="text-lg font-medium text-slate-500 line-through decoration-slate-500/50">
                                     {oldPrice.toLocaleString()} ₽
                                 </span>
                                 <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
@@ -1333,7 +872,7 @@ ${priceStr}`;
                                 </span>
                             </div>
                             {installActive && (
-                                <div className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
+                                <div className="bg-green-900/50 text-green-400 px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
                                     <CheckCircle2 size={12} />
                                     с монтажом
                                 </div>
@@ -1341,16 +880,16 @@ ${priceStr}`;
                         </div>
                         <div className="flex items-end justify-between">
                             <div>
-                                <p className="text-3xl font-black text-slate-900 leading-none tracking-tight">
+                                <p className="text-3xl font-black text-white leading-none tracking-tight">
                                     {totalPrice.toLocaleString()} ₽
                                 </p>
                                 {gatePrice > 0 && (
-                                    <p className="text-xs text-slate-500 mt-1">
+                                    <p className="text-xs text-slate-400 mt-1">
                                         Навес: {price.toLocaleString()} + Ворота: {gatePrice.toLocaleString()}
                                     </p>
                                 )}
                             </div>
-                            <div className="flex items-center gap-1 text-green-600 text-xs font-bold bg-green-50 px-2 py-1 rounded">
+                            <div className="flex items-center gap-1 text-green-400 text-xs font-bold bg-green-900/50 px-2 py-1 rounded">
                                 <TrendingDown size={14} />
                                 <span>-{savings.toLocaleString()} ₽</span>
                             </div>
@@ -1363,7 +902,7 @@ ${priceStr}`;
                             e.stopPropagation();
                             handleOrder();
                         }}
-                        className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 px-6 rounded-xl shadow-lg flex justify-center items-center gap-3 active:scale-[0.98] transition-all"
+                        className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 px-6 rounded-xl shadow-lg flex justify-center items-center gap-3 active:scale-[0.98] transition-all"
                         style={{ touchAction: "manipulation" }}
                     >
                         <span>Оформить заявку</span>
@@ -1374,27 +913,27 @@ ${priceStr}`;
 
             {/* DESKTOP SIDEBAR */}
             <div
-                className={`fixed inset-0 z-50 lg:static lg:z-auto transform transition-transform duration-500 ease-out ${isMobileMenuOpen ? "translate-y-0" : "translate-y-[100%] lg:translate-y-0"} lg:w-[460px] lg:min-w-[420px] flex-shrink-0 h-full shadow-2xl lg:shadow-none flex flex-col bg-white`}
+                className={`fixed inset-0 z-50 lg:static lg:z-auto transform transition-transform duration-500 ease-out ${isMobileMenuOpen ? "translate-y-0" : "translate-y-[100%] lg:translate-y-0"} lg:w-[460px] lg:min-w-[420px] flex-shrink-0 h-full shadow-2xl lg:shadow-none flex flex-col bg-slate-800`}
             >
                 {/* Mobile close button */}
-                <div className="lg:hidden flex items-center justify-between p-4 border-b border-slate-100">
-                    <h2 className="font-bold text-slate-800">Настройки</h2>
+                <div className="lg:hidden flex items-center justify-between p-4 border-b border-slate-700">
+                    <h2 className="font-bold text-white">Настройки</h2>
                     <button
                         onClick={() => setIsMobileMenuOpen(false)}
-                        className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors"
+                        className="p-2 bg-slate-700 rounded-full hover:bg-slate-600 transition-colors text-white"
                     >
                         <X size={20} />
                     </button>
                 </div>
                 
                 {/* Desktop tabs */}
-                <div className="hidden lg:flex border-b border-slate-100">
+                <div className="hidden lg:flex border-b border-slate-700">
                     <button
                         onClick={() => setActiveTab("carport")}
                         className={`flex-1 py-4 text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${
                             activeTab === "carport"
-                                ? "text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/50"
-                                : "text-slate-500 hover:text-slate-700"
+                                ? "text-indigo-400 border-b-2 border-indigo-400 bg-indigo-900/30"
+                                : "text-slate-400 hover:text-slate-200"
                         }`}
                     >
                         <Home size={18} />
@@ -1404,14 +943,14 @@ ${priceStr}`;
                         onClick={() => setActiveTab("gate")}
                         className={`flex-1 py-4 text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${
                             activeTab === "gate"
-                                ? "text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/50"
-                                : "text-slate-500 hover:text-slate-700"
+                                ? "text-indigo-400 border-b-2 border-indigo-400 bg-indigo-900/30"
+                                : "text-slate-400 hover:text-slate-200"
                         }`}
                     >
                         <Car size={18} />
                         Ворота
                         {gateConfig.type !== GateType.None && (
-                            <span className="bg-indigo-100 text-indigo-700 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                            <span className="bg-indigo-900/50 text-indigo-300 text-[10px] px-2 py-0.5 rounded-full font-bold">
                                 +{gatePrice.toLocaleString()}
                             </span>
                         )}
@@ -1451,11 +990,11 @@ ${priceStr}`;
                 </div>
 
                 {/* ORDER FOOTER (always visible) */}
-                <div className="flex-shrink-0 p-6 bg-white border-t border-slate-200">
+                <div className="flex-shrink-0 p-6 bg-slate-800 border-t border-slate-700">
                     <div className="mb-4">
                         <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center gap-2">
-                                <span className="text-lg font-medium text-slate-400 line-through decoration-slate-400/50">
+                                <span className="text-lg font-medium text-slate-500 line-through decoration-slate-500/50">
                                     {oldPrice.toLocaleString()} ₽
                                 </span>
                                 <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
@@ -1463,7 +1002,7 @@ ${priceStr}`;
                                 </span>
                             </div>
                             {installActive && (
-                                <div className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
+                                <div className="bg-green-900/50 text-green-400 px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
                                     <CheckCircle2 size={12} />
                                     с монтажом
                                 </div>
@@ -1471,16 +1010,16 @@ ${priceStr}`;
                         </div>
                         <div className="flex items-end justify-between">
                             <div>
-                                <p className="text-3xl font-black text-slate-900 leading-none tracking-tight">
+                                <p className="text-3xl font-black text-white leading-none tracking-tight">
                                     {totalPrice.toLocaleString()} ₽
                                 </p>
                                 {gatePrice > 0 && (
-                                    <p className="text-xs text-slate-500 mt-1">
+                                    <p className="text-xs text-slate-400 mt-1">
                                         Навес: {price.toLocaleString()} + Ворота: {gatePrice.toLocaleString()}
                                     </p>
                                 )}
                             </div>
-                            <div className="flex items-center gap-1 text-green-600 text-xs font-bold bg-green-50 px-2 py-1 rounded">
+                            <div className="flex items-center gap-1 text-green-400 text-xs font-bold bg-green-900/50 px-2 py-1 rounded">
                                 <TrendingDown size={14} />
                                 <span>-{savings.toLocaleString()} ₽</span>
                             </div>
@@ -1493,7 +1032,7 @@ ${priceStr}`;
                             e.stopPropagation();
                             handleOrder();
                         }}
-                        className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 px-6 rounded-xl transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
+                        className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 px-6 rounded-xl transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
                         style={{ touchAction: "manipulation" }}
                     >
                         <span>Оформить заявку</span>
@@ -1506,22 +1045,23 @@ ${priceStr}`;
             <div className="hidden lg:flex fixed bottom-6 left-6 z-40 gap-3 items-center">
                 <button
                     onClick={() => setShowExportModal(true)}
-                    className="bg-white hover:bg-slate-50 text-slate-700 font-medium py-2.5 px-4 rounded-xl shadow-lg border border-slate-200 flex items-center gap-2 transition-all active:scale-95"
+                    className="bg-slate-800/90 hover:bg-slate-700 text-slate-200 font-medium py-2.5 px-4 rounded-xl shadow-lg border border-slate-700 flex items-center gap-2 transition-all active:scale-95 backdrop-blur-md"
                 >
-                    <Download size={16} className="text-indigo-600" />
+                    <Download size={16} className="text-indigo-400" />
                     <span className="text-sm">Экспорт</span>
                 </button>
                 <a
                     href="https://kovka007.ru/"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="bg-white hover:bg-slate-50 text-slate-700 font-medium py-2.5 px-4 rounded-xl shadow-lg border border-slate-200 flex items-center gap-2 transition-all active:scale-95 no-underline"
+                    className="bg-slate-800/90 hover:bg-slate-700 text-slate-200 font-medium py-2.5 px-4 rounded-xl shadow-lg border border-slate-700 flex items-center gap-2 transition-all active:scale-95 backdrop-blur-md no-underline"
                 >
-                    <Globe size={16} className="text-blue-600" />
+                    <Globe size={16} className="text-blue-400" />
                     <span className="text-sm">Сайт</span>
                 </a>
             </div>
 
+            {/* Modals */}
             <BrowserOrderModal
                 isOpen={showBrowserOrderModal}
                 onClose={() => setShowBrowserOrderModal(false)}
@@ -1529,6 +1069,9 @@ ${priceStr}`;
                 price={totalPrice}
                 config={config}
                 gateConfig={gateConfig}
+                onSuccess={handleOrderSuccess}
+                onShowPrivacy={() => setShowPrivacyPolicy(true)}
+                onShowTerms={() => setShowTermsOfUse(true)}
             />
             
             <ExportModal
@@ -1538,6 +1081,11 @@ ${priceStr}`;
                 price={totalPrice}
                 gateConfig={gateConfig}
             />
+
+            {/* Policy Pages */}
+            {showPrivacyPolicy && <PrivacyPolicyPage onClose={() => setShowPrivacyPolicy(false)} />}
+            {showTermsOfUse && <TermsOfUsePage onClose={() => setShowTermsOfUse(false)} />}
+            {showOrderSuccess && <OrderSuccessScreen orderId={successOrderId} onClose={() => setShowOrderSuccess(false)} />}
         </div>
     );
 }

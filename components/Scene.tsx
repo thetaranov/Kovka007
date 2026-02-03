@@ -295,27 +295,19 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig }) => {
             touches={{ ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN }}
             ref={controlsRef}
           />
-          {/* Gizmo: показываем на всех устройствах; на маленьких мобильных (isMobile) — компактный в правом верхнем углу, на больших — правый нижний */}
-          {isMobile ? (
-            <GizmoHelper alignment="top-right" margin={[12, 12]}>
-              <GizmoViewport
-                axisColors={["#ef4444", "#3b82f6", "#22c55e"]}
-                labels={["X", "Z", "Y"]}
-                labelColor="#0f172a"
-                hideNegativeAxes={false}
-                className="scale-50"
-              />
-            </GizmoHelper>
-          ) : (
-            <GizmoHelper alignment="bottom-right" margin={[80, 100]}>
-              <GizmoViewport
-                axisColors={["#ef4444", "#3b82f6", "#22c55e"]}
-                labels={["X", "Z", "Y"]}
-                labelColor="#0f172a"
-                hideNegativeAxes={false}
-              />
-            </GizmoHelper>
-          )}
+          {/* Gizmo: на мобильных делаем меньше и ближе к краю */}
+          <GizmoHelper 
+            alignment="bottom-right" 
+            margin={isMobile ? [60, 160] : [80, 100]}
+          >
+            <GizmoViewport
+              axisColors={["#ef4444", "#3b82f6", "#22c55e"]}
+              labels={["X", "Z", "Y"]}
+              labelColor="#0f172a"
+              hideNegativeAxes={false}
+              font="14px Inter, sans-serif"
+            />
+          </GizmoHelper>
           <MeasurementTool
             enabled={measureMode}
             points={measurePoints}
