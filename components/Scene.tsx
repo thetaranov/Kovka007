@@ -134,7 +134,7 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig }) => {
       />
 
       {/* Control stack (mobile + desktop) */}
-      <div className="absolute right-4 top-24 lg:top-20 z-20 flex flex-col items-center gap-2">
+      <div className="absolute right-4 top-32 lg:top-28 z-20 flex flex-col items-center gap-2">
         <button
           onClick={handleReset}
           className="p-2 bg-white/80 hover:bg-white backdrop-blur-sm rounded-lg shadow-sm border border-slate-200 text-slate-500 hover:text-indigo-600 active:scale-95 transition-all"
@@ -260,13 +260,13 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig }) => {
             mouseButtons={{ LEFT: THREE.MOUSE.PAN, RIGHT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY }}
             ref={controlsRef}
           />
-          <GizmoHelper alignment="top-right" margin={[70, 120]}>
+          <GizmoHelper alignment="top-right" margin={[70, 70]}>
             <GizmoViewport
               axisColors={["#ef4444", "#3b82f6", "#22c55e"]}
               labels={["X", "Z", "Y"]}
               labelColor="#0f172a"
               hideNegativeAxes={false}
-              className="scale-[0.8] lg:scale-100"
+              className="scale-[0.65] lg:scale-100"
             />
           </GizmoHelper>
           <MeasurementTool
