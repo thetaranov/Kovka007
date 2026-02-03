@@ -35,7 +35,7 @@ export const LoadsInfoPanel: React.FC<LoadsInfoPanelProps> = ({
   );
   
   return (
-    <section className="border-t border-slate-100 pt-4">
+    <section className="border-t border-slate-100 pt-4" style={{ touchAction: "pan-y" }}>
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         className="w-full flex items-center justify-between mb-3"

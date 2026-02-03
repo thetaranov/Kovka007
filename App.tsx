@@ -480,12 +480,10 @@ export default function App() {
             materialCost += wallArea * PRICING.extras.sideWalls;
         }
         const foundationEnabled = config.hasFoundation || config.installationType === InstallationType.FoundationPour;
-        if (foundationEnabled) {
-            const baseThickness = 0.3;
-            const thickness = Math.max(0.15, config.foundationThickness || baseThickness);
-            const thicknessFactor = Math.pow(thickness / baseThickness, 1.6);
-            materialCost += pillarCount * 4000 * thicknessFactor;
-        }
+        const baseThickness = 0.3;
+        const thickness = Math.max(0.15, config.foundationThickness || baseThickness);
+        const foundationVolume = foundationEnabled ? floorArea * thickness : 0;
+        const foundationCost = foundationVolume * 10000;
 
         let total = materialCost;
         const installActive = config.installationType !== InstallationType.None;
@@ -502,6 +500,8 @@ export default function App() {
         if (total < minTotal) {
             total = minTotal;
         }
+
+        total += foundationCost;
 
         setPrice(Math.round(total / 100) * 100);
     }, [config]);

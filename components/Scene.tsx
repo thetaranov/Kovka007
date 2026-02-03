@@ -84,6 +84,25 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig }) => {
 
   const handleReset = (e: React.MouseEvent) => {
     e.stopPropagation();
+    setMeasureMode(false);
+    setMeasurePoints([]);
+    setOrthoPlane("top");
+    setOrthoSign(1);
+    setIsOrthoStrict(false);
+    setCameraTarget("perspective");
+    setCameraMode("perspective");
+    modeRef.current = "perspective";
+    transitionRef.current = {
+      active: false,
+      t: 0,
+      from: "perspective",
+      to: "perspective",
+      initialized: false,
+      startFov: 45,
+      targetFov: 45,
+      startZoom: 60,
+      targetZoom: 60,
+    };
     setResetKey((prev) => prev + 1);
   };
 
@@ -254,13 +273,14 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig }) => {
             minDistance={isOrtho ? 0.1 : 3}
             maxDistance={isOrtho ? 1000 : 50}
             target={[0, config.height / 2, 0]}
-            enablePan={false}
+            enablePan={true}
             enableZoom={true}
             enableDamping={false}
             dampingFactor={0}
             enableRotate={true}
             rotateSpeed={1}
-            mouseButtons={{ LEFT: THREE.MOUSE.PAN, RIGHT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY }}
+            mouseButtons={{ LEFT: THREE.MOUSE.ROTATE, RIGHT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY }}
+            touches={{ ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN }}
             ref={controlsRef}
           />
           <GizmoHelper alignment="top-right" margin={[70, 70]}>

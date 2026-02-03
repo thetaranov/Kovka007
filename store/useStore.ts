@@ -164,12 +164,10 @@ function calculateCarportPrice(config: CarportConfig): number {
     materialCost += wallArea * PRICING.extras.sideWalls;
   }
   const foundationEnabled = config.hasFoundation || config.installationType === InstallationType.FoundationPour;
-  if (foundationEnabled) {
-    const baseThickness = 0.3;
-    const thickness = Math.max(0.15, config.foundationThickness || baseThickness);
-    const thicknessFactor = Math.pow(thickness / baseThickness, 1.6);
-    materialCost += pillarCount * 4000 * thicknessFactor;
-  }
+  const baseThickness = 0.3;
+  const thickness = Math.max(0.15, config.foundationThickness || baseThickness);
+  const foundationVolume = foundationEnabled ? floorArea * thickness : 0;
+  const foundationCost = foundationVolume * 10000;
 
   let total = materialCost;
   
@@ -186,6 +184,8 @@ function calculateCarportPrice(config: CarportConfig): number {
   // Минимальная цена
   const minTotal = floorArea * PRICING.minPricePerSqm;
   if (total < minTotal) total = minTotal;
+
+  total += foundationCost;
 
   return Math.round(total / 100) * 100;
 }
