@@ -765,6 +765,14 @@ export default function App() {
         console.log(`📱 Telegram WebApp version: ${tg?.version || 'N/A'}`);
         console.log(`📱 Platform: ${tg?.platform || 'N/A'}`);
 
+        // Если Telegram WebApp отсутствует — открываем browser modal для ввода контактов
+        if (!tg) {
+            console.warn("⚠️ Telegram WebApp not found - browser mode");
+            setOrderJson(JSON.stringify(getOrderPayload({ includeCad: true })));
+            setShowBrowserOrderModal(true);
+            return;
+        }
+
         // Если Telegram WebApp доступен и можно использовать sendData — отправляем напрямую боту
         const dataToSend = JSON.stringify(telegramPayload);
         const payloadSize = new Blob([dataToSend]).size;
