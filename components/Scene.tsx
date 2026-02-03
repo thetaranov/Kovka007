@@ -134,10 +134,10 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig }) => {
       />
 
       {/* Control stack (mobile + desktop) */}
-      <div className="absolute right-4 top-32 lg:top-28 z-20 flex flex-col items-center gap-2">
+      <div className="absolute right-4 top-32 lg:top-28 z-20 flex flex-col items-center gap-2 pointer-events-auto">
         <button
           onClick={handleReset}
-          className="p-2 bg-white/80 hover:bg-white backdrop-blur-sm rounded-lg shadow-sm border border-slate-200 text-slate-500 hover:text-indigo-600 active:scale-95 transition-all"
+          className="p-2 bg-white/80 hover:bg-white backdrop-blur-sm rounded-lg shadow-sm border border-slate-200 text-slate-500 hover:text-indigo-600 active:scale-95 transition-all pointer-events-auto"
         >
           <RefreshCw size={18} />
         </button>
@@ -146,7 +146,7 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig }) => {
             setMeasureMode((v) => !v);
             setMeasurePoints([]);
           }}
-          className={`p-2 bg-white/80 backdrop-blur-sm border border-slate-200 rounded-lg transition-colors ${
+          className={`p-2 bg-white/80 backdrop-blur-sm border border-slate-200 rounded-lg transition-colors pointer-events-auto ${
             measureMode ? "text-indigo-700 border-indigo-300" : "text-slate-700 hover:bg-slate-100"
           }`}
         >
@@ -154,7 +154,7 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig }) => {
         </button>
         <button
           onClick={handleCameraToggle}
-          className="p-2 bg-white/80 backdrop-blur-sm border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-100 transition-colors"
+          className="p-2 bg-white/80 backdrop-blur-sm border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-100 transition-colors pointer-events-auto"
         >
           <Camera size={18} className={isOrthoTarget ? "text-indigo-700" : "text-slate-700"} />
         </button>
@@ -266,7 +266,7 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig }) => {
               labels={["X", "Z", "Y"]}
               labelColor="#0f172a"
               hideNegativeAxes={false}
-              className="scale-[0.65] lg:scale-100"
+              className="scale-[0.55] lg:scale-100"
             />
           </GizmoHelper>
           <MeasurementTool
