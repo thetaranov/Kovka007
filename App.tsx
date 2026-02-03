@@ -534,7 +534,8 @@ export default function App() {
         downloadReport(config, totalPrice);
     }, [config, totalPrice]);
 
-    const getOrderPayload = useCallback(() => {
+    const getOrderPayload = useCallback((options?: { includeCad?: boolean }) => {
+        const includeCad = options?.includeCad ?? true;
         const frameColorObj = FRAME_COLORS.find(
             (c) => c.hex === config.frameColor,
         );
@@ -607,33 +608,32 @@ export default function App() {
                 wicket: gateConfig.hasWicket,
                 automation: gateConfig.hasAutomation,
             } : undefined,
-            cad_dxf: (() => {
+            cad_dxf: includeCad ? (() => {
                 try {
                     return generateDXFBase64(config, gateConfig);
                 } catch (e) {
                     console.error("Error generating DXF:", e);
                     return undefined;
                 }
-            })(),
+            })() : undefined,
         };
     }, [config, gateConfig, price, gatePrice, totalPrice, loads]);
 
     const handleOrder = useCallback(() => {
-        const payload = getOrderPayload();
-        const telegramPayload = { ...payload } as typeof payload;
-        delete (telegramPayload as any).cad_dxf;
+        const telegramPayload = getOrderPayload({ includeCad: false });
         const dataToSend = JSON.stringify(telegramPayload);
 
         if (window.Telegram?.WebApp?.sendData) {
             try {
                 window.Telegram.WebApp.sendData(dataToSend);
+                window.Telegram.WebApp.close();
             } catch (e) {
                 console.error("sendData failed:", e);
-                setOrderJson(JSON.stringify(payload));
+                setOrderJson(JSON.stringify(getOrderPayload({ includeCad: true })));
                 setShowBrowserOrderModal(true);
             }
         } else {
-            setOrderJson(JSON.stringify(payload));
+            setOrderJson(JSON.stringify(getOrderPayload({ includeCad: true })));
             setShowBrowserOrderModal(true);
         }
     }, [getOrderPayload]);
