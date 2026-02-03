@@ -785,9 +785,9 @@ export default function App() {
         console.log(`📱 Telegram WebApp version: ${tg?.version || 'N/A'}`);
         console.log(`📱 Platform: ${tg?.platform || 'N/A'}`);
 
-        // Если Telegram WebApp отсутствует — открываем browser modal для ввода контактов
-        if (!tg) {
-            console.warn("⚠️ Telegram WebApp not found - browser mode");
+        // Если Telegram WebApp отсутствует ИЛИ мы в браузере (platform unknown, no initData) — открываем browser modal для ввода контактов
+        if (!tg || tg.platform === 'unknown' || !tg.initData) {
+            console.warn("⚠️ Telegram WebApp not found or running in browser - browser mode");
             setOrderJson(JSON.stringify(getOrderPayload({ includeCad: true })));
             setShowBrowserOrderModal(true);
             return;
