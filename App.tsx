@@ -761,11 +761,61 @@ export default function App() {
     const handleOrder = useCallback(() => {
         const tg = window.Telegram?.WebApp;
         const telegramPayload = getOrderPayload({ includeCad: false });
-        
+
         console.log(`📱 Telegram WebApp version: ${tg?.version || 'N/A'}`);
         console.log(`📱 Platform: ${tg?.platform || 'N/A'}`);
-        
-        // Формируем полный текст заказа для отправки админу
+
+        // Если Telegram WebApp доступен и можно использовать sendData — отправляем напрямую боту
+        const dataToSend = JSON.stringify(telegramPayload);
+        const payloadSize = new Blob([dataToSend]).size;
+        const canUseSendData = tg && typeof tg.sendData === 'function';
+        const initDataUnsafe = (tg as any)?.initDataUnsafe as any;
+        const isInlineMode = !!initDataUnsafe?.query_id;
+        console.log(`📤 Payload size: ${payloadSize} bytes (${(payloadSize / 1024).toFixed(2)}KB)`);
+        console.log(`📱 canUseSendData: ${!!canUseSendData}, isInlineMode: ${isInlineMode}`);
+
+        if (canUseSendData && !isInlineMode) {
+            // Ограничение sendData — 4096 байт
+            let finalData = dataToSend;
+            if (payloadSize > 4096) {
+                console.warn(`⚠️ Payload too large: ${payloadSize} bytes, reducing...`);
+                const minimalPayload: any = {
+                    id: telegramPayload.id,
+                    type: telegramPayload.type,
+                    length: telegramPayload.length,
+                    width: telegramPayload.width,
+                    height: telegramPayload.height,
+                    height_peak: telegramPayload.height_peak,
+                    slope: telegramPayload.slope,
+                    pillar: telegramPayload.pillar,
+                    area_floor: telegramPayload.area_floor,
+                    material: telegramPayload.material,
+                    paint: telegramPayload.paint,
+                    color_frame: telegramPayload.color_frame,
+                    color_roof: telegramPayload.color_roof,
+                    opts: telegramPayload.opts,
+                    price: telegramPayload.price,
+                    price_gate: telegramPayload.price_gate,
+                    price_total: telegramPayload.price_total,
+                    region: telegramPayload.region,
+                    gate: telegramPayload.gate,
+                };
+                finalData = JSON.stringify(minimalPayload);
+                console.log(`📦 Reduced payload: ${new Blob([finalData]).size} bytes`);
+            }
+
+            try {
+                console.log('🚀 Calling sendData...');
+                tg.sendData(finalData);
+                console.log('✅ sendData called successfully');
+                return; // sendData will close WebApp; stop further processing
+            } catch (e) {
+                console.error('❌ sendData exception:', e);
+                // fall through to clipboard/open behavior
+            }
+        }
+
+        // Формируем полный текст заказа для отправки админу (clipboard/open-chat fallback)
         const o = telegramPayload as any;
         const roofTypeName = (t: string) => ({ single: 'Односкатный', gable: 'Двускатный', arched: 'Арочный', triangular: 'Треугольный', semiarched: 'Полуарочный' }[t] || t);
         const materialName = (m: string) => ({ polycarbonate: 'Сотовый поликарбонат', metaltile: 'Металлочерепица', decking: 'Профнастил' }[m] || m);
