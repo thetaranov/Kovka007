@@ -10,11 +10,13 @@
   --bg-scene: #2d3139;
   --border-main: #2d323d;
   --border-card: #3d4251;
+  --border-hover: #4d5261;
   --text-primary: #ffffff;
   --text-secondary: #9ca3af;
   --text-muted: #6b7280;
   --accent: #22d3ee;
   --accent-hover: #06b6d4;
+  --accent-bg: rgba(34, 211, 238, 0.1);
   
   /* Transition for theme changes */
   --theme-transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
@@ -27,12 +29,165 @@
   --bg-scene: #e2e8f0;
   --border-main: #e2e8f0;
   --border-card: #cbd5e1;
+  --border-hover: #94a3b8;
   --text-primary: #1e293b;
   --text-secondary: #475569;
   --text-muted: #64748b;
   --accent: #0891b2;
   --accent-hover: #0e7490;
+  --accent-bg: rgba(8, 145, 178, 0.1);
 }
+
+/* ==================== UNIFIED MENU STYLES ==================== */
+
+/* Menu container */
+.menu-container {
+  background-color: var(--bg-main);
+  border-color: var(--border-main);
+  transition: var(--theme-transition);
+}
+
+/* Section headers */
+.menu-section-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+}
+
+/* Labels */
+.menu-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+/* Primary text */
+.menu-text {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+/* Secondary text */
+.menu-text-secondary {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+/* Muted text */
+.menu-text-muted {
+  font-size: 0.625rem;
+  color: var(--text-muted);
+}
+
+/* Value display */
+.menu-value {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  font-family: ui-monospace, monospace;
+  font-weight: 700;
+  color: var(--text-primary);
+  transition: var(--theme-transition);
+}
+
+/* Buttons - default state */
+.menu-btn {
+  border: 2px solid var(--border-card);
+  background-color: transparent;
+  color: var(--text-muted);
+  border-radius: 0.75rem;
+  transition: all 0.2s ease;
+}
+
+.menu-btn:hover {
+  border-color: var(--border-hover);
+  background-color: var(--bg-card);
+}
+
+/* Buttons - active state */
+.menu-btn-active {
+  border-color: var(--accent);
+  background-color: var(--accent-bg);
+  color: var(--accent);
+}
+
+/* Select inputs */
+.menu-select {
+  width: 100%;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-card);
+  color: var(--text-primary);
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  transition: var(--theme-transition);
+}
+
+.menu-select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-bg);
+}
+
+/* Range slider */
+.menu-slider {
+  width: 100%;
+  height: 0.375rem;
+  background-color: var(--border-card);
+  border-radius: 0.5rem;
+  appearance: none;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+
+/* Checkbox container */
+.menu-checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem;
+  border: 1px solid var(--border-card);
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: var(--theme-transition);
+}
+
+.menu-checkbox:hover {
+  background-color: var(--bg-card);
+}
+
+/* Checkbox box */
+.menu-checkbox-box {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 0.25rem;
+  border: 1px solid var(--border-hover);
+  background-color: var(--bg-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.menu-checkbox-box.checked {
+  background-color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Section divider */
+.menu-divider {
+  border-top: 1px solid var(--border-main);
+  padding-top: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+/* ==================== END MENU STYLES ==================== */
 
 html,
 body {

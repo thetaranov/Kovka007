@@ -9,7 +9,7 @@ interface GateControlsProps {
 }
 
 const GateTypeIcon: React.FC<{ type: GateType; active: boolean }> = ({ type, active }) => {
-  const color = active ? '#22d3ee' : '#6b7280'; // cyan-400 : gray-500
+  const color = active ? 'var(--accent)' : 'var(--text-muted)';
   
   if (type === GateType.None) {
     return (
@@ -69,7 +69,7 @@ export const GateControls: React.FC<GateControlsProps> = ({ config, onChange }) 
     <div className="space-y-6">
       {/* Тип ворот */}
       <section>
-        <h3 className="font-bold text-sm uppercase tracking-wide text-cyan-400 mb-4 flex items-center gap-2">
+        <h3 className="menu-section-title mb-4 flex items-center gap-2">
           <DoorOpen size={16} />
           Тип ворот
         </h3>
@@ -85,14 +85,13 @@ export const GateControls: React.FC<GateControlsProps> = ({ config, onChange }) 
               onClick={() => handleChange('type', opt.v)}
               className={`flex flex-col items-center justify-center p-2 rounded-xl border-2 transition-all h-20 ${
                 config.type === opt.v 
-                ? 'border-cyan-500 bg-cyan-500/10' 
-                : 'border-[#3d4251] hover:border-[#4d5261] hover:bg-[#252830]'
+                ? 'menu-btn-active' 
+                : 'menu-btn'
               }`}
             >
               <GateTypeIcon type={opt.v} active={config.type === opt.v} />
-              <span className={`text-[10px] font-bold mt-1.5 leading-tight text-center ${
-                config.type === opt.v ? 'text-cyan-400' : 'text-[#6b7280]'
-              }`}>
+              <span className={`text-[10px] font-bold mt-1.5 leading-tight text-center`}
+                    style={{ color: config.type === opt.v ? 'var(--accent)' : 'var(--text-muted)' }}>
                 {opt.l}
               </span>
             </button>
@@ -104,18 +103,19 @@ export const GateControls: React.FC<GateControlsProps> = ({ config, onChange }) 
         <>
           {/* Направление открытия (для откатных и распашных) */}
           {(config.type === GateType.Sliding || config.type === GateType.Swing) && (
-            <section className="pt-4 border-t border-[#3d4251]">
-              <h4 className="font-bold text-xs uppercase text-[#6b7280] mb-3">Направление открытия</h4>
+            <section className="menu-divider">
+              <h4 className="menu-label mb-3">Направление открытия</h4>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   onClick={() => handleChange('openDirection', 'left')}
                   className={`p-3 rounded-lg border-2 text-center transition-all ${
                     (config.openDirection ?? 'left') === 'left'
-                    ? 'border-cyan-500 bg-cyan-500/10' 
-                    : 'border-[#3d4251] hover:border-[#4d5261]'
+                    ? 'menu-btn-active' 
+                    : 'menu-btn'
                   }`}
                 >
-                  <div className={`font-semibold text-sm ${(config.openDirection ?? 'left') === 'left' ? 'text-cyan-400' : 'text-[#9ca3af]'}`}>
+                  <div className="font-semibold text-sm" 
+                       style={{ color: (config.openDirection ?? 'left') === 'left' ? 'var(--accent)' : 'var(--text-secondary)' }}>
                     ← Влево
                   </div>
                 </button>
@@ -123,11 +123,12 @@ export const GateControls: React.FC<GateControlsProps> = ({ config, onChange }) 
                   onClick={() => handleChange('openDirection', 'right')}
                   className={`p-3 rounded-lg border-2 text-center transition-all ${
                     config.openDirection === 'right'
-                    ? 'border-cyan-500 bg-cyan-500/10' 
-                    : 'border-[#3d4251] hover:border-[#4d5261]'
+                    ? 'menu-btn-active' 
+                    : 'menu-btn'
                   }`}
                 >
-                  <div className={`font-semibold text-sm ${config.openDirection === 'right' ? 'text-cyan-400' : 'text-[#9ca3af]'}`}>
+                  <div className="font-semibold text-sm"
+                       style={{ color: config.openDirection === 'right' ? 'var(--accent)' : 'var(--text-secondary)' }}>
                     Вправо →
                   </div>
                 </button>
@@ -136,16 +137,16 @@ export const GateControls: React.FC<GateControlsProps> = ({ config, onChange }) 
           )}
           
           {/* Размеры ворот */}
-          <section className="pt-4 border-t border-[#3d4251]">
-            <h4 className="font-bold text-xs uppercase text-[#6b7280] mb-3">Размеры проема</h4>
+          <section className="menu-divider">
+            <h4 className="menu-label mb-3">Размеры проема</h4>
             
             {/* Ширина */}
             <div className="mb-4">
               <div className="flex justify-between items-center mb-2">
-                <label className="text-xs text-[#6b7280]">Ширина</label>
-                <div className="flex items-center bg-[#252830] rounded px-2 py-1 border border-[#3d4251]">
-                  <span className="font-mono font-bold text-white">{config.width.toFixed(1)}</span>
-                  <span className="text-xs text-[#6b7280] ml-1">м</span>
+                <label className="menu-text-secondary">Ширина</label>
+                <div className="menu-value flex items-center">
+                  <span className="font-mono font-bold" style={{ color: 'var(--text-primary)' }}>{config.width.toFixed(1)}</span>
+                  <span className="text-xs ml-1" style={{ color: 'var(--text-muted)' }}>м</span>
                 </div>
               </div>
               <input
@@ -155,17 +156,17 @@ export const GateControls: React.FC<GateControlsProps> = ({ config, onChange }) 
                 step={0.1}
                 value={config.width}
                 onChange={(e) => handleChange('width', parseFloat(e.target.value))}
-                className="w-full h-1.5 bg-[#3d4251] rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                className="menu-slider"
               />
             </div>
             
             {/* Высота */}
             <div className="mb-4">
               <div className="flex justify-between items-center mb-2">
-                <label className="text-xs text-[#6b7280]">Высота</label>
-                <div className="flex items-center bg-[#252830] rounded px-2 py-1 border border-[#3d4251]">
-                  <span className="font-mono font-bold text-white">{config.height.toFixed(1)}</span>
-                  <span className="text-xs text-[#6b7280] ml-1">м</span>
+                <label className="menu-text-secondary">Высота</label>
+                <div className="menu-value flex items-center">
+                  <span className="font-mono font-bold" style={{ color: 'var(--text-primary)' }}>{config.height.toFixed(1)}</span>
+                  <span className="text-xs ml-1" style={{ color: 'var(--text-muted)' }}>м</span>
                 </div>
               </div>
               <input
@@ -175,17 +176,17 @@ export const GateControls: React.FC<GateControlsProps> = ({ config, onChange }) 
                 step={0.1}
                 value={config.height}
                 onChange={(e) => handleChange('height', parseFloat(e.target.value))}
-                className="w-full h-1.5 bg-[#3d4251] rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                className="menu-slider"
               />
             </div>
             
             {/* Расстояние до навеса */}
             <div className="mb-4">
               <div className="flex justify-between items-center mb-2">
-                <label className="text-xs text-[#6b7280]">До навеса</label>
-                <div className="flex items-center bg-[#252830] rounded px-2 py-1 border border-[#3d4251]">
-                  <span className="font-mono font-bold text-white">{(config.distanceFromCarport ?? 2.0).toFixed(1)}</span>
-                  <span className="text-xs text-[#6b7280] ml-1">м</span>
+                <label className="menu-text-secondary">До навеса</label>
+                <div className="menu-value flex items-center">
+                  <span className="font-mono font-bold" style={{ color: 'var(--text-primary)' }}>{(config.distanceFromCarport ?? 2.0).toFixed(1)}</span>
+                  <span className="text-xs ml-1" style={{ color: 'var(--text-muted)' }}>м</span>
                 </div>
               </div>
               <input
@@ -195,9 +196,9 @@ export const GateControls: React.FC<GateControlsProps> = ({ config, onChange }) 
                 step={0.5}
                 value={config.distanceFromCarport ?? 2.0}
                 onChange={(e) => handleChange('distanceFromCarport', parseFloat(e.target.value))}
-                className="w-full h-1.5 bg-[#3d4251] rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                className="menu-slider"
               />
-              <div className="flex justify-between text-[10px] text-[#6b7280] mt-1">
+              <div className="flex justify-between text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>
                 <span>0.5м</span>
                 <span>10м</span>
               </div>
@@ -205,8 +206,8 @@ export const GateControls: React.FC<GateControlsProps> = ({ config, onChange }) 
           </section>
           
           {/* Заполнение */}
-          <section className="pt-4 border-t border-[#3d4251]">
-            <h4 className="font-bold text-xs uppercase text-[#6b7280] mb-3">Заполнение</h4>
+          <section className="menu-divider">
+            <h4 className="menu-label mb-3">Заполнение</h4>
             <div className="grid grid-cols-2 gap-2">
               {[
                 { v: GateFilling.Solid, l: 'Профлист', desc: 'Глухое заполнение' },
@@ -219,65 +220,68 @@ export const GateControls: React.FC<GateControlsProps> = ({ config, onChange }) 
                   onClick={() => handleChange('filling', opt.v)}
                   className={`p-3 rounded-lg border-2 text-left transition-all ${
                     config.filling === opt.v 
-                    ? 'border-cyan-500 bg-cyan-500/10' 
-                    : 'border-[#3d4251] hover:border-[#4d5261]'
+                    ? 'menu-btn-active' 
+                    : 'menu-btn'
                   }`}
                 >
-                  <div className={`font-semibold text-sm ${config.filling === opt.v ? 'text-cyan-400' : 'text-[#9ca3af]'}`}>
+                  <div className="font-semibold text-sm" 
+                       style={{ color: config.filling === opt.v ? 'var(--accent)' : 'var(--text-secondary)' }}>
                     {opt.l}
                   </div>
-                  <div className="text-[10px] text-[#6b7280]">{opt.desc}</div>
+                  <div className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{opt.desc}</div>
                 </button>
               ))}
             </div>
           </section>
 
           {/* Цвета ворот */}
-          <section className="pt-4 border-t border-[#3d4251]">
-            <h4 className="font-bold text-xs uppercase text-[#6b7280] mb-3">Цвет рамы</h4>
+          <section className="menu-divider">
+            <h4 className="menu-label mb-3">Цвет рамы</h4>
             <div className="flex flex-wrap gap-2">
               {FRAME_COLORS.map((c) => (
                 <button
                   key={`frame-${c.hex}`}
                   onClick={() => handleChange('frameColor', c.hex)}
-                  className={`w-8 h-8 rounded-full border-2 transition-all ${
-                    frameColor === c.hex ? 'border-cyan-500 scale-110' : 'border-[#3d4251] hover:border-[#5d6271]'
-                  }`}
+                  className="w-8 h-8 rounded-full border-2 transition-all hover:scale-105"
+                  style={{ 
+                    backgroundColor: c.hex,
+                    borderColor: frameColor === c.hex ? 'var(--accent)' : 'var(--border-card)',
+                    transform: frameColor === c.hex ? 'scale(1.1)' : undefined
+                  }}
                   title={c.name}
-                  style={{ backgroundColor: c.hex }}
                 />
               ))}
             </div>
-            <h4 className="font-bold text-xs uppercase text-[#6b7280] mt-4 mb-3">Цвет профлиста</h4>
+            <h4 className="menu-label mt-4 mb-3">Цвет профлиста</h4>
             <div className="flex flex-wrap gap-2">
               {FRAME_COLORS.map((c) => (
                 <button
                   key={`panel-${c.hex}`}
                   onClick={() => handleChange('panelColor', c.hex)}
-                  className={`w-8 h-8 rounded-full border-2 transition-all ${
-                    panelColor === c.hex ? 'border-cyan-500 scale-110' : 'border-[#3d4251] hover:border-[#5d6271]'
-                  }`}
+                  className="w-8 h-8 rounded-full border-2 transition-all hover:scale-105"
+                  style={{ 
+                    backgroundColor: c.hex,
+                    borderColor: panelColor === c.hex ? 'var(--accent)' : 'var(--border-card)',
+                    transform: panelColor === c.hex ? 'scale(1.1)' : undefined
+                  }}
                   title={c.name}
-                  style={{ backgroundColor: c.hex }}
                 />
               ))}
             </div>
           </section>
           
           {/* Опции */}
-          <section className="pt-4 border-t border-[#3d4251]">
-            <h4 className="font-bold text-xs uppercase text-[#6b7280] mb-3">Дополнительно</h4>
+          <section className="menu-divider">
+            <h4 className="menu-label mb-3">Дополнительно</h4>
             <div className="space-y-2">
               {/* Автоматика */}
-              <label className="flex items-center justify-between p-3 rounded-lg border border-[#3d4251] hover:bg-[#252830] cursor-pointer">
+              <label className="menu-checkbox">
                 <div className="flex items-center gap-2">
-                  <Cpu size={16} className="text-[#6b7280]" />
-                  <span className="text-sm font-medium text-[#9ca3af]">Автоматический привод</span>
+                  <Cpu size={16} style={{ color: 'var(--text-muted)' }} />
+                  <span className="menu-text">Автоматический привод</span>
                 </div>
-                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
-                  config.hasAutomation ? 'bg-cyan-500 border-cyan-500' : 'bg-[#1e2128] border-[#3d4251]'
-                }`}>
-                  {config.hasAutomation && <Check className="w-3.5 h-3.5 text-white" />}
+                <div className={`menu-checkbox-box ${config.hasAutomation ? 'checked' : ''}`}>
+                  {config.hasAutomation && <Check className="w-3.5 h-3.5" style={{ color: 'var(--bg-main)' }} />}
                 </div>
                 <input 
                   type="checkbox" 
@@ -289,15 +293,13 @@ export const GateControls: React.FC<GateControlsProps> = ({ config, onChange }) 
               
               {/* Калитка (только для откатных и распашных) */}
               {(config.type === GateType.Sliding || config.type === GateType.Swing) && (
-                <label className="flex items-center justify-between p-3 rounded-lg border border-[#3d4251] hover:bg-[#252830] cursor-pointer">
+                <label className="menu-checkbox">
                   <div className="flex items-center gap-2">
-                    <UserPlus size={16} className="text-[#6b7280]" />
-                    <span className="text-sm font-medium text-[#9ca3af]">Встроенная калитка</span>
+                    <UserPlus size={16} style={{ color: 'var(--text-muted)' }} />
+                    <span className="menu-text">Встроенная калитка</span>
                   </div>
-                  <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
-                    config.hasWicket ? 'bg-cyan-500 border-cyan-500' : 'bg-[#1e2128] border-[#3d4251]'
-                  }`}>
-                    {config.hasWicket && <Check className="w-3.5 h-3.5 text-white" />}
+                  <div className={`menu-checkbox-box ${config.hasWicket ? 'checked' : ''}`}>
+                    {config.hasWicket && <Check className="w-3.5 h-3.5" style={{ color: 'var(--bg-main)' }} />}
                   </div>
                   <input 
                     type="checkbox" 
@@ -311,13 +313,14 @@ export const GateControls: React.FC<GateControlsProps> = ({ config, onChange }) 
           </section>
           
           {/* Цена ворот */}
-          <div className="pt-4 border-t border-[#3d4251]">
-            <div className="bg-[#252830] rounded-xl p-4 border border-[#3d4251]">
+          <div className="menu-divider">
+            <div className="rounded-xl p-4 border" 
+                 style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-card)' }}>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-[#9ca3af]">Стоимость ворот:</span>
-                <span className="text-lg font-bold text-white">{gatePrice.toLocaleString()} ₽</span>
+                <span className="menu-text-secondary">Стоимость ворот:</span>
+                <span className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{gatePrice.toLocaleString()} ₽</span>
               </div>
-              <div className="text-xs text-[#6b7280] mt-1">
+              <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                 {config.width.toFixed(1)} × {config.height.toFixed(1)} м = {(config.width * config.height).toFixed(1)} м²
               </div>
             </div>

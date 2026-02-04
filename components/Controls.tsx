@@ -1,13 +1,14 @@
 import React, { useEffect } from 'react';
 import { CarportConfig, RoofType, PillarSize, RoofMaterial, PaintType, InstallationType, MIN_WIDTH, MAX_WIDTH, MIN_LENGTH, MAX_LENGTH, MIN_HEIGHT, MAX_HEIGHT } from '../types';
 import { ROOF_COLORS, FRAME_COLORS } from '../constants';
-import { Check, Ruler, Maximize2, TrendingDown } from 'lucide-react';
+import { Check, Ruler, Maximize2 } from 'lucide-react';
 
 interface ControlsProps {
   config: CarportConfig;
   onChange: (newConfig: CarportConfig) => void;
   price: number;
   onOrder: () => void;
+  isDarkTheme?: boolean;
 }
 
 const Slider: React.FC<{
@@ -22,12 +23,12 @@ const Slider: React.FC<{
 }> = ({ label, value, min, max, step = 0.5, unit, onChange, extraInfo }) => (
   <div className="mb-6">
     <div className="flex justify-between items-center mb-2">
-      <label className="text-xs uppercase font-bold text-[#6b7280] tracking-wider">{label}</label>
+      <label className="menu-label">{label}</label>
       <div className="flex items-center gap-2">
-          {extraInfo && <span className="text-xs text-cyan-400 font-medium">{extraInfo}</span>}
-          <div className="flex items-center bg-[#252830] rounded px-2 py-1">
-            <span className="font-mono font-bold text-white">{value.toFixed(1)}</span>
-            <span className="text-xs text-[#6b7280] ml-1">{unit}</span>
+          {extraInfo && <span className="text-xs font-medium" style={{ color: 'var(--accent)' }}>{extraInfo}</span>}
+          <div className="menu-value flex items-center">
+            <span className="font-mono font-bold" style={{ color: 'var(--text-primary)' }}>{value.toFixed(1)}</span>
+            <span className="text-xs ml-1" style={{ color: 'var(--text-muted)' }}>{unit}</span>
           </div>
       </div>
     </div>
@@ -38,7 +39,7 @@ const Slider: React.FC<{
       step={step}
       value={value}
       onChange={(e) => onChange(parseFloat(e.target.value))}
-      className="w-full h-1.5 bg-[#3d4251] rounded-lg appearance-none cursor-pointer accent-cyan-500 hover:accent-cyan-400"
+      className="menu-slider"
     />
   </div>
 );
@@ -46,16 +47,19 @@ const Slider: React.FC<{
 const ColorOptionBtn: React.FC<{ hex: string; selected: boolean; onClick: () => void }> = ({ hex, selected, onClick }) => (
     <button
         onClick={onClick}
-        className={`w-8 h-8 rounded-full border-2 transition-all ${selected ? 'border-cyan-400 scale-110 shadow-md' : 'border-transparent hover:scale-105'}`}
-        style={{ backgroundColor: hex }}
+        className={`w-8 h-8 rounded-full border-2 transition-all ${selected ? 'scale-110 shadow-md' : 'border-transparent hover:scale-105'}`}
+        style={{ 
+          backgroundColor: hex,
+          borderColor: selected ? 'var(--accent)' : 'transparent'
+        }}
     >
         {selected && <Check className="w-4 h-4 text-white mx-auto drop-shadow-sm" />}
     </button>
 );
 
 const RoofIcon: React.FC<{ type: RoofType; active: boolean }> = ({ type, active }) => {
-    const color = active ? '#22d3ee' : '#6b7280';
-    const fill = active ? '#164e63' : 'transparent';
+    const color = active ? 'var(--accent)' : 'var(--text-muted)';
+    const fill = active ? 'var(--accent-bg)' : 'transparent';
 
     if (type === RoofType.Arched) {
         return (
@@ -99,7 +103,7 @@ const RoofIcon: React.FC<{ type: RoofType; active: boolean }> = ({ type, active 
     );
 }
 
-export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onOrder }) => {
+export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onOrder, isDarkTheme = true }) => {
   const handleChange = (key: keyof CarportConfig, value: any) => {
     onChange({ ...config, [key]: value });
   };
@@ -117,17 +121,15 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
   }, [config.roofType, config.roofSlope, maxAllowedAngle]);
 
   const area = (config.width * config.length).toFixed(1);
-  const oldPrice = Math.round(price * 1.2);
-  const savings = oldPrice - price;
 
   return (
-    <div className="flex flex-col h-full bg-[#1e2128] border-l border-[#2d323d]">
+    <div className="flex flex-col h-full menu-container border-l" style={{ transition: 'var(--theme-transition)' }}>
 
       <div className="flex-1 overflow-y-auto custom-scrollbar">
          <div className="p-6 space-y-8">
 
             <section>
-                <h3 className="font-bold text-sm uppercase tracking-wide text-cyan-400 mb-4">Тип конструкции</h3>
+                <h3 className="menu-section-title mb-4">Тип конструкции</h3>
                 <div className="grid grid-cols-5 gap-1.5">
                     {[
                         { v: RoofType.Arched, l: 'Арочный' },
@@ -141,12 +143,13 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
                             onClick={() => handleChange('roofType', opt.v)}
                             className={`flex flex-col items-center justify-center p-1.5 rounded-xl border-2 transition-all h-20 ${
                                 config.roofType === opt.v 
-                                ? 'border-cyan-500 bg-cyan-500/10' 
-                                : 'border-[#3d4251] hover:border-[#4d5261] hover:bg-[#252830]'
+                                ? 'menu-btn-active' 
+                                : 'menu-btn'
                             }`}
                         >
                             <RoofIcon type={opt.v} active={config.roofType === opt.v} />
-                            <span className={`text-[9px] sm:text-[10px] font-bold mt-1.5 leading-tight text-center ${config.roofType === opt.v ? 'text-cyan-400' : 'text-[#6b7280]'}`}>
+                            <span className={`text-[9px] sm:text-[10px] font-bold mt-1.5 leading-tight text-center`}
+                                  style={{ color: config.roofType === opt.v ? 'var(--accent)' : 'var(--text-muted)' }}>
                                 {opt.l}
                             </span>
                         </button>
@@ -154,19 +157,19 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
                 </div>
             </section>
 
-            <section className="pt-6 border-t border-[#2d323d]">
+            <section className="menu-divider">
                 <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2 text-white">
+                    <div className="flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
                         <Ruler size={18} />
                         <h3 className="font-bold text-sm uppercase tracking-wide">Размеры</h3>
                     </div>
-                    <div className="flex items-center gap-1.5 bg-[#252830] px-2 py-1 rounded text-[#9ca3af]">
+                    <div className="flex items-center gap-1.5 px-2 py-1 rounded" 
+                         style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-secondary)' }}>
                         <Maximize2 size={14} />
                         <span className="text-xs font-bold font-mono">{area} м²</span>
                     </div>
                 </div>
 
-                {/* ИЗМЕНЕН ПОРЯДОК: Длина -> Ширина -> Высота */}
                 <Slider label="Длина навеса" value={config.length} min={MIN_LENGTH} max={MAX_LENGTH} step={0.1} unit="м" onChange={(v) => handleChange('length', v)} />
                 <Slider label="Ширина навеса" value={config.width} min={MIN_WIDTH} max={MAX_WIDTH} step={0.1} unit="м" onChange={(v) => handleChange('width', v)} />
                 <Slider label="Высота столбов" value={config.height} min={MIN_HEIGHT} max={MAX_HEIGHT} step={0.1} unit="м" onChange={(v) => handleChange('height', v)} />
@@ -188,7 +191,7 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
                 )}
 
                 <div className="mt-4">
-                    <label className="text-xs uppercase font-bold text-[#6b7280] tracking-wider block mb-2">Сечение столбов</label>
+                    <label className="menu-label block mb-2">Сечение столбов</label>
                     <div className="grid grid-cols-4 gap-2">
                         {[
                             { v: PillarSize.Size60, l: '60x60' },
@@ -201,8 +204,8 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
                                 onClick={() => handleChange('pillarSize', opt.v)}
                                 className={`py-2 text-xs font-medium rounded-lg border ${
                                     config.pillarSize === opt.v 
-                                    ? 'border-cyan-500 bg-cyan-500/10 text-cyan-400' 
-                                    : 'border-[#3d4251] text-[#6b7280] hover:bg-[#252830]'
+                                    ? 'menu-btn-active' 
+                                    : 'menu-btn'
                                 }`}
                             >
                                 {opt.l}
@@ -212,15 +215,15 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
                 </div>
             </section>
 
-            <section className="pt-6 border-t border-[#2d323d]">
-                <h3 className="font-bold text-sm uppercase tracking-wide text-cyan-400 mb-4">Материалы</h3>
+            <section className="menu-divider">
+                <h3 className="menu-section-title mb-4">Материалы</h3>
 
                 <div className="mb-4">
-                    <label className="block text-xs font-bold text-[#6b7280] uppercase mb-2">Материал кровли</label>
+                    <label className="menu-label block mb-2">Материал кровли</label>
                     <select 
                         value={config.roofMaterial}
                         onChange={(e) => handleChange('roofMaterial', e.target.value)}
-                        className="w-full bg-[#252830] border border-[#3d4251] text-white py-2.5 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                        className="menu-select"
                     >
                         <option value={RoofMaterial.Polycarbonate}>Сотовый поликарбонат</option>
                         <option value={RoofMaterial.MetalTile}>Металлочерепица</option>
@@ -229,11 +232,11 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
                 </div>
 
                 <div className="mb-4">
-                    <label className="block text-xs font-bold text-[#6b7280] uppercase mb-2">Покраска металла</label>
+                    <label className="menu-label block mb-2">Покраска металла</label>
                     <select 
                         value={config.paintType}
                         onChange={(e) => handleChange('paintType', e.target.value)}
-                        className="w-full bg-[#252830] border border-[#3d4251] text-white py-2.5 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                        className="menu-select"
                     >
                         <option value={PaintType.None}>Грунт-эмаль (Стандарт)</option>
                         <option value={PaintType.Ral}>Эмаль RAL (Премиум)</option>
@@ -243,7 +246,7 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
 
                 <div className="grid grid-cols-2 gap-4 mt-6">
                     <div>
-                        <label className="block text-xs font-bold text-[#6b7280] uppercase mb-2">Цвет каркаса</label>
+                        <label className="menu-label block mb-2">Цвет каркаса</label>
                         <div className="flex flex-wrap gap-2">
                             {FRAME_COLORS.map(c => (
                                 <ColorOptionBtn key={c.hex} hex={c.hex} selected={config.frameColor === c.hex} onClick={() => handleChange('frameColor', c.hex)} />
@@ -251,7 +254,7 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
                         </div>
                     </div>
                     <div>
-                        <label className="block text-xs font-bold text-[#6b7280] uppercase mb-2">Цвет кровли</label>
+                        <label className="menu-label block mb-2">Цвет кровли</label>
                         <div className="flex flex-wrap gap-2">
                             {ROOF_COLORS.map(c => (
                                 <ColorOptionBtn key={c.hex} hex={c.hex} selected={config.roofColor === c.hex} onClick={() => handleChange('roofColor', c.hex)} />
@@ -261,8 +264,8 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
                 </div>
             </section>
 
-            <section className="pt-6 border-t border-[#2d323d]">
-                <h3 className="font-bold text-sm uppercase tracking-wide text-cyan-400 mb-4">Опции</h3>
+            <section className="menu-divider">
+                <h3 className="menu-section-title mb-4">Опции</h3>
                 <div className="space-y-3">
                     {[
                         { k: 'hasTrusses', l: 'Усиленные фермы' },
@@ -270,12 +273,10 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
                         { k: 'hasGutters', l: 'Водостоки' },
                         { k: 'hasFoundation', l: 'Заливка фундамента' }
                     ].map((item) => (
-                        <label key={item.k} className="flex items-center justify-between p-3 rounded-lg border border-[#3d4251] hover:bg-[#252830] cursor-pointer transition-colors">
-                            <span className="text-sm font-medium text-white">{item.l}</span>
-                            <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
-                                config[item.k as keyof CarportConfig] ? 'bg-cyan-500 border-cyan-500' : 'bg-[#252830] border-[#4d5261]'
-                            }`}>
-                                {config[item.k as keyof CarportConfig] && <Check className="w-3.5 h-3.5 text-[#0f1419]" />}
+                        <label key={item.k} className="menu-checkbox">
+                            <span className="menu-text">{item.l}</span>
+                            <div className={`menu-checkbox-box ${config[item.k as keyof CarportConfig] ? 'checked' : ''}`}>
+                                {config[item.k as keyof CarportConfig] && <Check className="w-3.5 h-3.5" style={{ color: 'var(--bg-main)' }} />}
                             </div>
                             <input type="checkbox" className="hidden" checked={config[item.k as keyof CarportConfig] as boolean} onChange={(e) => handleChange(item.k as keyof CarportConfig, e.target.checked)} />
                         </label>
@@ -284,9 +285,9 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
 
                 {(config.hasFoundation || config.installationType === InstallationType.FoundationPour) && (
                     <div className="mt-4">
-                        <label className="block text-xs font-bold text-[#6b7280] uppercase mb-2">Толщина фундамента</label>
+                        <label className="menu-label block mb-2">Толщина фундамента</label>
                         <div className="flex justify-between items-center mb-2">
-                            <span className="text-xs text-[#6b7280]">{(config.foundationThickness * 100).toFixed(0)} см</span>
+                            <span className="menu-text-muted">{(config.foundationThickness * 100).toFixed(0)} см</span>
                         </div>
                         <input
                             type="range"
@@ -295,13 +296,13 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
                             step={0.05}
                             value={config.foundationThickness}
                             onChange={(e) => handleChange('foundationThickness', parseFloat(e.target.value))}
-                            className="w-full h-1.5 bg-[#3d4251] rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                            className="menu-slider"
                         />
                     </div>
                 )}
 
                 <div className="mt-4">
-                    <label className="block text-xs font-bold text-[#6b7280] uppercase mb-2">Тип монтажа</label>
+                    <label className="menu-label block mb-2">Тип монтажа</label>
                     <select
                         value={config.installationType}
                         onChange={(e) => {
@@ -315,7 +316,7 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
                                 hasFoundation: foundationActive,
                             });
                         }}
-                        className="w-full bg-[#252830] border border-[#3d4251] text-white py-2.5 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                        className="menu-select"
                     >
                         <option value={InstallationType.FoundationPour}>Заливка фундамента</option>
                         <option value={InstallationType.OnPosts}>Установка на залитые столбы</option>
@@ -324,8 +325,8 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
                     </select>
                 </div>
             </section>
-                 </div>
-            </div>
-        </div>
-    );
+         </div>
+      </div>
+    </div>
+  );
 };

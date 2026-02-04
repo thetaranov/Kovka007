@@ -168,16 +168,27 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig, isDarkTheme = 
       className="w-full h-full relative shadow-inner overflow-hidden transition-colors duration-400"
       style={{ touchAction: "auto", backgroundColor: bgColor }}
     >
-      {/* Фон - водяной знак */}
-      <div
-        className="absolute inset-0 pointer-events-none z-0 transition-opacity duration-400"
-        style={{
-          opacity: isDarkTheme ? 0.04 : 0.06,
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='180' height='180' viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='Inter, sans-serif' font-weight='900' font-size='20' fill='${watermarkColor}' text-anchor='middle' transform='rotate(-45 90 90)'%3Ekovka007%3C/text%3E%3C/svg%3E")`,
-          backgroundRepeat: "repeat",
-          backgroundPosition: "center",
-        }}
-      />
+      {/* Фон - водяной знак (мобильный = одна большая, десктоп = мелкие) */}
+      {isMobile ? (
+        <div
+          className="absolute inset-0 pointer-events-none z-0 flex items-center justify-center transition-opacity duration-400"
+          style={{ opacity: isDarkTheme ? 0.06 : 0.08 }}
+        >
+          <svg width="280" height="280" viewBox="0 0 280 280" xmlns="http://www.w3.org/2000/svg">
+            <text x="50%" y="50%" fontFamily="Inter, sans-serif" fontWeight="900" fontSize="36" fill={isDarkTheme ? '#ffffff' : '#1e293b'} textAnchor="middle" transform="rotate(-45 140 140)">ковка007</text>
+          </svg>
+        </div>
+      ) : (
+        <div
+          className="absolute inset-0 pointer-events-none z-0 transition-opacity duration-400"
+          style={{
+            opacity: isDarkTheme ? 0.04 : 0.06,
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='180' height='180' viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='Inter, sans-serif' font-weight='900' font-size='20' fill='${watermarkColor}' text-anchor='middle' transform='rotate(-45 90 90)'%3Ekovka007%3C/text%3E%3C/svg%3E")`,
+            backgroundRepeat: "repeat",
+            backgroundPosition: "center",
+          }}
+        />
+      )}
 
       {/* Control stack (mobile + desktop) */}
       <div className="absolute right-4 top-1/3 lg:top-[40%] z-20 flex flex-col items-center gap-2 pointer-events-auto" data-allow-touch>
@@ -220,8 +231,8 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig, isDarkTheme = 
         }}
       >
         <Suspense fallback={<Loader />}>
-          <PerspectiveCamera ref={perspectiveRef} makeDefault={!isOrtho} position={[10, 8, 12]} fov={45} />
-          <OrthographicCamera ref={orthographicRef} makeDefault={isOrtho} position={[10, 8, 12]} zoom={60} near={0.1} far={200} />
+          <PerspectiveCamera ref={perspectiveRef} makeDefault={!isOrtho} position={[-10, 8, -12]} fov={45} />
+          <OrthographicCamera ref={orthographicRef} makeDefault={isOrtho} position={[-10, 8, -12]} zoom={60} near={0.1} far={200} />
           {/* Освещение без динамических теней (убирает мерцание) */}
           <ambientLight intensity={0.8} />
           <directionalLight

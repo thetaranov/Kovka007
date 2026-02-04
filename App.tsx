@@ -89,9 +89,10 @@ const isTelegramWebApp = (): boolean => {
 // Check if sendData is available (only for Keyboard Button Mini Apps)
 const canUseSendData = (): boolean => {
     const tg = window.Telegram?.WebApp;
-    // sendData is available when: in Telegram + sendData function exists
-    // Note: For Keyboard Button Mini Apps, initData may be empty, but sendData still works
-    return !!(tg && typeof tg.sendData === 'function');
+    // sendData is available when: ACTUALLY in Telegram + sendData function exists
+    // CRITICAL: Must check isTelegramWebApp() first! Otherwise script may load in browser
+    // and sendData function exists but won't work (silently fails)
+    return !!(isTelegramWebApp() && tg && typeof tg.sendData === 'function');
 };
 
 const INITIAL_CONFIG: CarportConfig = {
@@ -978,28 +979,34 @@ export default function App() {
 
             {/* DESKTOP SIDEBAR */}
             <div
-                className={`fixed inset-0 z-50 lg:static lg:z-auto transform transition-transform duration-500 ease-out ${isMobileMenuOpen ? "translate-y-0" : "translate-y-[100%] lg:translate-y-0"} lg:w-[460px] lg:min-w-[420px] flex-shrink-0 h-full shadow-2xl lg:shadow-none flex flex-col bg-[#1e2128]`}
+                className={`fixed inset-0 z-50 lg:static lg:z-auto transform transition-transform duration-500 ease-out ${isMobileMenuOpen ? "translate-y-0" : "translate-y-[100%] lg:translate-y-0"} lg:w-[460px] lg:min-w-[420px] flex-shrink-0 h-full shadow-2xl lg:shadow-none flex flex-col menu-container`}
             >
                 {/* Mobile close button */}
-                <div className="lg:hidden flex items-center justify-between p-4 border-b border-[#2d323d]">
-                    <h2 className="font-bold text-white">Настройки</h2>
+                <div className="lg:hidden flex items-center justify-between p-4 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                    <h2 className="font-bold" style={{ color: 'var(--text-primary)' }}>Настройки</h2>
                     <button
                         onClick={() => setIsMobileMenuOpen(false)}
-                        className="p-2 bg-[#252830] rounded-full hover:bg-[#2d3039] transition-colors text-white"
+                        className="p-2 rounded-full transition-colors"
+                        style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-primary)' }}
                     >
                         <X size={20} />
                     </button>
                 </div>
                 
                 {/* Desktop tabs */}
-                <div className="hidden lg:flex border-b border-[#2d323d]">
+                <div className="hidden lg:flex border-b" style={{ borderColor: 'var(--border-main)' }}>
                     <button
                         onClick={() => setActiveTab("carport")}
                         className={`flex-1 py-4 text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${
                             activeTab === "carport"
-                                ? "text-cyan-400 border-b-2 border-cyan-400 bg-cyan-500/10"
-                                : "text-[#6b7280] hover:text-[#9ca3af]"
+                                ? "border-b-2"
+                                : ""
                         }`}
+                        style={{
+                            color: activeTab === "carport" ? 'var(--accent)' : 'var(--text-muted)',
+                            borderColor: activeTab === "carport" ? 'var(--accent)' : 'transparent',
+                            backgroundColor: activeTab === "carport" ? 'var(--accent-bg)' : 'transparent'
+                        }}
                     >
                         <Home size={18} />
                         Навес
@@ -1008,14 +1015,20 @@ export default function App() {
                         onClick={() => setActiveTab("gate")}
                         className={`flex-1 py-4 text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${
                             activeTab === "gate"
-                                ? "text-cyan-400 border-b-2 border-cyan-400 bg-cyan-500/10"
-                                : "text-[#6b7280] hover:text-[#9ca3af]"
+                                ? "border-b-2"
+                                : ""
                         }`}
+                        style={{
+                            color: activeTab === "gate" ? 'var(--accent)' : 'var(--text-muted)',
+                            borderColor: activeTab === "gate" ? 'var(--accent)' : 'transparent',
+                            backgroundColor: activeTab === "gate" ? 'var(--accent-bg)' : 'transparent'
+                        }}
                     >
                         <Car size={18} />
                         Ворота
                         {gateConfig.type !== GateType.None && (
-                            <span className="bg-cyan-500/20 text-cyan-400 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                            <span className="text-[10px] px-2 py-0.5 rounded-full font-bold"
+                                  style={{ backgroundColor: 'var(--accent-bg)', color: 'var(--accent)' }}>
                                 +{gatePrice.toLocaleString()}
                             </span>
                         )}
@@ -1031,6 +1044,7 @@ export default function App() {
                                 onChange={handleConfigChange}
                                 price={price}
                                 onOrder={handleOrder}
+                                isDarkTheme={isDarkTheme}
                             />
                             {/* Панель нагрузок */}
                             <div className="px-6 pb-6">
@@ -1055,11 +1069,11 @@ export default function App() {
                 </div>
 
                 {/* ORDER FOOTER (always visible) */}
-                <div className="flex-shrink-0 p-6 bg-[#1e2128] border-t border-[#2d323d]">
+                <div className="flex-shrink-0 p-6 border-t menu-container" style={{ borderColor: 'var(--border-main)' }}>
                     <div className="mb-4">
                         <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center gap-2">
-                                <span className="text-lg font-medium text-[#6b7280] line-through decoration-[#6b7280]/50">
+                                <span className="text-lg font-medium line-through" style={{ color: 'var(--text-muted)', textDecorationColor: 'var(--text-muted)' }}>
                                     {oldPrice.toLocaleString()} ₽
                                 </span>
                                 <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
@@ -1075,11 +1089,11 @@ export default function App() {
                         </div>
                         <div className="flex items-end justify-between">
                             <div>
-                                <p className="text-3xl font-black text-white leading-none tracking-tight">
+                                <p className="text-3xl font-black leading-none tracking-tight" style={{ color: 'var(--text-primary)' }}>
                                     {totalPrice.toLocaleString()} ₽
                                 </p>
                                 {gatePrice > 0 && (
-                                    <p className="text-xs text-[#6b7280] mt-1">
+                                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                                         Навес: {price.toLocaleString()} + Ворота: {gatePrice.toLocaleString()}
                                     </p>
                                 )}
