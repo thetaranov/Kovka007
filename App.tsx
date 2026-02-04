@@ -254,19 +254,29 @@ const BrowserOrderModal: React.FC<BrowserOrderModalProps> = ({
             };
 
             const endpoint = (window as any).KOVKA_BOT_ENDPOINT || (import.meta as any).env?.VITE_BOT_API || 'https://kovka007bot.onrender.com';
+            console.log('[BrowserOrderModal] Sending order to:', `${endpoint}/submit_order`);
+            console.log('[BrowserOrderModal] Payload:', payload);
+            
             const res = await fetch(`${endpoint.replace(/\/$/, '')}/submit_order`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
                 body: JSON.stringify(payload),
             });
 
+            console.log('[BrowserOrderModal] Response status:', res.status);
+
             if (res.ok) {
+                const data = await res.json().catch(() => ({}));
+                console.log('[BrowserOrderModal] Success:', data);
                 onSuccess(parsedOrder?.id || 'N/A');
             } else {
-                alert('Ошибка отправки. Попробуйте позже.');
+                const errorText = await res.text().catch(() => 'Unknown error');
+                console.error('[BrowserOrderModal] Error response:', res.status, errorText);
+                alert(`Ошибка отправки (${res.status}). Попробуйте позже.`);
             }
-        } catch {
-            alert('Ошибка соединения. Попробуйте позже.');
+        } catch (err) {
+            console.error('[BrowserOrderModal] Network error:', err);
+            alert('Ошибка соединения. Проверьте интернет и попробуйте позже.');
         } finally {
             setSending(false);
         }
