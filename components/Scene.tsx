@@ -21,6 +21,7 @@ import { RefreshCw, Loader2, Ruler, Camera } from "lucide-react";
 interface SceneProps {
   config: CarportConfig;
   gateConfig?: GateConfig;
+  isDarkTheme?: boolean;
 }
 
 function Loader() {
@@ -37,7 +38,7 @@ function Loader() {
   );
 }
 
-export const Scene: React.FC<SceneProps> = ({ config, gateConfig }) => {
+export const Scene: React.FC<SceneProps> = ({ config, gateConfig, isDarkTheme = true }) => {
   const [resetKey, setResetKey] = useState(0);
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 640);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -151,17 +152,28 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig }) => {
     };
   }, []);
 
+  // Theme-based colors
+  const bgColor = isDarkTheme ? '#2d3139' : '#e2e8f0';
+  const watermarkColor = isDarkTheme ? '%23ffffff' : '%231e293b';
+  const buttonBg = isDarkTheme ? 'bg-[#252830]/90' : 'bg-white/90';
+  const buttonHoverBg = isDarkTheme ? 'hover:bg-[#2d3039]' : 'hover:bg-slate-100';
+  const buttonBorder = isDarkTheme ? 'border-[#3d4251]' : 'border-slate-300';
+  const buttonText = isDarkTheme ? 'text-slate-400' : 'text-slate-600';
+  const buttonHoverText = isDarkTheme ? 'hover:text-cyan-400' : 'hover:text-cyan-600';
+  const accentColor = isDarkTheme ? 'text-cyan-400' : 'text-cyan-600';
+
   return (
     <div
       ref={containerRef}
-      className="w-full h-full bg-[#252830] relative shadow-inner overflow-hidden"
-      style={{ touchAction: "auto" }}
+      className="w-full h-full relative shadow-inner overflow-hidden transition-colors duration-400"
+      style={{ touchAction: "auto", backgroundColor: bgColor }}
     >
       {/* Фон - водяной знак */}
       <div
-        className="absolute inset-0 pointer-events-none z-0 opacity-[0.04]"
+        className="absolute inset-0 pointer-events-none z-0 transition-opacity duration-400"
         style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='180' height='180' viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='Inter, sans-serif' font-weight='900' font-size='20' fill='%23ffffff' text-anchor='middle' transform='rotate(-45 90 90)'%3Ekovka007%3C/text%3E%3C/svg%3E")`,
+          opacity: isDarkTheme ? 0.04 : 0.06,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='180' height='180' viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='Inter, sans-serif' font-weight='900' font-size='20' fill='${watermarkColor}' text-anchor='middle' transform='rotate(-45 90 90)'%3Ekovka007%3C/text%3E%3C/svg%3E")`,
           backgroundRepeat: "repeat",
           backgroundPosition: "center",
         }}
@@ -171,7 +183,7 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig }) => {
       <div className="absolute right-4 top-1/3 lg:top-[40%] z-20 flex flex-col items-center gap-2 pointer-events-auto" data-allow-touch>
         <button
           onClick={handleReset}
-          className="p-2 bg-[#252830]/90 hover:bg-[#2d3039] backdrop-blur-sm rounded-lg shadow-lg border border-[#3d4251] text-slate-400 hover:text-cyan-400 active:scale-95 transition-all pointer-events-auto"
+          className={`p-2 ${buttonBg} ${buttonHoverBg} backdrop-blur-sm rounded-lg shadow-lg border ${buttonBorder} ${buttonText} ${buttonHoverText} active:scale-95 transition-all pointer-events-auto`}
         >
           <RefreshCw size={18} />
         </button>
@@ -180,17 +192,17 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig }) => {
             setMeasureMode((v) => !v);
             setMeasurePoints([]);
           }}
-          className={`p-2 bg-[#252830]/90 backdrop-blur-sm border border-[#3d4251] rounded-lg transition-colors pointer-events-auto ${
-            measureMode ? "text-cyan-400 border-cyan-500/50" : "text-slate-400 hover:bg-[#2d3039]"
+          className={`p-2 ${buttonBg} backdrop-blur-sm border ${buttonBorder} rounded-lg transition-colors pointer-events-auto ${
+            measureMode ? `${accentColor} border-cyan-500/50` : `${buttonText} ${buttonHoverBg}`
           }`}
         >
           <Ruler size={18} />
         </button>
         <button
           onClick={handleCameraToggle}
-          className="p-2 bg-[#252830]/90 backdrop-blur-sm border border-[#3d4251] rounded-lg text-slate-400 hover:bg-[#2d3039] transition-colors pointer-events-auto"
+          className={`p-2 ${buttonBg} backdrop-blur-sm border ${buttonBorder} rounded-lg ${buttonText} ${buttonHoverBg} transition-colors pointer-events-auto`}
         >
-          <Camera size={18} className={isOrthoTarget ? "text-cyan-400" : "text-slate-400"} />
+          <Camera size={18} className={isOrthoTarget ? accentColor : buttonText} />
         </button>
       </div>
 

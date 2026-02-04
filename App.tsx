@@ -79,9 +79,19 @@ const checkRateLimit = (): boolean => {
 
 // ==================== ENVIRONMENT DETECTION ====================
 
+// Check if running inside Telegram WebApp (any type)
 const isTelegramWebApp = (): boolean => {
     const tg = window.Telegram?.WebApp;
-    return !!(tg && tg.initData && tg.initData.length > 0);
+    // Check if WebApp object exists and has platform info (always present in real Telegram)
+    return !!(tg && tg.platform && tg.platform !== 'unknown');
+};
+
+// Check if sendData is available (only for Keyboard Button Mini Apps)
+const canUseSendData = (): boolean => {
+    const tg = window.Telegram?.WebApp;
+    // sendData is available when: in Telegram + sendData function exists
+    // Note: For Keyboard Button Mini Apps, initData may be empty, but sendData still works
+    return !!(tg && typeof tg.sendData === 'function');
 };
 
 const INITIAL_CONFIG: CarportConfig = {
@@ -408,6 +418,7 @@ export default function App() {
     const [gatePrice, setGatePrice] = useState(0);
     const [orderJson, setOrderJson] = useState("");
     const [isDarkTheme, setIsDarkTheme] = useState(true); // Theme state
+    const [isThemeChanging, setIsThemeChanging] = useState(false);
     const [loads, setLoads] = useState({
         snowLoad: 336,
         windLoad: 304,
@@ -436,6 +447,43 @@ export default function App() {
                 console.warn("⚠️ WebApp init error:", e);
             }
         }
+    }, []);
+
+    // Theme management with smooth transition
+    useEffect(() => {
+        const root = document.documentElement;
+        
+        // Apply theme attribute
+        if (isDarkTheme) {
+            root.removeAttribute('data-theme');
+        } else {
+            root.setAttribute('data-theme', 'light');
+        }
+        
+        // Update Telegram WebApp colors if available
+        const tg = window.Telegram?.WebApp;
+        if (tg) {
+            try {
+                if (isDarkTheme) {
+                    tg.setHeaderColor('#0f172a');
+                    tg.setBackgroundColor('#1e293b');
+                } else {
+                    tg.setHeaderColor('#f8fafc');
+                    tg.setBackgroundColor('#ffffff');
+                }
+            } catch (e) {
+                console.warn("Theme update error:", e);
+            }
+        }
+    }, [isDarkTheme]);
+
+    // Theme toggle handler with animation
+    const handleThemeToggle = useCallback(() => {
+        setIsThemeChanging(true);
+        setTimeout(() => {
+            setIsDarkTheme(prev => !prev);
+            setTimeout(() => setIsThemeChanging(false), 400);
+        }, 50);
     }, []);
 
     // Recalculate loads
@@ -708,48 +756,56 @@ export default function App() {
         const tg = window.Telegram?.WebApp;
         const telegramPayload = getOrderPayload({ includeCad: false });
 
-        // Check if running in Telegram WebApp with valid initData
-        if (isTelegramWebApp() && tg) {
+        // Check if running in Telegram WebApp and can use sendData
+        if (canUseSendData() && tg) {
             console.log('📱 Telegram WebApp mode - using sendData');
+            console.log('Platform:', tg.platform);
+            console.log('initData length:', tg.initData?.length || 0);
+            
             const dataToSend = JSON.stringify(telegramPayload);
             const payloadSize = new Blob([dataToSend]).size;
-            const canUseSendData = typeof tg.sendData === 'function';
+            console.log('Payload size:', payloadSize, 'bytes');
 
-            if (canUseSendData) {
-                let finalData = dataToSend;
-                if (payloadSize > 4096) {
-                    const minimalPayload = {
-                        id: telegramPayload.id,
-                        type: telegramPayload.type,
-                        length: telegramPayload.length,
-                        width: telegramPayload.width,
-                        height: telegramPayload.height,
-                        slope: telegramPayload.slope,
-                        pillar: telegramPayload.pillar,
-                        area_floor: telegramPayload.area_floor,
-                        material: telegramPayload.material,
-                        paint: telegramPayload.paint,
-                        opts: telegramPayload.opts,
-                        price: telegramPayload.price,
-                        price_gate: telegramPayload.price_gate,
-                        price_total: telegramPayload.price_total,
-                        region: telegramPayload.region,
-                        gate: telegramPayload.gate,
-                    };
-                    finalData = JSON.stringify(minimalPayload);
-                }
+            let finalData = dataToSend;
+            if (payloadSize > 4096) {
+                console.log('⚠️ Payload too large, using minimal version');
+                const minimalPayload = {
+                    id: telegramPayload.id,
+                    type: telegramPayload.type,
+                    length: telegramPayload.length,
+                    width: telegramPayload.width,
+                    height: telegramPayload.height,
+                    slope: telegramPayload.slope,
+                    pillar: telegramPayload.pillar,
+                    area_floor: telegramPayload.area_floor,
+                    material: telegramPayload.material,
+                    paint: telegramPayload.paint,
+                    opts: telegramPayload.opts,
+                    price: telegramPayload.price,
+                    price_gate: telegramPayload.price_gate,
+                    price_total: telegramPayload.price_total,
+                    region: telegramPayload.region,
+                    gate: telegramPayload.gate,
+                };
+                finalData = JSON.stringify(minimalPayload);
+                console.log('Minimal payload size:', new Blob([finalData]).size, 'bytes');
+            }
 
-                try {
-                    tg.sendData(finalData);
-                    return; // sendData closes WebApp
-                } catch (e) {
-                    console.error('sendData failed:', e);
-                }
+            try {
+                console.log('📤 Calling tg.sendData...');
+                tg.sendData(finalData);
+                console.log('✅ sendData called successfully');
+                // sendData closes the WebApp automatically
+                return;
+            } catch (e) {
+                console.error('❌ sendData failed:', e);
+                // Fall through to browser mode as fallback
             }
         }
 
-        // Browser mode - show modal
+        // Browser mode (or Telegram fallback if sendData failed)
         console.log('🌐 Browser mode - showing order modal');
+        console.log('Platform:', tg?.platform || 'browser');
         setOrderJson(JSON.stringify(getOrderPayload({ includeCad: true })));
         setShowBrowserOrderModal(true);
     }, [getOrderPayload]);
@@ -761,33 +817,33 @@ export default function App() {
     }, []);
 
     return (
-        <div className="flex flex-col lg:flex-row h-[100dvh] w-screen overflow-hidden bg-slate-900 font-sans overscroll-none fixed inset-0">
-            {/* HEADER - Compact Dark */}
+        <div className={`flex flex-col lg:flex-row h-[100dvh] w-screen overflow-hidden font-sans overscroll-none fixed inset-0 theme-transition ${isDarkTheme ? 'bg-slate-900' : 'bg-slate-100'} ${isThemeChanging ? 'theme-changing' : ''}`}>
+            {/* HEADER - Adaptive Theme */}
             <div className="absolute top-0 left-0 right-0 z-40 p-3 pointer-events-none flex justify-between items-start lg:p-4">
-                <div className="bg-[#1e2128]/95 backdrop-blur-md px-3 py-1.5 rounded-lg shadow-lg border border-[#2d323d] pointer-events-auto">
-                    <h1 className="font-bold text-white leading-tight flex items-center gap-1.5 text-sm">
-                        <span className="text-cyan-400">Kovka007</span>
-                        <span className="text-[#3d4451]">|</span>
-                        <span className="text-[10px] font-normal text-[#6b7280] uppercase tracking-wider">v2.0</span>
-                        <span className="text-[#3d4451]">|</span>
+                <div className={`backdrop-blur-md px-3 py-1.5 rounded-lg shadow-lg pointer-events-auto theme-transition ${isDarkTheme ? 'bg-[#1e2128]/95 border border-[#2d323d]' : 'bg-white/95 border border-slate-200'}`}>
+                    <h1 className={`font-bold leading-tight flex items-center gap-1.5 text-sm theme-transition ${isDarkTheme ? 'text-white' : 'text-slate-800'}`}>
+                        <span className={isDarkTheme ? 'text-cyan-400' : 'text-cyan-600'}>Kovka007</span>
+                        <span className={isDarkTheme ? 'text-[#3d4451]' : 'text-slate-300'}>|</span>
+                        <span className={`text-[10px] font-normal uppercase tracking-wider ${isDarkTheme ? 'text-[#6b7280]' : 'text-slate-500'}`}>v2.0</span>
+                        <span className={isDarkTheme ? 'text-[#3d4451]' : 'text-slate-300'}>|</span>
                         <button
-                            onClick={() => setIsDarkTheme(!isDarkTheme)}
-                            className="text-[10px] font-normal text-[#6b7280] hover:text-cyan-400 transition-colors uppercase tracking-wider cursor-pointer"
+                            onClick={handleThemeToggle}
+                            className={`text-[10px] font-normal uppercase tracking-wider cursor-pointer transition-colors ${isDarkTheme ? 'text-[#6b7280] hover:text-cyan-400' : 'text-slate-500 hover:text-cyan-600'}`}
                         >
-                            тема<span className="text-cyan-400/70">({isDarkTheme ? 'тёмная' : 'светлая'})</span>
+                            тема<span className={isDarkTheme ? 'text-cyan-400/70' : 'text-cyan-600/70'}>({isDarkTheme ? 'тёмная' : 'светлая'})</span>
                         </button>
                     </h1>
                 </div>
             </div>
 
             <div className="relative w-full flex-grow min-h-0 lg:h-full transition-all duration-300">
-                <Scene config={config} gateConfig={gateConfig} />
+                <Scene config={config} gateConfig={gateConfig} isDarkTheme={isDarkTheme} />
 
                 {/* Warnings */}
                 {loads.warnings.length > 0 && (
                     <div className="absolute top-14 left-4 z-20 max-w-xs">
                         {loads.warnings.map((warning, idx) => (
-                            <div key={idx} className="bg-amber-900/90 backdrop-blur border border-amber-700 text-amber-200 text-xs rounded-lg px-3 py-2 mb-2 flex items-start gap-2">
+                            <div key={idx} className={`backdrop-blur text-xs rounded-lg px-3 py-2 mb-2 flex items-start gap-2 theme-transition ${isDarkTheme ? 'bg-amber-900/90 border border-amber-700 text-amber-200' : 'bg-amber-50 border border-amber-300 text-amber-800'}`}>
                                 <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" />
                                 <span>{warning}</span>
                             </div>
@@ -797,19 +853,19 @@ export default function App() {
 
                 {/* ИНФО-ПЛАШКА */}
                 <div className="absolute bottom-6 left-0 right-0 flex justify-center pointer-events-none z-30 px-4">
-                    <div className="bg-[#1e2128]/95 backdrop-blur-md px-3 py-2 rounded-xl shadow-lg border border-[#2d323d] text-white flex flex-wrap items-center gap-2 text-[11px] sm:text-sm font-medium max-w-full">
+                    <div className={`backdrop-blur-md px-3 py-2 rounded-xl shadow-lg flex flex-wrap items-center gap-2 text-[11px] sm:text-sm font-medium max-w-full theme-transition ${isDarkTheme ? 'bg-[#1e2128]/95 border border-[#2d323d] text-white' : 'bg-white/95 border border-slate-200 text-slate-800'}`}>
                         <div className="flex items-baseline gap-1">
-                            <span className="font-bold text-white">
+                            <span className={`font-bold ${isDarkTheme ? 'text-white' : 'text-slate-800'}`}>
                                 {config.length}×{config.width}×{config.height}м
                             </span>
-                            <span className="text-[10px] text-[#6b7280] font-normal">
+                            <span className={`text-[10px] font-normal ${isDarkTheme ? 'text-[#6b7280]' : 'text-slate-500'}`}>
                                 (Д×Ш×В)
                             </span>
                         </div>
-                        <span className="text-[#9ca3af]">
+                        <span className={isDarkTheme ? 'text-[#9ca3af]' : 'text-slate-600'}>
                             {(config.width * config.length).toFixed(1)} м²
                         </span>
-                        <span className="text-[#9ca3af]">
+                        <span className={isDarkTheme ? 'text-[#9ca3af]' : 'text-slate-600'}>
                             ~{Math.round(price / (config.width * config.length)).toLocaleString()} ₽/м²
                         </span>
                         {gateConfig.type !== GateType.None && (

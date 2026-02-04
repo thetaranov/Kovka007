@@ -91,9 +91,10 @@ const SolidPanel: FC<PanelProps> = ({ width, height, color, offsetZ = -0.03 }) =
       <boxGeometry args={[width - 0.06, height - 0.06, 0.02]} />
       <meshStandardMaterial 
         color={color}
-        roughness={0.5} 
-        metalness={0.6}
+        roughness={0.35} 
+        metalness={0.4}
         side={THREE.DoubleSide}
+        envMapIntensity={1.2}
       />
     </mesh>
   );
