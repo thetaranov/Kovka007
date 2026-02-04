@@ -154,21 +154,21 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig }) => {
   return (
     <div
       ref={containerRef}
-      className="w-full h-full bg-[#1a1d23] relative shadow-inner overflow-hidden"
+      className="w-full h-full bg-[#252830] relative shadow-inner overflow-hidden"
       style={{ touchAction: "auto" }}
     >
       {/* Фон - водяной знак */}
       <div
-        className="absolute inset-0 pointer-events-none z-0 opacity-[0.03]"
+        className="absolute inset-0 pointer-events-none z-0 opacity-[0.04]"
         style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='Inter, sans-serif' font-weight='900' font-size='14' fill='%23ffffff' text-anchor='middle' transform='rotate(-45 50 50)'%3Ekovka007%3C/text%3E%3C/svg%3E")`,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='180' height='180' viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='Inter, sans-serif' font-weight='900' font-size='20' fill='%23ffffff' text-anchor='middle' transform='rotate(-45 90 90)'%3Ekovka007%3C/text%3E%3C/svg%3E")`,
           backgroundRepeat: "repeat",
           backgroundPosition: "center",
         }}
       />
 
       {/* Control stack (mobile + desktop) */}
-      <div className="absolute right-4 top-20 lg:top-28 z-20 flex flex-col items-center gap-2 pointer-events-auto" data-allow-touch>
+      <div className="absolute right-4 top-1/3 lg:top-[40%] z-20 flex flex-col items-center gap-2 pointer-events-auto" data-allow-touch>
         <button
           onClick={handleReset}
           className="p-2 bg-[#252830]/90 hover:bg-[#2d3039] backdrop-blur-sm rounded-lg shadow-lg border border-[#3d4251] text-slate-400 hover:text-cyan-400 active:scale-95 transition-all pointer-events-auto"

@@ -407,6 +407,7 @@ export default function App() {
     const [price, setPrice] = useState(0);
     const [gatePrice, setGatePrice] = useState(0);
     const [orderJson, setOrderJson] = useState("");
+    const [isDarkTheme, setIsDarkTheme] = useState(true); // Theme state
     const [loads, setLoads] = useState({
         snowLoad: 336,
         windLoad: 304,
@@ -768,6 +769,13 @@ export default function App() {
                         <span className="text-cyan-400">Kovka007</span>
                         <span className="text-[#3d4451]">|</span>
                         <span className="text-[10px] font-normal text-[#6b7280] uppercase tracking-wider">v2.0</span>
+                        <span className="text-[#3d4451]">|</span>
+                        <button
+                            onClick={() => setIsDarkTheme(!isDarkTheme)}
+                            className="text-[10px] font-normal text-[#6b7280] hover:text-cyan-400 transition-colors uppercase tracking-wider cursor-pointer"
+                        >
+                            тема<span className="text-cyan-400/70">({isDarkTheme ? 'тёмная' : 'светлая'})</span>
+                        </button>
                     </h1>
                 </div>
             </div>
