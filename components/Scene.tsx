@@ -154,24 +154,24 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig }) => {
   return (
     <div
       ref={containerRef}
-      className="w-full h-full bg-slate-200 relative shadow-inner overflow-hidden"
+      className="w-full h-full bg-[#1a1d23] relative shadow-inner overflow-hidden"
       style={{ touchAction: "auto" }}
     >
-      {/* Фон */}
+      {/* Фон - водяной знак */}
       <div
-        className="absolute inset-0 pointer-events-none z-0 opacity-[0.05]"
+        className="absolute inset-0 pointer-events-none z-0 opacity-[0.03]"
         style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='Inter, sans-serif' font-weight='900' font-size='14' fill='%231e293b' text-anchor='middle' transform='rotate(-45 50 50)'%3Ekovka007%3C/text%3E%3C/svg%3E")`,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='Inter, sans-serif' font-weight='900' font-size='14' fill='%23ffffff' text-anchor='middle' transform='rotate(-45 50 50)'%3Ekovka007%3C/text%3E%3C/svg%3E")`,
           backgroundRepeat: "repeat",
           backgroundPosition: "center",
         }}
       />
 
       {/* Control stack (mobile + desktop) */}
-      <div className="absolute right-4 top-32 lg:top-28 z-20 flex flex-col items-center gap-2 pointer-events-auto" data-allow-touch>
+      <div className="absolute right-4 top-20 lg:top-28 z-20 flex flex-col items-center gap-2 pointer-events-auto" data-allow-touch>
         <button
           onClick={handleReset}
-          className="p-2 bg-white/80 hover:bg-white backdrop-blur-sm rounded-lg shadow-sm border border-slate-200 text-slate-500 hover:text-indigo-600 active:scale-95 transition-all pointer-events-auto"
+          className="p-2 bg-[#252830]/90 hover:bg-[#2d3039] backdrop-blur-sm rounded-lg shadow-lg border border-[#3d4251] text-slate-400 hover:text-cyan-400 active:scale-95 transition-all pointer-events-auto"
         >
           <RefreshCw size={18} />
         </button>
@@ -180,17 +180,17 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig }) => {
             setMeasureMode((v) => !v);
             setMeasurePoints([]);
           }}
-          className={`p-2 bg-white/80 backdrop-blur-sm border border-slate-200 rounded-lg transition-colors pointer-events-auto ${
-            measureMode ? "text-indigo-700 border-indigo-300" : "text-slate-700 hover:bg-slate-100"
+          className={`p-2 bg-[#252830]/90 backdrop-blur-sm border border-[#3d4251] rounded-lg transition-colors pointer-events-auto ${
+            measureMode ? "text-cyan-400 border-cyan-500/50" : "text-slate-400 hover:bg-[#2d3039]"
           }`}
         >
           <Ruler size={18} />
         </button>
         <button
           onClick={handleCameraToggle}
-          className="p-2 bg-white/80 backdrop-blur-sm border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-100 transition-colors pointer-events-auto"
+          className="p-2 bg-[#252830]/90 backdrop-blur-sm border border-[#3d4251] rounded-lg text-slate-400 hover:bg-[#2d3039] transition-colors pointer-events-auto"
         >
-          <Camera size={18} className={isOrthoTarget ? "text-indigo-700" : "text-slate-700"} />
+          <Camera size={18} className={isOrthoTarget ? "text-cyan-400" : "text-slate-400"} />
         </button>
       </div>
 
@@ -243,15 +243,13 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig }) => {
               args={[gridWidth, gridLength]}
               cellSize={1}
               cellThickness={1}
-              cellColor="#94a3b8"
+              cellColor="#4a5568"
               sectionSize={5}
               sectionThickness={1.5}
-              sectionColor="#475569"
+              sectionColor="#2d3748"
               fadeDistance={50}
-              fadeStrength={2}
+              fadeStrength={3}
               infiniteGrid={true}
-              opacity={0.35}
-              transparent
             />
           )}
 
@@ -295,17 +293,17 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig }) => {
             touches={{ ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN }}
             ref={controlsRef}
           />
-          {/* Gizmo: на мобильных делаем меньше и ближе к краю */}
+          {/* Gizmo: на мобильных - правый верхний угол, на десктопе - правый нижний */}
           <GizmoHelper 
-            alignment="bottom-right" 
-            margin={isMobile ? [60, 160] : [80, 100]}
+            alignment={isMobile ? "top-right" : "bottom-right"}
+            margin={isMobile ? [70, 70] : [80, 100]}
           >
             <GizmoViewport
-              axisColors={["#ef4444", "#3b82f6", "#22c55e"]}
-              labels={["X", "Z", "Y"]}
-              labelColor="#0f172a"
+              axisColors={["#ef4444", "#22c55e", "#3b82f6"]}
+              labels={["X", "Y", "Z"]}
+              labelColor="#ffffff"
               hideNegativeAxes={false}
-              font="14px Inter, sans-serif"
+              font="12px Inter, sans-serif"
             />
           </GizmoHelper>
           <MeasurementTool
@@ -387,7 +385,7 @@ const MeasurementTool: React.FC<{
   const planeRotation =
     plane === "top" ? [-Math.PI / 2, 0, 0] : plane === "side" ? [0, Math.PI / 2, 0] : [0, 0, 0];
   const planePosition: [number, number, number] = [planeOrigin.x, planeOrigin.y, planeOrigin.z];
-  const planeSize =
+  const planeSize: [number, number] =
     plane === "top"
       ? [gridWidth, gridLength]
       : plane === "front"
@@ -626,12 +624,10 @@ const OrthoGrid: React.FC<{
         cellColor="#94a3b8"
         sectionSize={5}
         sectionThickness={1.5}
-        sectionColor="#475569"
+        sectionColor="#2d3748"
         fadeDistance={1000}
-        fadeStrength={1}
+        fadeStrength={2}
         infiniteGrid={true}
-        opacity={0.45}
-        transparent
         side={THREE.DoubleSide}
         renderOrder={-1}
       />
@@ -646,15 +642,13 @@ const OrthoGrid: React.FC<{
         args={[width, gridHeight]}
         cellSize={1}
         cellThickness={1}
-        cellColor="#94a3b8"
+        cellColor="#4a5568"
         sectionSize={5}
         sectionThickness={1.5}
-        sectionColor="#475569"
+        sectionColor="#2d3748"
         fadeDistance={1000}
-        fadeStrength={1}
+        fadeStrength={2}
         infiniteGrid={true}
-        opacity={0.45}
-        transparent
         side={THREE.DoubleSide}
         renderOrder={-1}
       />
@@ -668,15 +662,13 @@ const OrthoGrid: React.FC<{
       args={[length, gridHeight]}
       cellSize={1}
       cellThickness={1}
-      cellColor="#94a3b8"
+      cellColor="#4a5568"
       sectionSize={5}
       sectionThickness={1.5}
-      sectionColor="#475569"
+      sectionColor="#2d3748"
       fadeDistance={1000}
-      fadeStrength={1}
+      fadeStrength={2}
       infiniteGrid={true}
-      opacity={0.45}
-      transparent
       side={THREE.DoubleSide}
       renderOrder={-1}
     />

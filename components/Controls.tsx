@@ -22,12 +22,12 @@ const Slider: React.FC<{
 }> = ({ label, value, min, max, step = 0.5, unit, onChange, extraInfo }) => (
   <div className="mb-6">
     <div className="flex justify-between items-center mb-2">
-      <label className="text-xs uppercase font-bold text-slate-400 tracking-wider">{label}</label>
+      <label className="text-xs uppercase font-bold text-[#6b7280] tracking-wider">{label}</label>
       <div className="flex items-center gap-2">
-          {extraInfo && <span className="text-xs text-indigo-400 font-medium">{extraInfo}</span>}
-          <div className="flex items-center bg-slate-700 rounded px-2 py-1">
+          {extraInfo && <span className="text-xs text-cyan-400 font-medium">{extraInfo}</span>}
+          <div className="flex items-center bg-[#252830] rounded px-2 py-1">
             <span className="font-mono font-bold text-white">{value.toFixed(1)}</span>
-            <span className="text-xs text-slate-400 ml-1">{unit}</span>
+            <span className="text-xs text-[#6b7280] ml-1">{unit}</span>
           </div>
       </div>
     </div>
@@ -38,7 +38,7 @@ const Slider: React.FC<{
       step={step}
       value={value}
       onChange={(e) => onChange(parseFloat(e.target.value))}
-      className="w-full h-1.5 bg-slate-600 rounded-lg appearance-none cursor-pointer accent-indigo-500 hover:accent-indigo-400"
+      className="w-full h-1.5 bg-[#3d4251] rounded-lg appearance-none cursor-pointer accent-cyan-500 hover:accent-cyan-400"
     />
   </div>
 );
@@ -46,7 +46,7 @@ const Slider: React.FC<{
 const ColorOptionBtn: React.FC<{ hex: string; selected: boolean; onClick: () => void }> = ({ hex, selected, onClick }) => (
     <button
         onClick={onClick}
-        className={`w-8 h-8 rounded-full border-2 transition-all ${selected ? 'border-indigo-600 scale-110 shadow-md' : 'border-transparent hover:scale-105'}`}
+        className={`w-8 h-8 rounded-full border-2 transition-all ${selected ? 'border-cyan-400 scale-110 shadow-md' : 'border-transparent hover:scale-105'}`}
         style={{ backgroundColor: hex }}
     >
         {selected && <Check className="w-4 h-4 text-white mx-auto drop-shadow-sm" />}
@@ -54,8 +54,8 @@ const ColorOptionBtn: React.FC<{ hex: string; selected: boolean; onClick: () => 
 );
 
 const RoofIcon: React.FC<{ type: RoofType; active: boolean }> = ({ type, active }) => {
-    const color = active ? '#818cf8' : '#94a3b8';
-    const fill = active ? '#312e81' : 'transparent';
+    const color = active ? '#22d3ee' : '#6b7280';
+    const fill = active ? '#164e63' : 'transparent';
 
     if (type === RoofType.Arched) {
         return (
@@ -121,13 +121,13 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
   const savings = oldPrice - price;
 
   return (
-    <div className="flex flex-col h-full bg-slate-800 border-l border-slate-700">
+    <div className="flex flex-col h-full bg-[#1e2128] border-l border-[#2d323d]">
 
       <div className="flex-1 overflow-y-auto custom-scrollbar">
          <div className="p-6 space-y-8">
 
             <section>
-                <h3 className="font-bold text-sm uppercase tracking-wide text-indigo-400 mb-4">Тип конструкции</h3>
+                <h3 className="font-bold text-sm uppercase tracking-wide text-cyan-400 mb-4">Тип конструкции</h3>
                 <div className="grid grid-cols-5 gap-1.5">
                     {[
                         { v: RoofType.Arched, l: 'Арочный' },
@@ -141,12 +141,12 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
                             onClick={() => handleChange('roofType', opt.v)}
                             className={`flex flex-col items-center justify-center p-1.5 rounded-xl border-2 transition-all h-20 ${
                                 config.roofType === opt.v 
-                                ? 'border-indigo-500 bg-indigo-900/30' 
-                                : 'border-slate-700 hover:border-slate-500 hover:bg-slate-700/50'
+                                ? 'border-cyan-500 bg-cyan-500/10' 
+                                : 'border-[#3d4251] hover:border-[#4d5261] hover:bg-[#252830]'
                             }`}
                         >
                             <RoofIcon type={opt.v} active={config.roofType === opt.v} />
-                            <span className={`text-[9px] sm:text-[10px] font-bold mt-1.5 leading-tight text-center ${config.roofType === opt.v ? 'text-indigo-300' : 'text-slate-400'}`}>
+                            <span className={`text-[9px] sm:text-[10px] font-bold mt-1.5 leading-tight text-center ${config.roofType === opt.v ? 'text-cyan-400' : 'text-[#6b7280]'}`}>
                                 {opt.l}
                             </span>
                         </button>
@@ -154,13 +154,13 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
                 </div>
             </section>
 
-            <section className="pt-6 border-t border-slate-700">
+            <section className="pt-6 border-t border-[#2d323d]">
                 <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2 text-slate-200">
+                    <div className="flex items-center gap-2 text-white">
                         <Ruler size={18} />
                         <h3 className="font-bold text-sm uppercase tracking-wide">Размеры</h3>
                     </div>
-                    <div className="flex items-center gap-1.5 bg-slate-700 px-2 py-1 rounded text-slate-300">
+                    <div className="flex items-center gap-1.5 bg-[#252830] px-2 py-1 rounded text-[#9ca3af]">
                         <Maximize2 size={14} />
                         <span className="text-xs font-bold font-mono">{area} м²</span>
                     </div>
@@ -188,7 +188,7 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
                 )}
 
                 <div className="mt-4">
-                    <label className="text-xs uppercase font-bold text-slate-400 tracking-wider block mb-2">Сечение столбов</label>
+                    <label className="text-xs uppercase font-bold text-[#6b7280] tracking-wider block mb-2">Сечение столбов</label>
                     <div className="grid grid-cols-4 gap-2">
                         {[
                             { v: PillarSize.Size60, l: '60x60' },
@@ -201,8 +201,8 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
                                 onClick={() => handleChange('pillarSize', opt.v)}
                                 className={`py-2 text-xs font-medium rounded-lg border ${
                                     config.pillarSize === opt.v 
-                                    ? 'border-indigo-500 bg-indigo-900/30 text-indigo-300' 
-                                    : 'border-slate-600 text-slate-400 hover:bg-slate-700'
+                                    ? 'border-cyan-500 bg-cyan-500/10 text-cyan-400' 
+                                    : 'border-[#3d4251] text-[#6b7280] hover:bg-[#252830]'
                                 }`}
                             >
                                 {opt.l}
@@ -212,15 +212,15 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
                 </div>
             </section>
 
-            <section className="pt-6 border-t border-slate-700">
-                <h3 className="font-bold text-sm uppercase tracking-wide text-indigo-400 mb-4">Материалы</h3>
+            <section className="pt-6 border-t border-[#2d323d]">
+                <h3 className="font-bold text-sm uppercase tracking-wide text-cyan-400 mb-4">Материалы</h3>
 
                 <div className="mb-4">
-                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Материал кровли</label>
+                    <label className="block text-xs font-bold text-[#6b7280] uppercase mb-2">Материал кровли</label>
                     <select 
                         value={config.roofMaterial}
                         onChange={(e) => handleChange('roofMaterial', e.target.value)}
-                        className="w-full bg-slate-700 border border-slate-600 text-slate-200 py-2.5 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full bg-[#252830] border border-[#3d4251] text-white py-2.5 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
                     >
                         <option value={RoofMaterial.Polycarbonate}>Сотовый поликарбонат</option>
                         <option value={RoofMaterial.MetalTile}>Металлочерепица</option>
@@ -229,11 +229,11 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
                 </div>
 
                 <div className="mb-4">
-                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Покраска металла</label>
+                    <label className="block text-xs font-bold text-[#6b7280] uppercase mb-2">Покраска металла</label>
                     <select 
                         value={config.paintType}
                         onChange={(e) => handleChange('paintType', e.target.value)}
-                        className="w-full bg-slate-700 border border-slate-600 text-slate-200 py-2.5 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full bg-[#252830] border border-[#3d4251] text-white py-2.5 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
                     >
                         <option value={PaintType.None}>Грунт-эмаль (Стандарт)</option>
                         <option value={PaintType.Ral}>Эмаль RAL (Премиум)</option>
@@ -243,7 +243,7 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
 
                 <div className="grid grid-cols-2 gap-4 mt-6">
                     <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Цвет каркаса</label>
+                        <label className="block text-xs font-bold text-[#6b7280] uppercase mb-2">Цвет каркаса</label>
                         <div className="flex flex-wrap gap-2">
                             {FRAME_COLORS.map(c => (
                                 <ColorOptionBtn key={c.hex} hex={c.hex} selected={config.frameColor === c.hex} onClick={() => handleChange('frameColor', c.hex)} />
@@ -251,7 +251,7 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
                         </div>
                     </div>
                     <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Цвет кровли</label>
+                        <label className="block text-xs font-bold text-[#6b7280] uppercase mb-2">Цвет кровли</label>
                         <div className="flex flex-wrap gap-2">
                             {ROOF_COLORS.map(c => (
                                 <ColorOptionBtn key={c.hex} hex={c.hex} selected={config.roofColor === c.hex} onClick={() => handleChange('roofColor', c.hex)} />
@@ -261,8 +261,8 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
                 </div>
             </section>
 
-            <section className="pt-6 border-t border-slate-700">
-                <h3 className="font-bold text-sm uppercase tracking-wide text-indigo-400 mb-4">Опции</h3>
+            <section className="pt-6 border-t border-[#2d323d]">
+                <h3 className="font-bold text-sm uppercase tracking-wide text-cyan-400 mb-4">Опции</h3>
                 <div className="space-y-3">
                     {[
                         { k: 'hasTrusses', l: 'Усиленные фермы' },
@@ -270,12 +270,12 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
                         { k: 'hasGutters', l: 'Водостоки' },
                         { k: 'hasFoundation', l: 'Заливка фундамента' }
                     ].map((item) => (
-                        <label key={item.k} className="flex items-center justify-between p-3 rounded-lg border border-slate-700 hover:bg-slate-700/50 cursor-pointer transition-colors">
-                            <span className="text-sm font-medium text-slate-200">{item.l}</span>
+                        <label key={item.k} className="flex items-center justify-between p-3 rounded-lg border border-[#3d4251] hover:bg-[#252830] cursor-pointer transition-colors">
+                            <span className="text-sm font-medium text-white">{item.l}</span>
                             <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
-                                config[item.k as keyof CarportConfig] ? 'bg-indigo-600 border-indigo-600' : 'bg-slate-700 border-slate-500'
+                                config[item.k as keyof CarportConfig] ? 'bg-cyan-500 border-cyan-500' : 'bg-[#252830] border-[#4d5261]'
                             }`}>
-                                {config[item.k as keyof CarportConfig] && <Check className="w-3.5 h-3.5 text-white" />}
+                                {config[item.k as keyof CarportConfig] && <Check className="w-3.5 h-3.5 text-[#0f1419]" />}
                             </div>
                             <input type="checkbox" className="hidden" checked={config[item.k as keyof CarportConfig] as boolean} onChange={(e) => handleChange(item.k as keyof CarportConfig, e.target.checked)} />
                         </label>
@@ -284,9 +284,9 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
 
                 {(config.hasFoundation || config.installationType === InstallationType.FoundationPour) && (
                     <div className="mt-4">
-                        <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Толщина фундамента</label>
+                        <label className="block text-xs font-bold text-[#6b7280] uppercase mb-2">Толщина фундамента</label>
                         <div className="flex justify-between items-center mb-2">
-                            <span className="text-xs text-slate-400">{(config.foundationThickness * 100).toFixed(0)} см</span>
+                            <span className="text-xs text-[#6b7280]">{(config.foundationThickness * 100).toFixed(0)} см</span>
                         </div>
                         <input
                             type="range"
@@ -295,13 +295,13 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
                             step={0.05}
                             value={config.foundationThickness}
                             onChange={(e) => handleChange('foundationThickness', parseFloat(e.target.value))}
-                            className="w-full h-1.5 bg-slate-600 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                            className="w-full h-1.5 bg-[#3d4251] rounded-lg appearance-none cursor-pointer accent-cyan-500"
                         />
                     </div>
                 )}
 
                 <div className="mt-4">
-                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Тип монтажа</label>
+                    <label className="block text-xs font-bold text-[#6b7280] uppercase mb-2">Тип монтажа</label>
                     <select
                         value={config.installationType}
                         onChange={(e) => {
@@ -315,7 +315,7 @@ export const Controls: React.FC<ControlsProps> = ({ config, onChange, price, onO
                                 hasFoundation: foundationActive,
                             });
                         }}
-                        className="w-full bg-slate-700 border border-slate-600 text-slate-200 py-2.5 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full bg-[#252830] border border-[#3d4251] text-white py-2.5 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
                     >
                         <option value={InstallationType.FoundationPour}>Заливка фундамента</option>
                         <option value={InstallationType.OnPosts}>Установка на залитые столбы</option>

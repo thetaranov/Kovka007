@@ -205,12 +205,13 @@ const BrowserOrderModal: React.FC<BrowserOrderModalProps> = ({
     const [errors, setErrors] = useState<{ name?: string; phone?: string }>({});
     const [csrfToken] = useState(() => generateCSRFToken());
 
-    if (!isOpen) return null;
-
+    // useMemo must be called before any conditional returns (Rules of Hooks)
     const parsedOrder = useMemo(() => {
         try { return orderData ? JSON.parse(orderData) : null; }
         catch { return null; }
     }, [orderData]);
+
+    if (!isOpen) return null;
 
     const validateForm = (): boolean => {
         const newErrors: { name?: string; phone?: string } = {};
@@ -762,11 +763,11 @@ export default function App() {
         <div className="flex flex-col lg:flex-row h-[100dvh] w-screen overflow-hidden bg-slate-900 font-sans overscroll-none fixed inset-0">
             {/* HEADER - Compact Dark */}
             <div className="absolute top-0 left-0 right-0 z-40 p-3 pointer-events-none flex justify-between items-start lg:p-4">
-                <div className="bg-slate-800/90 backdrop-blur-md px-3 py-1.5 rounded-lg shadow-lg border border-slate-700/50 pointer-events-auto">
+                <div className="bg-[#1e2128]/95 backdrop-blur-md px-3 py-1.5 rounded-lg shadow-lg border border-[#2d323d] pointer-events-auto">
                     <h1 className="font-bold text-white leading-tight flex items-center gap-1.5 text-sm">
-                        <span className="text-indigo-400">Kovka007</span>
-                        <span className="text-slate-600">|</span>
-                        <span className="text-[10px] font-normal text-slate-500 uppercase tracking-wider">v2.0</span>
+                        <span className="text-cyan-400">Kovka007</span>
+                        <span className="text-[#3d4451]">|</span>
+                        <span className="text-[10px] font-normal text-[#6b7280] uppercase tracking-wider">v2.0</span>
                     </h1>
                 </div>
             </div>
@@ -788,24 +789,24 @@ export default function App() {
 
                 {/* ИНФО-ПЛАШКА */}
                 <div className="absolute bottom-6 left-0 right-0 flex justify-center pointer-events-none z-30 px-4">
-                    <div className="bg-white/95 backdrop-blur-md px-3 py-2 rounded-xl shadow-lg border border-slate-200 text-slate-800 flex flex-wrap items-center gap-2 text-[11px] sm:text-sm font-medium max-w-full">
+                    <div className="bg-[#1e2128]/95 backdrop-blur-md px-3 py-2 rounded-xl shadow-lg border border-[#2d323d] text-white flex flex-wrap items-center gap-2 text-[11px] sm:text-sm font-medium max-w-full">
                         <div className="flex items-baseline gap-1">
-                            <span className="font-bold text-slate-700">
+                            <span className="font-bold text-white">
                                 {config.length}×{config.width}×{config.height}м
                             </span>
-                            <span className="text-[10px] text-slate-400 font-normal">
+                            <span className="text-[10px] text-[#6b7280] font-normal">
                                 (Д×Ш×В)
                             </span>
                         </div>
-                        <span className="text-slate-500">
+                        <span className="text-[#9ca3af]">
                             {(config.width * config.length).toFixed(1)} м²
                         </span>
-                        <span className="text-slate-500">
+                        <span className="text-[#9ca3af]">
                             ~{Math.round(price / (config.width * config.length)).toLocaleString()} ₽/м²
                         </span>
                         {gateConfig.type !== GateType.None && (
                             <>
-                                <span className="text-indigo-600 flex items-center gap-1">
+                                <span className="text-cyan-400 flex items-center gap-1">
                                     <Car size={12} />
                                     Ворота
                                 </span>
@@ -816,15 +817,15 @@ export default function App() {
             </div>
 
             {/* MOBILE PANEL */}
-            <div className="lg:hidden flex flex-col z-30 flex-shrink-0 bg-slate-800 shadow-[0_-4px_20px_rgba(0,0,0,0.3)] pb-safe">
+            <div className="lg:hidden flex flex-col z-30 flex-shrink-0 bg-[#1e2128] shadow-[0_-4px_20px_rgba(0,0,0,0.4)] pb-safe">
                 {/* Табы */}
-                <div className="flex border-b border-slate-700">
+                <div className="flex border-b border-[#2d323d]">
                     <button
                         onClick={() => setActiveTab("carport")}
                         className={`flex-1 py-3 text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
                             activeTab === "carport"
-                                ? "text-indigo-400 border-b-2 border-indigo-400"
-                                : "text-slate-400"
+                                ? "text-cyan-400 border-b-2 border-cyan-400"
+                                : "text-[#6b7280]"
                         }`}
                     >
                         <Home size={16} />
@@ -834,14 +835,14 @@ export default function App() {
                         onClick={() => setActiveTab("gate")}
                         className={`flex-1 py-3 text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
                             activeTab === "gate"
-                                ? "text-indigo-400 border-b-2 border-indigo-400"
-                                : "text-slate-400"
+                                ? "text-cyan-400 border-b-2 border-cyan-400"
+                                : "text-[#6b7280]"
                         }`}
                     >
                         <Car size={16} />
                         Ворота
                         {gateConfig.type !== GateType.None && (
-                            <span className="bg-indigo-900/50 text-indigo-300 text-[10px] px-1.5 py-0.5 rounded-full">
+                            <span className="bg-cyan-500/20 text-cyan-400 text-[10px] px-1.5 py-0.5 rounded-full">
                                 +{gatePrice.toLocaleString()}
                             </span>
                         )}
@@ -852,11 +853,11 @@ export default function App() {
                 <div className="px-4 pt-3">
                     <button
                         onClick={() => setIsMobileMenuOpen(true)}
-                        className="w-full bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-200 font-medium py-3 rounded-xl flex items-center justify-center gap-2 transition-colors active:scale-[0.98]"
+                        className="w-full bg-[#252830] hover:bg-[#2d3039] border border-[#3d4251] text-[#9ca3af] font-medium py-3 rounded-xl flex items-center justify-center gap-2 transition-colors active:scale-[0.98]"
                     >
                         <Settings2 size={18} />
                         <span>Настроить {activeTab === "carport" ? "навес" : "ворота"}</span>
-                        <ChevronRight size={16} className="text-slate-400" />
+                        <ChevronRight size={16} className="text-[#6b7280]" />
                     </button>
                 </div>
 
@@ -864,7 +865,7 @@ export default function App() {
                     <div className="mb-4">
                         <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center gap-2">
-                                <span className="text-lg font-medium text-slate-500 line-through decoration-slate-500/50">
+                                <span className="text-lg font-medium text-[#6b7280] line-through decoration-[#6b7280]/50">
                                     {oldPrice.toLocaleString()} ₽
                                 </span>
                                 <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
@@ -872,7 +873,7 @@ export default function App() {
                                 </span>
                             </div>
                             {installActive && (
-                                <div className="bg-green-900/50 text-green-400 px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
+                                <div className="bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
                                     <CheckCircle2 size={12} />
                                     с монтажом
                                 </div>
@@ -884,12 +885,12 @@ export default function App() {
                                     {totalPrice.toLocaleString()} ₽
                                 </p>
                                 {gatePrice > 0 && (
-                                    <p className="text-xs text-slate-400 mt-1">
+                                    <p className="text-xs text-[#6b7280] mt-1">
                                         Навес: {price.toLocaleString()} + Ворота: {gatePrice.toLocaleString()}
                                     </p>
                                 )}
                             </div>
-                            <div className="flex items-center gap-1 text-green-400 text-xs font-bold bg-green-900/50 px-2 py-1 rounded">
+                            <div className="flex items-center gap-1 text-emerald-400 text-xs font-bold bg-emerald-500/20 px-2 py-1 rounded">
                                 <TrendingDown size={14} />
                                 <span>-{savings.toLocaleString()} ₽</span>
                             </div>
@@ -902,7 +903,7 @@ export default function App() {
                             e.stopPropagation();
                             handleOrder();
                         }}
-                        className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 px-6 rounded-xl shadow-lg flex justify-center items-center gap-3 active:scale-[0.98] transition-all"
+                        className="w-full bg-cyan-500 hover:bg-cyan-400 text-[#0f1419] font-bold py-4 px-6 rounded-xl shadow-lg flex justify-center items-center gap-3 active:scale-[0.98] transition-all"
                         style={{ touchAction: "manipulation" }}
                     >
                         <span>Оформить заявку</span>
@@ -913,27 +914,27 @@ export default function App() {
 
             {/* DESKTOP SIDEBAR */}
             <div
-                className={`fixed inset-0 z-50 lg:static lg:z-auto transform transition-transform duration-500 ease-out ${isMobileMenuOpen ? "translate-y-0" : "translate-y-[100%] lg:translate-y-0"} lg:w-[460px] lg:min-w-[420px] flex-shrink-0 h-full shadow-2xl lg:shadow-none flex flex-col bg-slate-800`}
+                className={`fixed inset-0 z-50 lg:static lg:z-auto transform transition-transform duration-500 ease-out ${isMobileMenuOpen ? "translate-y-0" : "translate-y-[100%] lg:translate-y-0"} lg:w-[460px] lg:min-w-[420px] flex-shrink-0 h-full shadow-2xl lg:shadow-none flex flex-col bg-[#1e2128]`}
             >
                 {/* Mobile close button */}
-                <div className="lg:hidden flex items-center justify-between p-4 border-b border-slate-700">
+                <div className="lg:hidden flex items-center justify-between p-4 border-b border-[#2d323d]">
                     <h2 className="font-bold text-white">Настройки</h2>
                     <button
                         onClick={() => setIsMobileMenuOpen(false)}
-                        className="p-2 bg-slate-700 rounded-full hover:bg-slate-600 transition-colors text-white"
+                        className="p-2 bg-[#252830] rounded-full hover:bg-[#2d3039] transition-colors text-white"
                     >
                         <X size={20} />
                     </button>
                 </div>
                 
                 {/* Desktop tabs */}
-                <div className="hidden lg:flex border-b border-slate-700">
+                <div className="hidden lg:flex border-b border-[#2d323d]">
                     <button
                         onClick={() => setActiveTab("carport")}
                         className={`flex-1 py-4 text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${
                             activeTab === "carport"
-                                ? "text-indigo-400 border-b-2 border-indigo-400 bg-indigo-900/30"
-                                : "text-slate-400 hover:text-slate-200"
+                                ? "text-cyan-400 border-b-2 border-cyan-400 bg-cyan-500/10"
+                                : "text-[#6b7280] hover:text-[#9ca3af]"
                         }`}
                     >
                         <Home size={18} />
@@ -943,14 +944,14 @@ export default function App() {
                         onClick={() => setActiveTab("gate")}
                         className={`flex-1 py-4 text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${
                             activeTab === "gate"
-                                ? "text-indigo-400 border-b-2 border-indigo-400 bg-indigo-900/30"
-                                : "text-slate-400 hover:text-slate-200"
+                                ? "text-cyan-400 border-b-2 border-cyan-400 bg-cyan-500/10"
+                                : "text-[#6b7280] hover:text-[#9ca3af]"
                         }`}
                     >
                         <Car size={18} />
                         Ворота
                         {gateConfig.type !== GateType.None && (
-                            <span className="bg-indigo-900/50 text-indigo-300 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                            <span className="bg-cyan-500/20 text-cyan-400 text-[10px] px-2 py-0.5 rounded-full font-bold">
                                 +{gatePrice.toLocaleString()}
                             </span>
                         )}
@@ -990,11 +991,11 @@ export default function App() {
                 </div>
 
                 {/* ORDER FOOTER (always visible) */}
-                <div className="flex-shrink-0 p-6 bg-slate-800 border-t border-slate-700">
+                <div className="flex-shrink-0 p-6 bg-[#1e2128] border-t border-[#2d323d]">
                     <div className="mb-4">
                         <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center gap-2">
-                                <span className="text-lg font-medium text-slate-500 line-through decoration-slate-500/50">
+                                <span className="text-lg font-medium text-[#6b7280] line-through decoration-[#6b7280]/50">
                                     {oldPrice.toLocaleString()} ₽
                                 </span>
                                 <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
@@ -1002,7 +1003,7 @@ export default function App() {
                                 </span>
                             </div>
                             {installActive && (
-                                <div className="bg-green-900/50 text-green-400 px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
+                                <div className="bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
                                     <CheckCircle2 size={12} />
                                     с монтажом
                                 </div>
@@ -1014,12 +1015,12 @@ export default function App() {
                                     {totalPrice.toLocaleString()} ₽
                                 </p>
                                 {gatePrice > 0 && (
-                                    <p className="text-xs text-slate-400 mt-1">
+                                    <p className="text-xs text-[#6b7280] mt-1">
                                         Навес: {price.toLocaleString()} + Ворота: {gatePrice.toLocaleString()}
                                     </p>
                                 )}
                             </div>
-                            <div className="flex items-center gap-1 text-green-400 text-xs font-bold bg-green-900/50 px-2 py-1 rounded">
+                            <div className="flex items-center gap-1 text-emerald-400 text-xs font-bold bg-emerald-500/20 px-2 py-1 rounded">
                                 <TrendingDown size={14} />
                                 <span>-{savings.toLocaleString()} ₽</span>
                             </div>
@@ -1032,7 +1033,7 @@ export default function App() {
                             e.stopPropagation();
                             handleOrder();
                         }}
-                        className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 px-6 rounded-xl transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
+                        className="w-full bg-cyan-500 hover:bg-cyan-400 text-[#0f1419] font-bold py-4 px-6 rounded-xl transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
                         style={{ touchAction: "manipulation" }}
                     >
                         <span>Оформить заявку</span>
@@ -1045,18 +1046,18 @@ export default function App() {
             <div className="hidden lg:flex fixed bottom-6 left-6 z-40 gap-3 items-center">
                 <button
                     onClick={() => setShowExportModal(true)}
-                    className="bg-slate-800/90 hover:bg-slate-700 text-slate-200 font-medium py-2.5 px-4 rounded-xl shadow-lg border border-slate-700 flex items-center gap-2 transition-all active:scale-95 backdrop-blur-md"
+                    className="bg-[#1e2128]/95 hover:bg-[#252830] text-[#9ca3af] font-medium py-2.5 px-4 rounded-xl shadow-lg border border-[#2d323d] flex items-center gap-2 transition-all active:scale-95 backdrop-blur-md"
                 >
-                    <Download size={16} className="text-indigo-400" />
+                    <Download size={16} className="text-cyan-400" />
                     <span className="text-sm">Экспорт</span>
                 </button>
                 <a
                     href="https://kovka007.ru/"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="bg-slate-800/90 hover:bg-slate-700 text-slate-200 font-medium py-2.5 px-4 rounded-xl shadow-lg border border-slate-700 flex items-center gap-2 transition-all active:scale-95 backdrop-blur-md no-underline"
+                    className="bg-[#1e2128]/95 hover:bg-[#252830] text-[#9ca3af] font-medium py-2.5 px-4 rounded-xl shadow-lg border border-[#2d323d] flex items-center gap-2 transition-all active:scale-95 backdrop-blur-md no-underline"
                 >
-                    <Globe size={16} className="text-blue-400" />
+                    <Globe size={16} className="text-cyan-400" />
                     <span className="text-sm">Сайт</span>
                 </a>
             </div>
