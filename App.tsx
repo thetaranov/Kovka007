@@ -33,6 +33,7 @@ import {
     ChevronRight,
     Layers,
     Shield,
+    Check,
 } from "lucide-react";
 
 // ==================== SECURITY UTILITIES ====================
@@ -417,6 +418,7 @@ const ExportModal: React.FC<{ isOpen: boolean; onClose: () => void; config: Carp
 export default function App() {
     const [config, setConfig] = useState<CarportConfig>(INITIAL_CONFIG);
     const [gateConfig, setGateConfig] = useState<GateConfig>(INITIAL_GATE);
+    const [onlyGates, setOnlyGates] = useState(false); // Режим "только ворота"
     const [activeTab, setActiveTab] = useState<"carport" | "gate">("carport");
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [showBrowserOrderModal, setShowBrowserOrderModal] = useState(false);
@@ -650,10 +652,14 @@ export default function App() {
     // Расчет стоимости ворот
     useEffect(() => {
         setGatePrice(calculateGatePrice(gateConfig));
+        // Сбрасываем "только ворота" если ворота выключены
+        if (gateConfig.type === GateType.None) {
+            setOnlyGates(false);
+        }
     }, [gateConfig]);
 
-    // Общая стоимость
-    const totalPrice = price + gatePrice;
+    // Общая стоимость (если onlyGates - только ворота)
+    const totalPrice = onlyGates ? gatePrice : (price + gatePrice);
     const oldPrice = Math.round(totalPrice * 1.2);
     const savings = oldPrice - totalPrice;
     const installActive = config.installationType !== InstallationType.None;
@@ -752,6 +758,7 @@ export default function App() {
                 wicket: gateConfig.hasWicket,
                 automation: gateConfig.hasAutomation,
             } : undefined,
+            only_gates: onlyGates, // Режим "только ворота" (без навеса)
             cad_dxf: includeCad ? (() => {
                 try {
                     return generateDXFBase64(config, gateConfig);
@@ -761,7 +768,7 @@ export default function App() {
                 }
             })() : undefined,
         };
-    }, [config, gateConfig, price, gatePrice, totalPrice, loads]);
+    }, [config, gateConfig, price, gatePrice, totalPrice, loads, onlyGates]);
 
     const handleOrder = useCallback(async () => {
         const tg = window.Telegram?.WebApp;
@@ -959,10 +966,13 @@ export default function App() {
                                 <p className="text-3xl font-black text-white leading-none tracking-tight">
                                     {totalPrice.toLocaleString()} ₽
                                 </p>
-                                {gatePrice > 0 && (
+                                {!onlyGates && gatePrice > 0 && (
                                     <p className="text-xs text-[#6b7280] mt-1">
                                         Навес: {price.toLocaleString()} + Ворота: {gatePrice.toLocaleString()}
                                     </p>
+                                )}
+                                {onlyGates && (
+                                    <p className="text-xs text-cyan-400 mt-1">Только ворота</p>
                                 )}
                             </div>
                             <div className="flex items-center gap-1 text-emerald-400 text-xs font-bold bg-emerald-500/20 px-2 py-1 rounded">
@@ -970,7 +980,22 @@ export default function App() {
                                 <span>-{savings.toLocaleString()} ₽</span>
                             </div>
                         </div>
+                        <p className="text-[10px] text-[#6b7280] mt-2 text-center">Цена ориентировочная, точный расчёт после замера</p>
                     </div>
+                    
+                    {/* Чекбокс "Только ворота" - показываем только если ворота выбраны */}
+                    {gateConfig.type !== GateType.None && (
+                        <label className="flex items-center gap-3 mb-3 p-3 rounded-lg border border-[#3d4251] cursor-pointer hover:bg-[#252830] transition-colors">
+                            <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
+                                onlyGates ? 'bg-cyan-500 border-cyan-500' : 'bg-[#252830] border-[#4d5261]'
+                            }`}>
+                                {onlyGates && <Check className="w-3.5 h-3.5 text-[#0f1419]" />}
+                            </div>
+                            <span className="text-sm font-medium text-white">Без навеса (только ворота)</span>
+                            <input type="checkbox" className="hidden" checked={onlyGates} onChange={(e) => setOnlyGates(e.target.checked)} />
+                        </label>
+                    )}
+                    
                     <button
                         onClick={handleOrder}
                         onTouchEnd={(e) => {
@@ -1102,10 +1127,13 @@ export default function App() {
                                 <p className="text-3xl font-black leading-none tracking-tight" style={{ color: 'var(--text-primary)' }}>
                                     {totalPrice.toLocaleString()} ₽
                                 </p>
-                                {gatePrice > 0 && (
+                                {!onlyGates && gatePrice > 0 && (
                                     <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                                         Навес: {price.toLocaleString()} + Ворота: {gatePrice.toLocaleString()}
                                     </p>
+                                )}
+                                {onlyGates && (
+                                    <p className="text-xs mt-1" style={{ color: 'var(--accent)' }}>Только ворота</p>
                                 )}
                             </div>
                             <div className="flex items-center gap-1 text-emerald-400 text-xs font-bold bg-emerald-500/20 px-2 py-1 rounded">
@@ -1113,7 +1141,20 @@ export default function App() {
                                 <span>-{savings.toLocaleString()} ₽</span>
                             </div>
                         </div>
+                        <p className="text-[10px] mt-2 text-center" style={{ color: 'var(--text-muted)' }}>Цена ориентировочная, точный расчёт после замера</p>
                     </div>
+                    
+                    {/* Чекбокс "Только ворота" - показываем только если ворота выбраны */}
+                    {gateConfig.type !== GateType.None && (
+                        <label className="menu-checkbox mb-3">
+                            <span className="menu-text">Без навеса (только ворота)</span>
+                            <div className={`menu-checkbox-box ${onlyGates ? 'checked' : ''}`}>
+                                {onlyGates && <Check className="w-3.5 h-3.5" style={{ color: 'var(--bg-main)' }} />}
+                            </div>
+                            <input type="checkbox" className="hidden" checked={onlyGates} onChange={(e) => setOnlyGates(e.target.checked)} />
+                        </label>
+                    )}
+                    
                     <button
                         onClick={handleOrder}
                         onTouchEnd={(e) => {
