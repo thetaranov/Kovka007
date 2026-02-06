@@ -376,7 +376,9 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig, isDarkTheme = 
             maxPolarAngle={isOrtho ? Math.PI : Math.PI}
             minDistance={isOrtho ? 0.1 : 3}
             maxDistance={isOrtho ? 1000 : 50}
-            target={[0, config.height / 2, 0]}
+            // initial target is set via effect (so toggling onlyGates or gate type
+            // won't force-reset the camera). The effect below sets the initial target
+            // on mount or when `resetKey` changes.
             enablePan={true}
             enableZoom={true}
             enableDamping={false}
@@ -387,6 +389,8 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig, isDarkTheme = 
             touches={{ ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN }}
             ref={controlsRef}
           />
+          {/* Ensure initial/reset target is applied only on mount or explicit reset */}
+          <EffectSetup resetKey={resetKey} controlsRef={controlsRef} configHeight={config.height} />
           {/* Gizmo: на мобильных - правый верхний угол, на десктопе - правый нижний */}
           <GizmoHelper 
             alignment={isMobile ? "top-right" : "bottom-right"}
@@ -432,6 +436,19 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig, isDarkTheme = 
       </Canvas>
     </div>
   );
+};
+
+// Small helper to set initial/reset target on controls without reacting to other prop changes
+const EffectSetup: React.FC<{ resetKey: number; controlsRef: React.RefObject<any>; configHeight: number }> = ({ resetKey, controlsRef, configHeight }) => {
+  useEffect(() => {
+    const controls = controlsRef.current;
+    if (!controls) return;
+    const target = new THREE.Vector3(0, configHeight / 2, 0);
+    controls.target.copy(target);
+    controls.update();
+  }, [resetKey, controlsRef, configHeight]);
+
+  return null;
 };
 
 const MeasurementTool: React.FC<{
