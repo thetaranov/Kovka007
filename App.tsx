@@ -716,43 +716,63 @@ export default function App() {
         const foundationEnabled = config.hasFoundation || config.installationType === InstallationType.FoundationPour;
         const installActive = config.hasInstallation;
 
-        return {
+        const hasGateData = gateConfig.type !== GateType.None;
+
+        // Базовый объект заказа
+        const payload: Record<string, any> = {
             id: generateOrderId(),
             timestamp: new Date().toISOString(),
-            type: config.roofType,
-            width: config.width,
-            length: config.length,
-            height: config.height,
-            height_peak: parseFloat(peakHeight.toFixed(2)),
-            slope: config.roofSlope,
-            pillar: config.pillarSize,
-            area_floor: areaFloor,
-            area_roof: areaRoof,
-            material: config.roofMaterial,
-            paint: config.paintType,
-            color_frame: frameColorObj ? frameColorObj.name : config.frameColor,
-            color_roof: roofColorObj ? roofColorObj.name : config.roofColor,
-            opts: {
+            only_gates: onlyGates,
+            price: price,
+            price_gate: gatePrice,
+            price_total: totalPrice,
+        };
+
+        // Данные навеса — только если НЕ режим «только ворота»
+        if (!onlyGates) {
+            payload.type = config.roofType;
+            payload.width = config.width;
+            payload.length = config.length;
+            payload.height = config.height;
+            payload.height_peak = parseFloat(peakHeight.toFixed(2));
+            payload.slope = config.roofSlope;
+            payload.pillar = config.pillarSize;
+            payload.area_floor = areaFloor;
+            payload.area_roof = areaRoof;
+            payload.material = config.roofMaterial;
+            payload.paint = config.paintType;
+            payload.color_frame = frameColorObj ? frameColorObj.name : config.frameColor;
+            payload.color_roof = roofColorObj ? roofColorObj.name : config.roofColor;
+            payload.opts = {
                 trusses: config.hasTrusses,
                 gutters: config.hasGutters,
                 walls: config.hasSideWalls,
                 found: foundationEnabled,
                 install: installActive,
-            },
-            foundation_thickness: config.foundationThickness,
-            installation_type: config.installationType,
-            region: config.region,
-            snow_region: config.snowRegion,
-            wind_region: config.windRegion,
-            loads: {
+            };
+            payload.foundation_thickness = config.foundationThickness;
+            payload.installation_type = config.installationType;
+            payload.region = config.region;
+            payload.snow_region = config.snowRegion;
+            payload.wind_region = config.windRegion;
+            payload.loads = {
                 snow: loads.snowLoad,
                 wind: loads.windLoad,
                 total: loads.totalLoad,
-            },
-            price: price,
-            price_gate: gatePrice,
-            price_total: totalPrice,
-            gate: gateConfig.type !== GateType.None ? {
+            };
+            payload.cad_dxf = includeCad ? (() => {
+                try {
+                    return generateDXFBase64(config, gateConfig);
+                } catch (e) {
+                    console.error("Error generating DXF:", e);
+                    return undefined;
+                }
+            })() : undefined;
+        }
+
+        // Данные ворот — только если ворота выбраны
+        if (hasGateData) {
+            payload.gate = {
                 type: gateConfig.type,
                 width: gateConfig.width,
                 height: gateConfig.height,
@@ -761,17 +781,10 @@ export default function App() {
                 panelColor: gateConfig.panelColor,
                 wicket: gateConfig.hasWicket,
                 automation: gateConfig.hasAutomation,
-            } : undefined,
-            only_gates: onlyGates, // Режим "только ворота" (без навеса)
-            cad_dxf: includeCad ? (() => {
-                try {
-                    return generateDXFBase64(config, gateConfig);
-                } catch (e) {
-                    console.error("Error generating DXF:", e);
-                    return undefined;
-                }
-            })() : undefined,
-        };
+            };
+        }
+
+        return payload;
     }, [config, gateConfig, price, gatePrice, totalPrice, loads, onlyGates]);
 
     const handleOrder = useCallback(async () => {
@@ -881,7 +894,7 @@ export default function App() {
             </div>
 
             <div className="relative w-full flex-grow min-h-0 lg:h-full transition-all duration-300">
-                <Scene ref={sceneRef} config={config} gateConfig={gateConfig} isDarkTheme={isDarkTheme} onlyGates={onlyGates} />
+                <Scene ref={sceneRef} config={config} gateConfig={gateConfig} isDarkTheme={isDarkTheme} onlyGates={onlyGates} mobileMenuOpen={isMobileMenuOpen} />
 
                 {/* Warnings */}
                 {loads.warnings.length > 0 && (

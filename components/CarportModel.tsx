@@ -262,6 +262,12 @@ const ArchedTruss: React.FC<{ width: number; color: string; overhang?: number }>
 export const CarportModel: React.FC<CarportModelProps> = ({ config, dimmed = false }) => {
   const { width, length, height, roofType, frameColor, roofColor, pillarSize, roofMaterial, hasSideWalls, roofSlope = 20 } = config;
 
+  // --- DECLARATIVE DIMMING: при dimmed=true все цвета заменяются на серый полупрозрачный ---
+  const DIM_COLOR = '#9ca3af';
+  const DIM_OPACITY = 0.25;
+  const effFrameColor = dimmed ? DIM_COLOR : frameColor;
+  const effRoofColor = dimmed ? DIM_COLOR : roofColor;
+
   // Размер столба в зависимости от сечения (квадратная труба)
   const pSize = pillarSize === PillarSize.Size60 ? 0.06 
     : pillarSize === PillarSize.Size80 ? 0.08 
@@ -332,7 +338,7 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config, dimmed = fal
             posts.push(
                 <mesh key={`p-${c}-${r}`} position={[x, hAtX/2, z]} castShadow receiveShadow>
                     <boxGeometry args={[pSize, hAtX, pSize]} />
-                    <meshStandardMaterial color={frameColor} roughness={0.8} />
+                    <meshStandardMaterial color={effFrameColor} roughness={0.8} transparent={dimmed} opacity={dimmed ? DIM_OPACITY : 1} />
                 </mesh>
             );
         }
@@ -343,22 +349,25 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config, dimmed = fal
                 end={new THREE.Vector3(x, hAtX + beamH/2, length/2)} 
                 thickness={beamH} 
                 depth={beamD} 
-                color={frameColor} 
+                color={effFrameColor}
+                transparent={dimmed}
+                opacity={dimmed ? DIM_OPACITY : 1}
             />
         );
     }
     return { posts, beams };
-  }, [length, width, height, asymmetricRise, isAsymmetric, frameColor, pSize, beamH, beamD, roofType]);
+  }, [length, width, height, asymmetricRise, isAsymmetric, effFrameColor, pSize, beamH, beamD, roofType, dimmed]);
 
   const trussCount = Math.ceil(length / 1.5) + 1;
   const trussSpacing = length / (trussCount - 1);
-  const skinOffset = 0.16; 
 
-  const RoofSkin = () => {
-    const opacity = roofMaterial === RoofMaterial.Polycarbonate ? 0.5 : 1.0;
-    const isTrans = roofMaterial === RoofMaterial.Polycarbonate;
-    const metalness = roofMaterial === RoofMaterial.MetalTile ? 0.5 : 0.1;
-    const roughness = roofMaterial === RoofMaterial.Polycarbonate ? 0.1 : 0.6;
+  // --- MEMOIZED ROOF SKIN ---
+  const roofSkinNode = useMemo(() => {
+    const opacity = dimmed ? DIM_OPACITY : (roofMaterial === RoofMaterial.Polycarbonate ? 0.5 : 1.0);
+    const isTrans = dimmed || roofMaterial === RoofMaterial.Polycarbonate;
+    const metalness = dimmed ? 0.1 : (roofMaterial === RoofMaterial.MetalTile ? 0.5 : 0.1);
+    const roughness = dimmed ? 0.5 : (roofMaterial === RoofMaterial.Polycarbonate ? 0.1 : 0.6);
+    const color = effRoofColor;
     const totalW = width + overhang * 2;
     const totalL = length + overhang * 2;
     const baseY = height + beamH; 
@@ -379,19 +388,16 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config, dimmed = fal
        
        return (
          <group position={[0, baseY + rise, 0]}>
-           {/* Left Slope */}
            <group position={[-width/4 - overhang/2, localY, 0]} rotation={[0, 0, rad]}>
                 <mesh castShadow receiveShadow>
                     <boxGeometry args={[slopeLen, 0.01, totalL]} />
-                    <meshStandardMaterial color={roofColor} transparent={isTrans} opacity={opacity} metalness={metalness} roughness={roughness} side={THREE.DoubleSide} />
+                    <meshStandardMaterial color={color} transparent={isTrans} opacity={opacity} metalness={metalness} roughness={roughness} side={THREE.DoubleSide} />
                 </mesh>
            </group>
-
-           {/* Right Slope */}
            <group position={[width/4 + overhang/2, localY, 0]} rotation={[0, 0, -rad]}>
                 <mesh castShadow receiveShadow>
                     <boxGeometry args={[slopeLen, 0.01, totalL]} />
-                    <meshStandardMaterial color={roofColor} transparent={isTrans} opacity={opacity} metalness={metalness} roughness={roughness} side={THREE.DoubleSide} />
+                    <meshStandardMaterial color={color} transparent={isTrans} opacity={opacity} metalness={metalness} roughness={roughness} side={THREE.DoubleSide} />
                 </mesh>
            </group>
          </group>
@@ -416,7 +422,7 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config, dimmed = fal
              <group position={[0, totalY, 0]} rotation={[0, 0, rad]}>
                 <mesh castShadow receiveShadow>
                     <boxGeometry args={[slopeLen, 0.01, totalL]} />
-                    <meshStandardMaterial color={roofColor} transparent={isTrans} opacity={opacity} metalness={metalness} roughness={roughness} side={THREE.DoubleSide} />
+                    <meshStandardMaterial color={color} transparent={isTrans} opacity={opacity} metalness={metalness} roughness={roughness} side={THREE.DoubleSide} />
                 </mesh>
              </group>
           </group>
@@ -440,7 +446,6 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config, dimmed = fal
         const tLeft = startTheta + overhang * anglePerMeter;
         const tRight = endTheta - overhang * anglePerMeter;
         
-        // Render Strips
         const segments = 24;
         const strips = [];
         for (let i=0; i<segments; i++) {
@@ -455,7 +460,7 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config, dimmed = fal
                    end={p2} 
                    thickness={0.01} 
                    depth={totalL} 
-                   color={roofColor} 
+                   color={color} 
                    transparent={isTrans} 
                    opacity={opacity} 
                    metalness={metalness} 
@@ -464,12 +469,8 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config, dimmed = fal
            );
         }
 
-        // FIXED: Removed the erroneous .map that was creating new objects in the loop
-        return <group position={[0, baseY, 0]}>
-            {strips}
-        </group>;
+        return <group position={[0, baseY, 0]}>{strips}</group>;
     } else {
-        // Arched
         const rise = width * SPECS.trussHeightArch;
         const radius = (Math.pow(width/2, 2) + Math.pow(rise, 2)) / (2 * rise);
         const centerY = -(radius - rise);
@@ -485,17 +486,18 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config, dimmed = fal
            <group position={[0, baseY, 0]}>
               <mesh position={[0, centerY, 0]} rotation={[-Math.PI/2, 0, 0]} castShadow receiveShadow>
                   <cylinderGeometry args={[skinRadius, skinRadius, totalL, 64, 1, true, -totalAngle/2, totalAngle]} />
-                  <meshStandardMaterial color={roofColor} transparent={isTrans} opacity={opacity} metalness={metalness} roughness={roughness} side={THREE.DoubleSide} />
+                  <meshStandardMaterial color={color} transparent={isTrans} opacity={opacity} metalness={metalness} roughness={roughness} side={THREE.DoubleSide} />
               </mesh>
            </group>
         );
     }
-  };
+  }, [width, length, height, roofType, roofSlope, effRoofColor, roofMaterial, beamH, overhang, dimmed]);
 
-  const Purlins = () => {
+  // --- MEMOIZED PURLINS ---
+  const purlinsNode = useMemo(() => {
     const count = Math.ceil(width / 0.6);
     const elements = [];
-    const color = frameColor;
+    const color = effFrameColor;
     const purlinThick = 0.04;
     const purlinDepth = 0.04;
     
@@ -552,77 +554,59 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config, dimmed = fal
              rotZ = currentTheta - Math.PI/2; 
         }
 
-        elements.push(<mesh key={i} position={[x, y, 0]} rotation={[0, 0, rotZ]} castShadow receiveShadow><boxGeometry args={[purlinThick, purlinDepth, zLen]} /><meshStandardMaterial color={color} roughness={0.7} metalness={0.2} /></mesh>);
+        elements.push(
+          <mesh key={i} position={[x, y, 0]} rotation={[0, 0, rotZ]} castShadow receiveShadow>
+            <boxGeometry args={[purlinThick, purlinDepth, zLen]} />
+            <meshStandardMaterial color={color} roughness={0.7} metalness={0.2} transparent={dimmed} opacity={dimmed ? DIM_OPACITY : 1} />
+          </mesh>
+        );
     }
     return <group>{elements}</group>;
-  };
+  }, [width, length, height, roofType, roofSlope, effFrameColor, beamH, dimmed]);
 
-  const groupRef = React.useRef<THREE.Group>(null);
-  const wasDimmedRef = React.useRef(false);
+  // --- MEMOIZED TRUSSES ---
+  const trussesNode = useMemo(() => {
+    return Array.from({length: trussCount}).map((_, i) => {
+      const z = -length/2 + i * trussSpacing;
+      return (
+        <group key={`truss-${i}`} position={[0, height + beamH, z]}>
+           {roofType === RoofType.Gable && <GableTruss width={width} angle={roofSlope} color={effFrameColor} />}
+           {roofType === RoofType.SingleSlope && <SingleSlopeTruss width={width} angle={roofSlope} color={effFrameColor} />}
+           {roofType === RoofType.Triangular && <TriangularTruss width={width} angle={roofSlope} color={effFrameColor} />}
+           {roofType === RoofType.SemiArched && <SemiArchedTruss width={width} angle={roofSlope} color={effFrameColor} />}
+           {roofType === RoofType.Arched && <ArchedTruss width={width} color={effFrameColor} overhang={overhang} />}
+        </group>
+      );
+    });
+  }, [trussCount, trussSpacing, length, width, height, roofType, roofSlope, effFrameColor, beamH, overhang]);
 
-  React.useEffect(() => {
-    const g = groupRef.current;
-    if (!g) return;
-
-    if (dimmed) {
-      // Save original materials and apply dim
-      const dimColor = new THREE.Color('#9ca3af');
-      g.traverse((obj: any) => {
-        if (obj.isMesh && obj.material) {
-          try {
-            if (!obj.userData.__prevMaterial) {
-              obj.userData.__prevMaterial = obj.material;
-            }
-            const mat = obj.material.clone ? obj.material.clone() : obj.material;
-            mat.color = dimColor;
-            mat.transparent = true;
-            mat.opacity = 0.25;
-            mat.needsUpdate = true;
-            obj.material = mat;
-          } catch {}
-        }
-      });
-      wasDimmedRef.current = true;
-    } else if (wasDimmedRef.current) {
-      // Only restore if we previously dimmed (skip first render)
-      g.traverse((obj: any) => {
-        if (obj.isMesh) {
-          const prev = obj.userData?.__prevMaterial;
-          if (prev) {
-            try { obj.material.dispose?.(); } catch {}
-            obj.material = prev;
-            delete obj.userData.__prevMaterial;
-          }
-        }
-      });
-      wasDimmedRef.current = false;
-    }
-  }, [dimmed]);
+  // --- MEMOIZED SIDE WALLS ---
+  const sideWallsNode = useMemo(() => {
+    if (!hasSideWalls) return null;
+    const wallColor = effRoofColor;
+    const wallOpacity = dimmed ? DIM_OPACITY : 0.5;
+    return (
+      <group>
+        <mesh position={[0, height/2, -length/2 + pSize/2]} receiveShadow>
+          <planeGeometry args={[width, height]} />
+          <meshStandardMaterial color={wallColor} opacity={wallOpacity} transparent side={THREE.DoubleSide} />
+        </mesh>
+        <mesh position={[-width/2 + pSize/2, height/2, 0]} rotation={[0, Math.PI/2, 0]} receiveShadow>
+          <planeGeometry args={[length, height]} />
+          <meshStandardMaterial color={wallColor} opacity={wallOpacity} transparent side={THREE.DoubleSide} />
+        </mesh>
+      </group>
+    );
+  }, [hasSideWalls, width, length, height, pSize, effRoofColor, dimmed]);
 
   return (
-    <group ref={groupRef}>
+    <group>
       {grid.posts}
       {grid.beams}
-      {Array.from({length: trussCount}).map((_, i) => {
-        const z = -length/2 + i * trussSpacing;
-        return (
-          <group key={`truss-${i}`} position={[0, height + beamH, z]}>
-             {roofType === RoofType.Gable && <GableTruss width={width} angle={roofSlope} color={frameColor} />}
-             {roofType === RoofType.SingleSlope && <SingleSlopeTruss width={width} angle={roofSlope} color={frameColor} />}
-             {roofType === RoofType.Triangular && <TriangularTruss width={width} angle={roofSlope} color={frameColor} />}
-             {roofType === RoofType.SemiArched && <SemiArchedTruss width={width} angle={roofSlope} color={frameColor} />}
-             {roofType === RoofType.Arched && <ArchedTruss width={width} color={frameColor} overhang={overhang} />}
-          </group>
-        );
-      })}
-      <Purlins />
-      <RoofSkin />
-      {hasSideWalls && (
-        <group>
-            <mesh position={[0, height/2, -length/2 + pSize/2]} receiveShadow><planeGeometry args={[width, height]} /><meshStandardMaterial color={roofColor} opacity={0.5} transparent side={THREE.DoubleSide} /></mesh>
-             <mesh position={[-width/2 + pSize/2, height/2, 0]} rotation={[0, Math.PI/2, 0]} receiveShadow><planeGeometry args={[length, height]} /><meshStandardMaterial color={roofColor} opacity={0.5} transparent side={THREE.DoubleSide} /></mesh>
-        </group>
-      )}
+      {trussesNode}
+      {purlinsNode}
+      {roofSkinNode}
+      {sideWallsNode}
     </group>
   );
 };

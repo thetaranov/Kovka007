@@ -12,7 +12,7 @@ import {
   GizmoViewport,
   Line,
 } from "@react-three/drei";
-import { CarportConfig, GateConfig, GateType, InstallationType } from "../types";
+import { CarportConfig, GateConfig, GateType, InstallationType, RoofType } from "../types";
 import { SPECS } from "../constants";
 import { CarportModel } from "./CarportModel";
 import { GateModel } from "./GateModel";
@@ -27,6 +27,7 @@ interface SceneProps {
   gateConfig?: GateConfig;
   isDarkTheme?: boolean;
   onlyGates?: boolean;
+  mobileMenuOpen?: boolean;
 }
 
 function Loader() {
@@ -43,12 +44,116 @@ function Loader() {
   );
 }
 
-export const Scene = forwardRef<SceneHandle, SceneProps>(({ config, gateConfig, isDarkTheme = true, onlyGates = false }, ref) => {
+// --- Helper: вычисляет позицию камеры для скриншота чтобы модель заняла ~80% кадра ---
+function computeScreenshotCamera(config: CarportConfig, gateConfig?: GateConfig, onlyGates?: boolean): { position: THREE.Vector3; target: THREE.Vector3 } {
+  const { width, length, height, roofType, roofSlope = 20 } = config;
+  
+  // Вычисляем высоту крыши
+  let roofRise = 0;
+  if (roofType === RoofType.Gable) roofRise = (width / 2) * Math.tan((roofSlope * Math.PI) / 180);
+  else if (roofType === RoofType.Arched) roofRise = width * (SPECS.trussHeightArch || 0.2);
+  else if (roofType === RoofType.SemiArched || roofType === RoofType.SingleSlope || roofType === RoofType.Triangular) {
+    roofRise = width * Math.tan((roofSlope * Math.PI) / 180);
+  }
+  
+  const totalHeight = height + roofRise + 0.5; // +overhang
+  
+  // Габариты с учётом ворот
+  const hasGate = gateConfig && gateConfig.type !== GateType.None;
+  const gateExt = hasGate ? (gateConfig?.distanceFromCarport ?? 2.0) : 0;
+  const totalLength = length + gateExt;
+  
+  // Максимальный габарит модели
+  const maxDim = Math.max(width, totalLength, totalHeight);
+  
+  // Центр модели
+  const centerY = totalHeight / 2;
+  const centerZ = -gateExt / 2;
+  const target = new THREE.Vector3(0, centerY, centerZ);
+  
+  // Расстояние камеры — чем больше модель, тем дальше (80% заполнение = делим на 0.8)
+  const fov = 45;
+  const fovRad = (fov * Math.PI) / 180;
+  const dist = (maxDim / (2 * Math.tan(fovRad / 2))) / 0.7; // ~80% fill
+  
+  // Камера с ¾ ракурса (изометрический вид)
+  const angle = Math.PI / 6; // 30°
+  const elevation = Math.PI / 7; // ~25° над горизонтом
+  const position = new THREE.Vector3(
+    target.x - dist * Math.cos(elevation) * Math.sin(angle),
+    target.y + dist * Math.sin(elevation),
+    target.z - dist * Math.cos(elevation) * Math.cos(angle)
+  );
+  
+  return { position, target };
+}
+
+// Компонент внутри Canvas для создания скриншота с отдельной камерой
+const ScreenshotCapture = forwardRef<{ capture: () => string | null }, { config: CarportConfig; gateConfig?: GateConfig; onlyGates?: boolean; gizmoRef: React.RefObject<THREE.Group | null> }>(
+  ({ config, gateConfig, onlyGates, gizmoRef }, ref) => {
+    const { gl, scene } = useThree();
+    
+    useImperativeHandle(ref, () => ({
+      capture: () => {
+        try {
+          // 1. Скрыть гизмо
+          const gizmo = gizmoRef.current;
+          let gizmoWasVisible = false;
+          if (gizmo) {
+            gizmoWasVisible = gizmo.visible;
+            gizmo.visible = false;
+          }
+          
+          // 2. Сохранить и заменить фон
+          const prevBg = scene.background;
+          scene.background = new THREE.Color('#e2e8f0'); // светло-серый
+          
+          // 3. Создать временную камеру
+          const { position, target } = computeScreenshotCamera(config, gateConfig, onlyGates);
+          const tmpCam = new THREE.PerspectiveCamera(45, gl.domElement.width / gl.domElement.height, 0.1, 200);
+          tmpCam.position.copy(position);
+          tmpCam.lookAt(target);
+          tmpCam.updateProjectionMatrix();
+          
+          // 4. Рендерим кадр
+          gl.render(scene, tmpCam);
+          
+          // 5. Захватываем
+          const dataUrl = gl.domElement.toDataURL('image/jpeg', 0.85);
+          
+          // 6. Восстанавливаем
+          scene.background = prevBg;
+          if (gizmo) gizmo.visible = gizmoWasVisible;
+          
+          // 7. Перерисовываем с оригинальной камерой (чтобы пользователь не видел мерцание)
+          // (следующий кадр useFrame сделает это автоматически)
+          
+          return dataUrl;
+        } catch (e) {
+          console.error('Screenshot capture failed:', e);
+          return null;
+        }
+      }
+    }));
+    
+    return null;
+  }
+);
+
+export const Scene = forwardRef<SceneHandle, SceneProps>(({ config, gateConfig, isDarkTheme = true, onlyGates = false, mobileMenuOpen = false }, ref) => {
+
+  const screenshotCaptureRef = useRef<{ capture: () => string | null }>(null);
+  const gizmoGroupRef = useRef<THREE.Group>(null);
 
   // Экспортируем функцию скриншота через ref
   useImperativeHandle(ref, () => ({
     takeScreenshot: () => {
       try {
+        // Используем внутренний компонент Canvas для скриншота с правильной камерой
+        if (screenshotCaptureRef.current) {
+          return screenshotCaptureRef.current.capture();
+        }
+        // Fallback: обычный canvas capture
         const canvas = containerRef.current?.querySelector('canvas');
         if (!canvas) return null;
         return canvas.toDataURL('image/jpeg', 0.85);
@@ -289,7 +394,8 @@ export const Scene = forwardRef<SceneHandle, SceneProps>(({ config, gateConfig, 
       <Canvas
         key={resetKey}
         shadows={false}
-        dpr={[1, 1.5]}
+        dpr={mobileMenuOpen && isMobile ? [1, 1] : [1, 1.5]}
+        frameloop={mobileMenuOpen && isMobile ? 'demand' : 'always'}
         gl={{ powerPreference: "high-performance", antialias: true, preserveDrawingBuffer: true }}
         className="z-10 relative"
         style={{
@@ -385,18 +491,20 @@ export const Scene = forwardRef<SceneHandle, SceneProps>(({ config, gateConfig, 
           {/* Ensure initial/reset target is applied only on mount or explicit reset */}
           <EffectSetup resetKey={resetKey} controlsRef={controlsRef} configHeight={config.height} />
           {/* Gizmo: на мобильных - правый верхний угол, на десктопе - правый нижний */}
-          <GizmoHelper 
-            alignment={isMobile ? "top-right" : "bottom-right"}
-            margin={isMobile ? [70, 70] : [80, 100]}
-          >
-            <GizmoViewport
-              axisColors={["#ef4444", "#22c55e", "#3b82f6"]}
-              labels={["X", "Y", "Z"]}
-              labelColor="#ffffff"
-              hideNegativeAxes={false}
-              font="12px Inter, sans-serif"
-            />
-          </GizmoHelper>
+          <group ref={gizmoGroupRef}>
+            <GizmoHelper 
+              alignment={isMobile ? "top-right" : "bottom-right"}
+              margin={isMobile ? [70, 70] : [80, 100]}
+            >
+              <GizmoViewport
+                axisColors={["#ef4444", "#22c55e", "#3b82f6"]}
+                labels={["X", "Y", "Z"]}
+                labelColor="#ffffff"
+                hideNegativeAxes={false}
+                font="12px Inter, sans-serif"
+              />
+            </GizmoHelper>
+          </group>
           <MeasurementTool
             enabled={measureMode}
             points={measurePoints}
@@ -425,6 +533,7 @@ export const Scene = forwardRef<SceneHandle, SceneProps>(({ config, gateConfig, 
             setSign={setOrthoSign}
             setStrict={setIsOrthoStrict}
           />
+          <ScreenshotCapture ref={screenshotCaptureRef} config={config} gateConfig={gateConfig} onlyGates={onlyGates} gizmoRef={gizmoGroupRef} />
         </Suspense>
       </Canvas>
     </div>
