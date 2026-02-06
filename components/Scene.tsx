@@ -63,7 +63,6 @@ function ResetOverride() {
   return null;
 }
 
-export const Scene: React.FC<SceneProps> = ({ config, gateConfig, isDarkTheme = true }) => {
 export const Scene: React.FC<SceneProps> = ({ config, gateConfig, isDarkTheme = true, onlyGates = false }) => {
   const [resetKey, setResetKey] = useState(0);
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 640);
