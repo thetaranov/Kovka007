@@ -149,6 +149,7 @@ declare global {
       WebApp: {
         initData: string;
         initDataUnsafe: {
+          query_id?: string;
           user?: {
             id: number;
             first_name: string;

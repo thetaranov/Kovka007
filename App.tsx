@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef, useDeferredValue } from "react";
 import { Scene, SceneHandle } from "./components/Scene";
 import { Controls } from "./components/Controls";
 import { GateControls } from "./components/GateControls";
@@ -58,6 +58,37 @@ const validateName = (name: string): boolean => {
     return /^[a-zA-Zа-яА-ЯёЁ\s\-]{2,100}$/.test(name);
 };
 
+// ==================== SCREENSHOT RESIZE ====================
+/**
+ * Resize a data-URL screenshot to max MAX_SIDE px on the longest side
+ * and re-encode as JPEG at the given quality.
+ * Returns a Promise<string | null> with the resized data-URL.
+ */
+const resizeScreenshot = (dataUrl: string, maxSide = 800, quality = 0.72): Promise<string | null> => {
+    return new Promise((resolve) => {
+        try {
+            const img = new Image();
+            img.onload = () => {
+                let { width, height } = img;
+                if (width > maxSide || height > maxSide) {
+                    const scale = maxSide / Math.max(width, height);
+                    width = Math.round(width * scale);
+                    height = Math.round(height * scale);
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) { resolve(null); return; }
+                ctx.drawImage(img, 0, 0, width, height);
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+            img.onerror = () => resolve(null);
+            img.src = dataUrl;
+        } catch { resolve(null); }
+    });
+};
+
 const generateCSRFToken = (): string => {
     const array = new Uint8Array(32);
     crypto.getRandomValues(array);
@@ -90,10 +121,14 @@ const isTelegramWebApp = (): boolean => {
 // Check if sendData is available (only for Keyboard Button Mini Apps)
 const canUseSendData = (): boolean => {
     const tg = window.Telegram?.WebApp;
-    // sendData is available when: ACTUALLY in Telegram + sendData function exists
-    // CRITICAL: Must check isTelegramWebApp() first! Otherwise script may load in browser
-    // and sendData function exists but won't work (silently fails)
-    return !!(isTelegramWebApp() && tg && typeof tg.sendData === 'function');
+    // sendData is available ONLY when launched via a KeyboardButton with web_app.
+    // When opened via BotFather menu_button / inline query, sendData exists
+    // on the object but silently does nothing. The distinguishing signal is
+    // initDataUnsafe.query_id — its presence means the app was opened via
+    // menu-button / direct-link / inline, where sendData is NOT supported.
+    if (!isTelegramWebApp() || !tg || typeof tg.sendData !== 'function') return false;
+    if (tg.initDataUnsafe?.query_id) return false;   // menu-button / inline
+    return true;
 };
 
 const INITIAL_CONFIG: CarportConfig = {
@@ -245,8 +280,10 @@ const BrowserOrderModal: React.FC<BrowserOrderModalProps> = ({
 
         setSending(true);
         try {
+            // Strip cad_dxf from payload — bot doesn't use it & it bloats request
+            const { cad_dxf: _dxf, ...orderWithoutDxf } = (parsedOrder || {});
             const payload = {
-                ...(parsedOrder || {}),
+                ...orderWithoutDxf,
                 name: sanitizeInput(name),
                 phone: sanitizeInput(phone),
                 comment: sanitizeInput(comment),
@@ -257,13 +294,13 @@ const BrowserOrderModal: React.FC<BrowserOrderModalProps> = ({
             };
 
             const endpoint = (window as any).KOVKA_BOT_ENDPOINT || (import.meta as any).env?.VITE_BOT_API || 'https://kovka007bot.onrender.com';
-            console.log('[BrowserOrderModal] Sending order to:', `${endpoint}/submit_order`);
-            console.log('[BrowserOrderModal] Payload:', payload);
+            const payloadStr = JSON.stringify(payload);
+            console.log('[BrowserOrderModal] Sending order to:', `${endpoint}/submit_order`, '| size:', Math.round(payloadStr.length / 1024), 'KB', '| screenshot:', screenshotBase64 ? Math.round(screenshotBase64.length / 1024) + ' KB' : 'none');
             
             const res = await fetch(`${endpoint.replace(/\/$/, '')}/submit_order`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
-                body: JSON.stringify(payload),
+                body: payloadStr,
             });
 
             console.log('[BrowserOrderModal] Response status:', res.status);
@@ -421,6 +458,9 @@ export default function App() {
     const sceneRef = useRef<SceneHandle>(null);
     const [config, setConfig] = useState<CarportConfig>(INITIAL_CONFIG);
     const [gateConfig, setGateConfig] = useState<GateConfig>(INITIAL_GATE);
+    // Deferred config for 3D scene: sliders update instantly, 3D follows with low priority
+    const deferredConfig = useDeferredValue(config);
+    const deferredGateConfig = useDeferredValue(gateConfig);
     const [onlyGates, setOnlyGates] = useState(false); // Режим "только ворота"
     const [activeTab, setActiveTab] = useState<"carport" | "gate">("carport");
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -791,8 +831,19 @@ export default function App() {
         const tg = window.Telegram?.WebApp;
         const telegramPayload = getOrderPayload({ includeCad: false });
 
-        // Захватываем скриншот 3D сцены
-        const screenshot = sceneRef.current?.takeScreenshot() || null;
+        // Захватываем скриншот 3D сцены и сжимаем до 800px
+        let screenshot: string | null = null;
+        try {
+            const raw = sceneRef.current?.takeScreenshot() || null;
+            if (raw) {
+                screenshot = await resizeScreenshot(raw, 800, 0.72) || raw;
+                console.log('📸 Screenshot captured:', Math.round(screenshot.length / 1024), 'KB');
+            } else {
+                console.warn('⚠️ takeScreenshot returned null');
+            }
+        } catch (e) {
+            console.warn('⚠️ Screenshot capture/resize failed:', e);
+        }
 
         // Check if running in Telegram WebApp and can use sendData
         if (canUseSendData() && tg) {
@@ -856,7 +907,7 @@ export default function App() {
             }
         }
 
-        // Browser mode (or Telegram fallback if sendData failed)
+        // Browser mode (or Telegram fallback if sendData failed / app-button mode)
         console.log('🌐 Browser mode - showing order modal');
         console.log('Platform:', tg?.platform || 'browser');
         setOrderScreenshot(screenshot);
@@ -894,7 +945,7 @@ export default function App() {
             </div>
 
             <div className="relative w-full flex-grow min-h-0 lg:h-full transition-all duration-300">
-                <Scene ref={sceneRef} config={config} gateConfig={gateConfig} isDarkTheme={isDarkTheme} onlyGates={onlyGates} mobileMenuOpen={isMobileMenuOpen} />
+                <Scene ref={sceneRef} config={deferredConfig} gateConfig={deferredGateConfig} isDarkTheme={isDarkTheme} onlyGates={onlyGates} mobileMenuOpen={isMobileMenuOpen} />
 
                 {/* Warnings */}
                 {loads.warnings.length > 0 && (
