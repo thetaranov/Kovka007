@@ -5,6 +5,7 @@ import { SPECS } from '../constants';
 
 interface CarportModelProps {
   config: CarportConfig;
+  dimmed?: boolean;
 }
 
 const BoxBeam: React.FC<{ 
@@ -258,7 +259,7 @@ const ArchedTruss: React.FC<{ width: number; color: string; overhang?: number }>
 
 // --- MAIN MODEL ---
 
-export const CarportModel: React.FC<CarportModelProps> = ({ config }) => {
+export const CarportModel: React.FC<CarportModelProps> = ({ config, dimmed = false }) => {
   const { width, length, height, roofType, frameColor, roofColor, pillarSize, roofMaterial, hasSideWalls, roofSlope = 20 } = config;
 
   // Размер столба в зависимости от сечения (квадратная труба)
@@ -556,8 +557,52 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config }) => {
     return <group>{elements}</group>;
   };
 
+  const groupRef = React.useRef<THREE.Group>(null);
+
+  React.useEffect(() => {
+    const g = groupRef.current;
+    if (!g) return;
+    const dimColor = new THREE.Color('#9ca3af');
+    const dimOpacity = 0.25;
+
+    if (dimmed) {
+      g.traverse((obj: any) => {
+        if (obj.isMesh) {
+          try { obj.userData.__prevMaterial = obj.material; } catch {}
+          const mat = obj.material && obj.material.clone ? obj.material.clone() : obj.material;
+          try {
+            mat.color = dimColor;
+            mat.transparent = true;
+            mat.opacity = dimOpacity;
+            mat.needsUpdate = true;
+            obj.material = mat;
+          } catch {}
+        }
+      });
+    } else {
+      g.traverse((obj: any) => {
+        if (obj.isMesh) {
+          const prev = obj.userData && obj.userData.__prevMaterial;
+          if (prev) {
+            try { obj.material.dispose && obj.material.dispose(); } catch {}
+            obj.material = prev;
+            try { delete obj.userData.__prevMaterial; } catch {}
+          } else {
+            try {
+              if (obj.material) {
+                obj.material.transparent = false;
+                obj.material.opacity = 1;
+                obj.material.needsUpdate = true;
+              }
+            } catch {}
+          }
+        }
+      });
+    }
+  }, [dimmed]);
+
   return (
-    <group>
+    <group ref={groupRef}>
       {grid.posts}
       {grid.beams}
       {Array.from({length: trussCount}).map((_, i) => {

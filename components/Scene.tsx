@@ -354,11 +354,7 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig, isDarkTheme = 
             foundationCenterZ={foundationCenterZ}
           />
 
-          <CarportModel config={config} />
-          {/* Если режим "только ворота" — затемнём/сделаем каркас полупрозрачным */}
-          {onlyGates && <OverrideCarportDim />}
-          <CarportModel config={config} />
-          {onlyGates && <ResetOverride />}
+          <CarportModel config={config} dimmed={onlyGates} />
           
           {/* Ворота - позиционируются перед выездом навеса */}
           {gateConfig && gateConfig.type !== GateType.None && (
