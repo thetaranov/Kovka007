@@ -22,6 +22,7 @@ interface SceneProps {
   config: CarportConfig;
   gateConfig?: GateConfig;
   isDarkTheme?: boolean;
+  onlyGates?: boolean;
 }
 
 function Loader() {
@@ -38,7 +39,32 @@ function Loader() {
   );
 }
 
+function OverrideCarportDim() {
+  const { scene } = useThree();
+  useEffect(() => {
+    const prev = scene.overrideMaterial;
+    const mat = new THREE.MeshStandardMaterial({ color: '#9ca3af', transparent: true, opacity: 0.25 });
+    scene.overrideMaterial = mat;
+    return () => {
+      scene.overrideMaterial = prev;
+      try { mat.dispose(); } catch {}
+    };
+  }, [scene]);
+  return null;
+}
+
+function ResetOverride() {
+  const { scene } = useThree();
+  useEffect(() => {
+    const prev = scene.overrideMaterial;
+    scene.overrideMaterial = null;
+    return () => { scene.overrideMaterial = prev; };
+  }, [scene]);
+  return null;
+}
+
 export const Scene: React.FC<SceneProps> = ({ config, gateConfig, isDarkTheme = true }) => {
+export const Scene: React.FC<SceneProps> = ({ config, gateConfig, isDarkTheme = true, onlyGates = false }) => {
   const [resetKey, setResetKey] = useState(0);
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 640);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -116,6 +142,52 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig, isDarkTheme = 
     };
     setResetKey((prev) => prev + 1);
   };
+
+  // Center camera on gates when onlyGates mode is enabled
+  useEffect(() => {
+    if (!onlyGates || !hasGate) return;
+    const controls = controlsRef.current;
+    if (!controls) return;
+
+    const distance = gateConfig?.distanceFromCarport ?? 2.0;
+    const gateZ = -config.length / 2 - distance;
+    const gateY = (gateConfig?.height ?? config.height) / 2;
+    const target = new THREE.Vector3(0, gateY, gateZ);
+
+    // Compute camera offset relative to current target so we preserve view angle
+    const camObj = (perspectiveRef.current && perspectiveRef.current) || (orthographicRef.current && orthographicRef.current);
+    if (!camObj) {
+      controls.target.copy(target);
+      controls.update();
+      return;
+    }
+
+    const fromTarget = controls.target.clone();
+    const fromCamPos = camObj.position.clone();
+    const offset = fromCamPos.clone().sub(fromTarget);
+    const toCamPos = target.clone().add(offset);
+
+    let t = 0;
+    const duration = 400; // ms
+    const start = performance.now();
+
+    const step = (now: number) => {
+      t = Math.min(1, (now - start) / duration);
+      const eased = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; // easeInOutQuad-like
+
+      controls.target.lerpVectors(fromTarget, target, eased);
+      camObj.position.lerpVectors(fromCamPos, toCamPos, eased);
+      controls.update();
+
+      if (t < 1) requestAnimationFrame(step);
+    };
+
+    requestAnimationFrame(step);
+
+    return () => {
+      // no-op cleanup
+    };
+  }, [onlyGates, hasGate, gateConfig, config.length, config.height]);
 
   const handleCameraToggle = () => {
     const next = cameraTarget === "orthographic" ? "perspective" : "orthographic";
@@ -284,6 +356,10 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig, isDarkTheme = 
           />
 
           <CarportModel config={config} />
+          {/* Если режим "только ворота" — затемнём/сделаем каркас полупрозрачным */}
+          {onlyGates && <OverrideCarportDim />}
+          <CarportModel config={config} />
+          {onlyGates && <ResetOverride />}
           
           {/* Ворота - позиционируются перед выездом навеса */}
           {gateConfig && gateConfig.type !== GateType.None && (

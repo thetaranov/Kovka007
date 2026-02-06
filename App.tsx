@@ -855,7 +855,7 @@ export default function App() {
             </div>
 
             <div className="relative w-full flex-grow min-h-0 lg:h-full transition-all duration-300">
-                <Scene config={config} gateConfig={gateConfig} isDarkTheme={isDarkTheme} />
+                <Scene config={config} gateConfig={gateConfig} isDarkTheme={isDarkTheme} onlyGates={onlyGates} />
 
                 {/* Warnings */}
                 {loads.warnings.length > 0 && (
