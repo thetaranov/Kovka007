@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { Scene } from "./components/Scene";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { Scene, SceneHandle } from "./components/Scene";
 import { Controls } from "./components/Controls";
 import { GateControls } from "./components/GateControls";
 import { LoadsInfoPanel } from "./components/LoadsInfoPanel";
@@ -205,10 +205,11 @@ interface BrowserOrderModalProps {
     onSuccess: (orderId: string) => void;
     onShowPrivacy: () => void;
     onShowTerms: () => void;
+    screenshotBase64?: string | null;
 }
 
 const BrowserOrderModal: React.FC<BrowserOrderModalProps> = ({
-    isOpen, onClose, orderData, config, onSuccess, onShowPrivacy, onShowTerms
+    isOpen, onClose, orderData, config, onSuccess, onShowPrivacy, onShowTerms, screenshotBase64
 }) => {
     const [name, setName] = useState("");
     const [phone, setPhone] = useState("");
@@ -251,7 +252,8 @@ const BrowserOrderModal: React.FC<BrowserOrderModalProps> = ({
                 comment: sanitizeInput(comment),
                 csrf_token: csrfToken,
                 timestamp: Date.now(),
-                source: 'browser'
+                source: 'browser',
+                screenshot: screenshotBase64 || undefined,
             };
 
             const endpoint = (window as any).KOVKA_BOT_ENDPOINT || (import.meta as any).env?.VITE_BOT_API || 'https://kovka007bot.onrender.com';
@@ -416,6 +418,7 @@ const ExportModal: React.FC<{ isOpen: boolean; onClose: () => void; config: Carp
 };
 
 export default function App() {
+    const sceneRef = useRef<SceneHandle>(null);
     const [config, setConfig] = useState<CarportConfig>(INITIAL_CONFIG);
     const [gateConfig, setGateConfig] = useState<GateConfig>(INITIAL_GATE);
     const [onlyGates, setOnlyGates] = useState(false); // Режим "только ворота"
@@ -430,6 +433,7 @@ export default function App() {
     const [price, setPrice] = useState(0);
     const [gatePrice, setGatePrice] = useState(0);
     const [orderJson, setOrderJson] = useState("");
+    const [orderScreenshot, setOrderScreenshot] = useState<string | null>(null);
     const [isDarkTheme, setIsDarkTheme] = useState(true); // Theme state
     const [isThemeChanging, setIsThemeChanging] = useState(false);
     const [loads, setLoads] = useState({
@@ -774,11 +778,29 @@ export default function App() {
         const tg = window.Telegram?.WebApp;
         const telegramPayload = getOrderPayload({ includeCad: false });
 
+        // Захватываем скриншот 3D сцены
+        const screenshot = sceneRef.current?.takeScreenshot() || null;
+
         // Check if running in Telegram WebApp and can use sendData
         if (canUseSendData() && tg) {
             console.log('📱 Telegram WebApp mode - using sendData');
             console.log('Platform:', tg.platform);
             console.log('initData length:', tg.initData?.length || 0);
+
+            // Отправляем скриншот отдельно через HTTP (sendData ограничен 4096 байт)
+            if (screenshot) {
+                try {
+                    const endpoint = (window as any).KOVKA_BOT_ENDPOINT || (import.meta as any).env?.VITE_BOT_API || 'https://kovka007bot.onrender.com';
+                    await fetch(`${endpoint.replace(/\/$/, '')}/upload_screenshot`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ order_id: telegramPayload.id, screenshot }),
+                    });
+                    console.log('📸 Screenshot uploaded for Telegram order');
+                } catch (e) {
+                    console.warn('⚠️ Screenshot upload failed:', e);
+                }
+            }
             
             const dataToSend = JSON.stringify(telegramPayload);
             const payloadSize = new Blob([dataToSend]).size;
@@ -824,6 +846,7 @@ export default function App() {
         // Browser mode (or Telegram fallback if sendData failed)
         console.log('🌐 Browser mode - showing order modal');
         console.log('Platform:', tg?.platform || 'browser');
+        setOrderScreenshot(screenshot);
         setOrderJson(JSON.stringify(getOrderPayload({ includeCad: true })));
         setShowBrowserOrderModal(true);
     }, [getOrderPayload]);
@@ -858,7 +881,7 @@ export default function App() {
             </div>
 
             <div className="relative w-full flex-grow min-h-0 lg:h-full transition-all duration-300">
-                <Scene config={config} gateConfig={gateConfig} isDarkTheme={isDarkTheme} onlyGates={onlyGates} />
+                <Scene ref={sceneRef} config={config} gateConfig={gateConfig} isDarkTheme={isDarkTheme} onlyGates={onlyGates} />
 
                 {/* Warnings */}
                 {loads.warnings.length > 0 && (
@@ -1205,6 +1228,7 @@ export default function App() {
                 onSuccess={handleOrderSuccess}
                 onShowPrivacy={() => setShowPrivacyPolicy(true)}
                 onShowTerms={() => setShowTermsOfUse(true)}
+                screenshotBase64={orderScreenshot}
             />
             
             <ExportModal

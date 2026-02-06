@@ -13,8 +13,13 @@ export default defineConfig({
   build: {
     outDir: "dist",
     chunkSizeWarningLimit: 700,
+    sourcemap: false,
     rollupOptions: {
       output: {
+        // Хеширование имён всех ассетов
+        entryFileNames: 'assets/[name]-[hash].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]',
         manualChunks: {
           three: ["three"],
           "react-three": ["@react-three/fiber", "@react-three/drei"],

@@ -1,4 +1,4 @@
-import { Suspense, useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { Suspense, useState, useEffect, useRef, useMemo, useCallback, forwardRef, useImperativeHandle } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import {
@@ -17,6 +17,10 @@ import { SPECS } from "../constants";
 import { CarportModel } from "./CarportModel";
 import { GateModel } from "./GateModel";
 import { RefreshCw, Loader2, Ruler, Camera } from "lucide-react";
+
+export interface SceneHandle {
+  takeScreenshot: () => string | null;
+}
 
 interface SceneProps {
   config: CarportConfig;
@@ -39,7 +43,21 @@ function Loader() {
   );
 }
 
-export const Scene: React.FC<SceneProps> = ({ config, gateConfig, isDarkTheme = true, onlyGates = false }) => {
+export const Scene = forwardRef<SceneHandle, SceneProps>(({ config, gateConfig, isDarkTheme = true, onlyGates = false }, ref) => {
+
+  // Экспортируем функцию скриншота через ref
+  useImperativeHandle(ref, () => ({
+    takeScreenshot: () => {
+      try {
+        const canvas = containerRef.current?.querySelector('canvas');
+        if (!canvas) return null;
+        return canvas.toDataURL('image/jpeg', 0.85);
+      } catch (e) {
+        console.error('Screenshot failed:', e);
+        return null;
+      }
+    },
+  }));
   const [resetKey, setResetKey] = useState(0);
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 640);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -272,7 +290,7 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig, isDarkTheme = 
         key={resetKey}
         shadows={false}
         dpr={[1, 1.5]}
-        gl={{ powerPreference: "high-performance", antialias: true }} // Включил сглаживание для четкости
+        gl={{ powerPreference: "high-performance", antialias: true, preserveDrawingBuffer: true }}
         className="z-10 relative"
         style={{
           touchAction: "none",
@@ -411,7 +429,7 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig, isDarkTheme = 
       </Canvas>
     </div>
   );
-};
+});
 
 // Small helper to set initial/reset target on controls without reacting to other prop changes
 const EffectSetup: React.FC<{ resetKey: number; controlsRef: React.RefObject<any>; configHeight: number }> = ({ resetKey, controlsRef, configHeight }) => {
