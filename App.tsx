@@ -851,6 +851,9 @@ export default function App() {
                             тема<span className={isDarkTheme ? 'text-cyan-400/70' : 'text-cyan-600/70'}>({isDarkTheme ? 'тёмная' : 'светлая'})</span>
                         </button>
                     </h1>
+                    <p className={`text-[9px] tracking-wide mt-0.5 ${isDarkTheme ? 'text-[#4d5563]' : 'text-slate-400'}`}>
+                        разработано <a href="https://t.me/TheTaranov" target="_blank" rel="noopener noreferrer" className={`${isDarkTheme ? 'text-[#6b7280] hover:text-cyan-400' : 'text-slate-500 hover:text-cyan-600'} transition-colors no-underline`}>@TheTaranov</a>
+                    </p>
                 </div>
             </div>
 
@@ -899,7 +902,7 @@ export default function App() {
             </div>
 
             {/* MOBILE PANEL */}
-            <div className="lg:hidden flex flex-col z-30 flex-shrink-0 bg-[#1e2128] shadow-[0_-4px_20px_rgba(0,0,0,0.4)] pb-safe">
+            <div className="lg:hidden flex flex-col z-30 flex-shrink-0 bg-[#1e2128] shadow-[0_-4px_20px_rgba(0,0,0,0.4)] pb-safe overflow-x-hidden">
                 {/* Табы */}
                 <div className="flex border-b border-[#2d323d]">
                     <button
@@ -1071,7 +1074,7 @@ export default function App() {
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto overflow-x-hidden">
                     {activeTab === "carport" ? (
                         <div>
                             <Controls

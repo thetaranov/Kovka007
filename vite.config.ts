@@ -12,5 +12,15 @@ export default defineConfig({
   },
   build: {
     outDir: "dist",
+    chunkSizeWarningLimit: 700,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          three: ["three"],
+          "react-three": ["@react-three/fiber", "@react-three/drei"],
+          react: ["react", "react-dom"],
+        },
+      },
+    },
   },
 });

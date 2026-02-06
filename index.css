@@ -267,7 +267,7 @@ body {
 /* Smooth backdrop for theme change */
 @keyframes theme-pulse {
   0% { opacity: 0; }
-  50% { opacity: 0.1; }
+  50% { opacity: 0.15; }
   100% { opacity: 0; }
 }
 
@@ -275,7 +275,7 @@ body {
   content: '';
   position: fixed;
   inset: 0;
-  background: var(--accent);
+  background: var(--bg-main);
   pointer-events: none;
   animation: theme-pulse 0.4s ease-out;
   z-index: 9999;

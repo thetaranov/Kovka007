@@ -558,46 +558,44 @@ export const CarportModel: React.FC<CarportModelProps> = ({ config, dimmed = fal
   };
 
   const groupRef = React.useRef<THREE.Group>(null);
+  const wasDimmedRef = React.useRef(false);
 
   React.useEffect(() => {
     const g = groupRef.current;
     if (!g) return;
-    const dimColor = new THREE.Color('#9ca3af');
-    const dimOpacity = 0.25;
 
     if (dimmed) {
+      // Save original materials and apply dim
+      const dimColor = new THREE.Color('#9ca3af');
       g.traverse((obj: any) => {
-        if (obj.isMesh) {
-          try { obj.userData.__prevMaterial = obj.material; } catch {}
-          const mat = obj.material && obj.material.clone ? obj.material.clone() : obj.material;
+        if (obj.isMesh && obj.material) {
           try {
+            if (!obj.userData.__prevMaterial) {
+              obj.userData.__prevMaterial = obj.material;
+            }
+            const mat = obj.material.clone ? obj.material.clone() : obj.material;
             mat.color = dimColor;
             mat.transparent = true;
-            mat.opacity = dimOpacity;
+            mat.opacity = 0.25;
             mat.needsUpdate = true;
             obj.material = mat;
           } catch {}
         }
       });
-    } else {
+      wasDimmedRef.current = true;
+    } else if (wasDimmedRef.current) {
+      // Only restore if we previously dimmed (skip first render)
       g.traverse((obj: any) => {
         if (obj.isMesh) {
-          const prev = obj.userData && obj.userData.__prevMaterial;
+          const prev = obj.userData?.__prevMaterial;
           if (prev) {
-            try { obj.material.dispose && obj.material.dispose(); } catch {}
+            try { obj.material.dispose?.(); } catch {}
             obj.material = prev;
-            try { delete obj.userData.__prevMaterial; } catch {}
-          } else {
-            try {
-              if (obj.material) {
-                obj.material.transparent = false;
-                obj.material.opacity = 1;
-                obj.material.needsUpdate = true;
-              }
-            } catch {}
+            delete obj.userData.__prevMaterial;
           }
         }
       });
+      wasDimmedRef.current = false;
     }
   }, [dimmed]);
 

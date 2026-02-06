@@ -39,30 +39,6 @@ function Loader() {
   );
 }
 
-function OverrideCarportDim() {
-  const { scene } = useThree();
-  useEffect(() => {
-    const prev = scene.overrideMaterial;
-    const mat = new THREE.MeshStandardMaterial({ color: '#9ca3af', transparent: true, opacity: 0.25 });
-    scene.overrideMaterial = mat;
-    return () => {
-      scene.overrideMaterial = prev;
-      try { mat.dispose(); } catch {}
-    };
-  }, [scene]);
-  return null;
-}
-
-function ResetOverride() {
-  const { scene } = useThree();
-  useEffect(() => {
-    const prev = scene.overrideMaterial;
-    scene.overrideMaterial = null;
-    return () => { scene.overrideMaterial = prev; };
-  }, [scene]);
-  return null;
-}
-
 export const Scene: React.FC<SceneProps> = ({ config, gateConfig, isDarkTheme = true, onlyGates = false }) => {
   const [resetKey, setResetKey] = useState(0);
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 640);
@@ -142,23 +118,32 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig, isDarkTheme = 
     setResetKey((prev) => prev + 1);
   };
 
-  // Center camera on gates when onlyGates mode is enabled
+  // Track previous onlyGates state for reverse animation
+  const prevOnlyGatesRef = useRef(false);
+
+  // Center camera on gates when onlyGates mode is enabled, animate back when disabled
   useEffect(() => {
-    if (!onlyGates || !hasGate) return;
     const controls = controlsRef.current;
     if (!controls) return;
 
-    const distance = gateConfig?.distanceFromCarport ?? 2.0;
-    const gateZ = -config.length / 2 - distance;
-    const gateY = (gateConfig?.height ?? config.height) / 2;
-    const target = new THREE.Vector3(0, gateY, gateZ);
+    const camObj = perspectiveRef.current || orthographicRef.current;
+    if (!camObj) return;
 
-    // Compute camera offset relative to current target so we preserve view angle
-    const camObj = (perspectiveRef.current && perspectiveRef.current) || (orthographicRef.current && orthographicRef.current);
-    if (!camObj) {
-      controls.target.copy(target);
-      controls.update();
-      return;
+    let target: THREE.Vector3;
+
+    if (onlyGates && hasGate) {
+      // Animate TO gates
+      const distance = gateConfig?.distanceFromCarport ?? 2.0;
+      const gateZ = -config.length / 2 - distance;
+      const gateY = (gateConfig?.height ?? config.height) / 2;
+      target = new THREE.Vector3(0, gateY, gateZ);
+      prevOnlyGatesRef.current = true;
+    } else if (!onlyGates && prevOnlyGatesRef.current) {
+      // Animate BACK to scene center
+      target = new THREE.Vector3(0, config.height / 2, 0);
+      prevOnlyGatesRef.current = false;
+    } else {
+      return; // No animation needed
     }
 
     const fromTarget = controls.target.clone();
@@ -166,13 +151,12 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig, isDarkTheme = 
     const offset = fromCamPos.clone().sub(fromTarget);
     const toCamPos = target.clone().add(offset);
 
-    let t = 0;
-    const duration = 400; // ms
+    const duration = 400;
     const start = performance.now();
 
     const step = (now: number) => {
-      t = Math.min(1, (now - start) / duration);
-      const eased = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; // easeInOutQuad-like
+      const t = Math.min(1, (now - start) / duration);
+      const eased = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
 
       controls.target.lerpVectors(fromTarget, target, eased);
       camObj.position.lerpVectors(fromCamPos, toCamPos, eased);
@@ -182,10 +166,6 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig, isDarkTheme = 
     };
 
     requestAnimationFrame(step);
-
-    return () => {
-      // no-op cleanup
-    };
   }, [onlyGates, hasGate, gateConfig, config.length, config.height]);
 
   const handleCameraToggle = () => {
@@ -224,7 +204,7 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig, isDarkTheme = 
   }, []);
 
   // Theme-based colors
-  const bgColor = isDarkTheme ? '#2d3139' : '#e2e8f0';
+  const bgColor = isDarkTheme ? '#363b44' : '#f1f5f9';
   const watermarkColor = isDarkTheme ? '%23ffffff' : '%231e293b';
   const buttonBg = isDarkTheme ? 'bg-[#252830]/90' : 'bg-white/90';
   const buttonHoverBg = isDarkTheme ? 'hover:bg-[#2d3039]' : 'hover:bg-slate-100';
@@ -245,8 +225,8 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig, isDarkTheme = 
           className="absolute inset-0 pointer-events-none z-0 flex items-center justify-center transition-opacity duration-400"
           style={{ opacity: isDarkTheme ? 0.06 : 0.08 }}
         >
-          <svg width="280" height="280" viewBox="0 0 280 280" xmlns="http://www.w3.org/2000/svg">
-            <text x="50%" y="50%" fontFamily="Inter, sans-serif" fontWeight="900" fontSize="36" fill={isDarkTheme ? '#ffffff' : '#1e293b'} textAnchor="middle" transform="rotate(-45 140 140)">ковка007</text>
+          <svg width="360" height="360" viewBox="0 0 360 360" xmlns="http://www.w3.org/2000/svg">
+            <text x="50%" y="50%" fontFamily="Inter, sans-serif" fontWeight="900" fontSize="48" fill={isDarkTheme ? '#ffffff' : '#1e293b'} textAnchor="middle" transform="rotate(-45 180 180)">Kovka007</text>
           </svg>
         </div>
       ) : (
@@ -254,7 +234,7 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig, isDarkTheme = 
           className="absolute inset-0 pointer-events-none z-0 transition-opacity duration-400"
           style={{
             opacity: isDarkTheme ? 0.04 : 0.06,
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='180' height='180' viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='Inter, sans-serif' font-weight='900' font-size='20' fill='${watermarkColor}' text-anchor='middle' transform='rotate(-45 90 90)'%3Ekovka007%3C/text%3E%3C/svg%3E")`,
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='180' height='180' viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='Inter, sans-serif' font-weight='900' font-size='20' fill='${watermarkColor}' text-anchor='middle' transform='rotate(-45 90 90)'%3EKovka007%3C/text%3E%3C/svg%3E")`,
             backgroundRepeat: "repeat",
             backgroundPosition: "center",
           }}
@@ -364,11 +344,6 @@ export const Scene: React.FC<SceneProps> = ({ config, gateConfig, isDarkTheme = 
               carportLength={config.length}
             />
           )}
-          
-          {null}
-
-          {/* Запеченные контактные тени - не мерцают */}
-          {null}
 
           <OrbitControls
             makeDefault
@@ -619,12 +594,17 @@ const Foundation: React.FC<{
   const materialRef = useRef<THREE.MeshStandardMaterial>(null);
   const { camera } = useThree();
 
+  const lastBelowRef = useRef(false);
+
   useFrame(() => {
     if (!materialRef.current) return;
     const below = camera.position.y < -0.05;
-    materialRef.current.transparent = true;
-    materialRef.current.opacity = below ? 0.35 : 1;
-    materialRef.current.needsUpdate = true;
+    if (below !== lastBelowRef.current) {
+      lastBelowRef.current = below;
+      materialRef.current.transparent = true;
+      materialRef.current.opacity = below ? 0.35 : 1;
+      materialRef.current.needsUpdate = true;
+    }
   });
 
   const numRows = Math.ceil(config.length / SPECS.postSpacing);
